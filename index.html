@@ -84,6 +84,30 @@
             background-clip: text;
         }
         
+        /* Infinite scroll animation */
+        @keyframes scroll {
+            0% {
+                transform: translateX(0);
+            }
+            100% {
+                transform: translateX(-50%);
+            }
+        }
+        
+        .animate-scroll {
+            animation: scroll 40s linear infinite;
+        }
+        
+        .animate-scroll-reverse {
+            animation: scroll 40s linear infinite reverse;
+        }
+        
+        /* Pause animation on hover */
+        .scroll-container:hover .animate-scroll,
+        .scroll-container:hover .animate-scroll-reverse {
+            animation-play-state: paused;
+        }
+        
         /* Button hover effect estilo Slack */
         .btn-primary {
             transition: all 0.3s ease;
@@ -131,7 +155,7 @@
                 <a href="#como-funciona" class="text-sm font-semibold text-slate-600 hover:text-slate-900 transition">Cómo funciona</a>
             </div>
             
-            <a href="mailto:hola@zentu.app" class="text-sm font-bold bg-slate-900 text-white px-5 py-2.5 rounded-xl hover:bg-slate-800 transition shadow-md">
+            <a href="/cdn-cgi/l/email-protection#086067646948726d667c7d26697878" class="text-sm font-bold bg-slate-900 text-white px-5 py-2.5 rounded-xl hover:bg-slate-800 transition shadow-md">
                 Contacto
             </a>
         </div>
@@ -223,6 +247,366 @@
                 <div>
                     <div class="text-5xl font-black mb-2 gradient-text" style="background: linear-gradient(135deg, #F9C74F 0%, #FF8C42 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">85%</div>
                     <div class="text-slate-400 font-semibold">Tasa de colocación</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Universidades Aliadas - Carousel Infinito -->
+    <section class="py-12 bg-white border-y border-slate-200 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 md:px-8 mb-8">
+            <div class="text-center">
+                <h3 class="text-sm font-black text-slate-500 uppercase tracking-wider mb-2">Universidades aliadas</h3>
+                <p class="text-slate-600">Estudiantes de las mejores instituciones de México</p>
+            </div>
+        </div>
+        
+        <div class="scroll-container relative">
+            <div class="flex animate-scroll">
+                <!-- Primera iteración de logos -->
+                <div class="flex items-center gap-12 px-6 flex-shrink-0">
+                    <!-- UNAM -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-2xl">UNAM</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">UNAM</span>
+                    </div>
+                    
+                    <!-- IPN -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-2xl">IPN</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">IPN</span>
+                    </div>
+                    
+                    <!-- ITESM -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-xl">TEC</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">ITESM</span>
+                    </div>
+                    
+                    <!-- ITAM -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-xl">ITAM</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">ITAM</span>
+                    </div>
+                    
+                    <!-- UAM -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-xl">UAM</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">UAM</span>
+                    </div>
+                    
+                    <!-- IBERO -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-sm">IBERO</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">Ibero</span>
+                    </div>
+                    
+                    <!-- UDG -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-xl">UDG</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">UDG</span>
+                    </div>
+                    
+                    <!-- UANL -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-lime-500 to-lime-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-lg">UANL</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">UANL</span>
+                    </div>
+                    
+                    <!-- BUAP -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-lg">BUAP</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">BUAP</span>
+                    </div>
+                    
+                    <!-- UP -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-xl">UP</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">Panamericana</span>
+                    </div>
+                </div>
+                
+                <!-- Segunda iteración (duplicado para loop infinito) -->
+                <div class="flex items-center gap-12 px-6 flex-shrink-0">
+                    <!-- UNAM -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-2xl">UNAM</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">UNAM</span>
+                    </div>
+                    
+                    <!-- IPN -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-2xl">IPN</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">IPN</span>
+                    </div>
+                    
+                    <!-- ITESM -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-800 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-xl">TEC</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">ITESM</span>
+                    </div>
+                    
+                    <!-- ITAM -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-xl">ITAM</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">ITAM</span>
+                    </div>
+                    
+                    <!-- UAM -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-600 to-purple-800 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-xl">UAM</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">UAM</span>
+                    </div>
+                    
+                    <!-- IBERO -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-sm">IBERO</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">Ibero</span>
+                    </div>
+                    
+                    <!-- UDG -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-xl">UDG</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">UDG</span>
+                    </div>
+                    
+                    <!-- UANL -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-lime-500 to-lime-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-lg">UANL</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">UANL</span>
+                    </div>
+                    
+                    <!-- BUAP -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-lg">BUAP</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">BUAP</span>
+                    </div>
+                    
+                    <!-- UP -->
+                    <div class="flex flex-col items-center opacity-70 hover:opacity-100 transition">
+                        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-rose-500 to-rose-700 flex items-center justify-center shadow-lg">
+                            <span class="text-white font-black text-xl">UP</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-600 mt-2">Panamericana</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Empresas que confían - Carousel Infinito Reversa -->
+    <section class="py-12 bg-slate-50 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 md:px-8 mb-8">
+            <div class="text-center">
+                <h3 class="text-sm font-black text-slate-500 uppercase tracking-wider mb-2">Empresas que confían en ZentU</h3>
+                <p class="text-slate-600">Líderes de la industria encuentran su próximo talento aquí</p>
+            </div>
+        </div>
+        
+        <div class="scroll-container relative">
+            <div class="flex animate-scroll-reverse">
+                <!-- Primera iteración de logos -->
+                <div class="flex items-center gap-8 px-4 flex-shrink-0">
+                    <!-- Google -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">G</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Google</span>
+                    </div>
+                    
+                    <!-- Amazon -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-orange-400 to-yellow-600 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">A</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Amazon</span>
+                    </div>
+                    
+                    <!-- Microsoft -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">M</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Microsoft</span>
+                    </div>
+                    
+                    <!-- Mercado Libre -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-lg">ML</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Mercado Libre</span>
+                    </div>
+                    
+                    <!-- Kavak -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">K</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Kavak</span>
+                    </div>
+                    
+                    <!-- Clip -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">C</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Clip</span>
+                    </div>
+                    
+                    <!-- Spotify -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">S</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Spotify</span>
+                    </div>
+                    
+                    <!-- BBVA -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-lg">BBVA</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">BBVA</span>
+                    </div>
+                    
+                    <!-- Bimbo -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">B</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Bimbo</span>
+                    </div>
+                    
+                    <!-- Liverpool -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-pink-600 to-pink-800 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">L</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Liverpool</span>
+                    </div>
+                </div>
+                
+                <!-- Segunda iteración (duplicado para loop infinito) -->
+                <div class="flex items-center gap-8 px-4 flex-shrink-0">
+                    <!-- Google -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">G</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Google</span>
+                    </div>
+                    
+                    <!-- Amazon -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-orange-400 to-yellow-600 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">A</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Amazon</span>
+                    </div>
+                    
+                    <!-- Microsoft -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">M</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Microsoft</span>
+                    </div>
+                    
+                    <!-- Mercado Libre -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-lg">ML</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Mercado Libre</span>
+                    </div>
+                    
+                    <!-- Kavak -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">K</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Kavak</span>
+                    </div>
+                    
+                    <!-- Clip -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">C</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Clip</span>
+                    </div>
+                    
+                    <!-- Spotify -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">S</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Spotify</span>
+                    </div>
+                    
+                    <!-- BBVA -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-blue-700 to-blue-900 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-lg">BBVA</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">BBVA</span>
+                    </div>
+                    
+                    <!-- Bimbo -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">B</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Bimbo</span>
+                    </div>
+                    
+                    <!-- Liverpool -->
+                    <div class="flex flex-col items-center p-6 bg-white rounded-2xl shadow-sm hover:shadow-md transition opacity-80 hover:opacity-100">
+                        <div class="w-16 h-16 rounded-xl bg-gradient-to-br from-pink-600 to-pink-800 flex items-center justify-center shadow-md">
+                            <span class="text-white font-black text-xl">L</span>
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 mt-2">Liverpool</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -592,4 +976,3 @@
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
                                     </svg>
                                 </div>
-                                <span class="
