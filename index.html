@@ -3,51 +3,593 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ZentU | El futuro del talento</title>
+    <title>ZentU | Donde el talento joven conecta con oportunidades</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; }
-        .gradient-text { background: linear-gradient(90deg, #7C3AED, #38BDF8); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        body { 
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        
+        /* Estilo Slack/ClickUp - Gradientes suaves */
+        .gradient-purple-blue { 
+            background: linear-gradient(135deg, #7B68EE 0%, #4A9EFF 100%); 
+        }
+        .gradient-pink-orange { 
+            background: linear-gradient(135deg, #FF6B9D 0%, #FF8C42 100%); 
+        }
+        .gradient-green-blue { 
+            background: linear-gradient(135deg, #49CCB8 0%, #4A9EFF 100%); 
+        }
+        
+        /* Hero pattern background - estilo Slack */
+        .hero-pattern {
+            background-color: #F9FAFB;
+            background-image: 
+                radial-gradient(circle at 20% 50%, rgba(123, 104, 238, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(74, 158, 255, 0.08) 0%, transparent 50%);
+        }
+        
+        /* Sombras profundas estilo ClickUp */
+        .shadow-clickup {
+            box-shadow: 
+                0 0 0 1px rgba(0,0,0,.04),
+                0 2px 6px rgba(0,0,0,.04),
+                0 10px 20px rgba(0,0,0,.08);
+        }
+        
+        .shadow-clickup-hover {
+            box-shadow: 
+                0 0 0 1px rgba(0,0,0,.04),
+                0 4px 12px rgba(0,0,0,.08),
+                0 16px 32px rgba(0,0,0,.12);
+        }
+        
+        /* Card hover effect - estilo Slack */
+        .student-card {
+            transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .student-card:hover {
+            transform: translateY(-12px);
+        }
+        
+        /* Animación de fade-in */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .fade-in-up {
+            animation: fadeInUp 0.8s ease-out forwards;
+            opacity: 0;
+        }
+        
+        .delay-100 { animation-delay: 0.1s; }
+        .delay-200 { animation-delay: 0.2s; }
+        .delay-300 { animation-delay: 0.3s; }
+        .delay-400 { animation-delay: 0.4s; }
+        
+        /* Gradient text */
+        .gradient-text {
+            background: linear-gradient(135deg, #7B68EE 0%, #4A9EFF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Button hover effect estilo Slack */
+        .btn-primary {
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn-primary:hover::before {
+            left: 100%;
+        }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-900">
-    <nav class="flex justify-between items-center px-8 py-6 max-w-7xl mx-auto">
-        <div class="text-2xl font-black tracking-tighter gradient-text">ZentU</div>
-        <div class="text-sm font-semibold bg-white border border-slate-200 px-5 py-2 rounded-full shadow-sm">hola@zentu.app</div>
+<body class="bg-white text-slate-900">
+    
+    <!-- Navigation - Estilo Slack -->
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div class="flex justify-between items-center px-6 md:px-8 py-4 max-w-7xl mx-auto">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 gradient-purple-blue rounded-2xl flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <span class="text-2xl font-black tracking-tight">ZentU</span>
+            </div>
+            
+            <div class="hidden md:flex items-center gap-8">
+                <a href="#talento" class="text-sm font-semibold text-slate-600 hover:text-slate-900 transition">Talento</a>
+                <a href="#empresas" class="text-sm font-semibold text-slate-600 hover:text-slate-900 transition">Empresas</a>
+                <a href="#como-funciona" class="text-sm font-semibold text-slate-600 hover:text-slate-900 transition">Cómo funciona</a>
+            </div>
+            
+            <a href="mailto:hola@zentu.app" class="text-sm font-bold bg-slate-900 text-white px-5 py-2.5 rounded-xl hover:bg-slate-800 transition shadow-md">
+                Contacto
+            </a>
+        </div>
     </nav>
 
-    <main class="max-w-7xl mx-auto px-8 pt-16 pb-24 text-center">
-        <div class="inline-block bg-purple-50 text-purple-700 px-4 py-2 rounded-full text-xs font-bold mb-8">✨ EL FUTURO LABORAL ES GEN Z</div>
-        <h1 class="text-5xl md:text-7xl font-black tracking-tight mb-6">Tu potencial, <br><span class="gradient-text">vale más que tu experiencia.</span></h1>
-        <p class="text-lg text-slate-500 max-w-2xl mx-auto mb-10">ZentU conecta a estudiantes universitarios próximos a graduarse, con empresas que buscan talento nuevo y valoran más el potencial que la experiencia.</p>
+    <!-- Hero Section - Estilo Slack con pattern -->
+    <section class="hero-pattern py-16 md:py-24 overflow-hidden">
+        <div class="max-w-7xl mx-auto px-6 md:px-8">
+            <div class="text-center max-w-4xl mx-auto">
+                
+                <!-- Badge -->
+                <div class="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full text-xs font-bold mb-8 shadow-md fade-in-up border border-slate-200">
+                    <div class="w-2 h-2 rounded-full gradient-purple-blue"></div>
+                    <span class="gradient-text">EL FUTURO DEL TALENTO ES AHORA</span>
+                </div>
+                
+                <!-- Headline - Estilo ClickUp -->
+                <h1 class="text-5xl md:text-6xl lg:text-7xl font-black tracking-tight mb-6 leading-[1.1] fade-in-up delay-100">
+                    Donde el talento joven conecta con 
+                    <span class="gradient-text">oportunidades reales</span>
+                </h1>
+                
+                <p class="text-xl md:text-2xl text-slate-600 max-w-3xl mx-auto mb-10 leading-relaxed fade-in-up delay-200">
+                    ZentU es la plataforma que valora tu <strong class="text-slate-900">potencial</strong> sobre tu experiencia. 
+                    Conectamos estudiantes universitarios con empresas que buscan talento fresco.
+                </p>
 
-        <form class="flex flex-col md:flex-row items-center justify-center gap-4 max-w-md mx-auto mb-20">
-            <input type="email" placeholder="Tu correo de la uni..." class="w-full px-6 py-4 rounded-2xl border border-slate-200 focus:ring-2 focus:ring-purple-500 outline-none shadow-sm" required>
-            <button class="w-full md:w-auto bg-slate-900 text-white px-8 py-4 rounded-2xl font-bold hover:bg-slate-800 transition">Unirse</button>
-        </form>
+                <!-- CTA Buttons - Estilo Slack con diferenciación -->
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12 fade-in-up delay-300">
+                    <button onclick="window.location.href='#estudiantes'" class="btn-primary w-full sm:w-auto gradient-purple-blue text-white px-8 py-4 rounded-xl font-bold shadow-clickup hover:shadow-clickup-hover text-lg flex items-center justify-center gap-3 group">
+                        <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14zm-4 6v-7.5l4-2.222"/>
+                        </svg>
+                        Soy Estudiante
+                    </button>
+                    <button onclick="window.location.href='#empresas'" class="w-full sm:w-auto bg-white text-slate-900 px-8 py-4 rounded-xl font-bold border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition text-lg shadow-md flex items-center justify-center gap-3 group">
+                        <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        </svg>
+                        Soy Empresa
+                    </button>
+                </div>
 
-        <div class="max-w-sm mx-auto bg-white p-8 rounded-[32px] shadow-2xl border border-slate-100 transform -rotate-2">
-            <div class="flex items-center space-x-4 mb-6 text-left">
-                <div class="w-16 h-16 rounded-2xl overflow-hidden bg-gradient-to-br from-purple-400 to-blue-400">
-  <img
-    src="/Users/alexmeza/Desktop/nino.png"
-    alt="Foto del usuario"
-    class="w-full h-full object-cover"
-  />
-</div>
-
-                <div>
-                    <h3 class="font-bold text-lg">Alejandro Reyes</h3>
-                    <p class="text-xs text-slate-400 font-bold uppercase">DESAROLLADOR JR</p>
+                <!-- Trust Indicators - Estilo Slack -->
+                <div class="flex flex-wrap justify-center gap-8 text-sm text-slate-600 fade-in-up delay-400">
+                    <div class="flex items-center gap-2">
+                        <div class="w-5 h-5 rounded-full gradient-green-blue flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                            </svg>
+                        </div>
+                        <span class="font-semibold">100% Gratis</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-5 h-5 rounded-full gradient-green-blue flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                            </svg>
+                        </div>
+                        <span class="font-semibold">Sin CV obligatorio</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-5 h-5 rounded-full gradient-green-blue flex items-center justify-center">
+                            <svg class="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"/>
+                            </svg>
+                        </div>
+                        <span class="font-semibold">Contacto directo</span>
+                    </div>
                 </div>
             </div>
-            <div class="bg-slate-50 p-4 rounded-2xl mb-4 text-left">
-                <div class="flex justify-between text-[10px] font-bold mb-2"><span>IA ANALYTICS</span> <span class="text-purple-600">92%</span></div>
-                <div class="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden"><div class="bg-purple-600 h-full w-[92%]"></div></div>
-            </div>
-            <div class="flex gap-2"><span class="bg-purple-50 text-purple-600 text-[10px] font-bold px-2 py-1 rounded">UX DESIGN</span><span class="bg-blue-50 text-blue-600 text-[10px] font-bold px-2 py-1 rounded">PYTHON</span></div>
         </div>
-    </main>
-</body>
-</html>
+    </section>
+
+    <!-- Stats Section - Estilo ClickUp -->
+    <section class="py-16 bg-slate-900 text-white">
+        <div class="max-w-7xl mx-auto px-6 md:px-8">
+            <div class="grid md:grid-cols-3 gap-8 text-center">
+                <div>
+                    <div class="text-5xl font-black mb-2 gradient-text" style="background: linear-gradient(135deg, #49CCB8 0%, #4A9EFF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">10,000+</div>
+                    <div class="text-slate-400 font-semibold">Estudiantes registrados</div>
+                </div>
+                <div>
+                    <div class="text-5xl font-black mb-2 gradient-text" style="background: linear-gradient(135deg, #FF6B9D 0%, #7B68EE 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">500+</div>
+                    <div class="text-slate-400 font-semibold">Empresas activas</div>
+                </div>
+                <div>
+                    <div class="text-5xl font-black mb-2 gradient-text" style="background: linear-gradient(135deg, #F9C74F 0%, #FF8C42 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">85%</div>
+                    <div class="text-slate-400 font-semibold">Tasa de colocación</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section Para Estudiantes - Estilo Slack -->
+    <section id="estudiantes" class="py-20 bg-gradient-to-br from-purple-50 to-blue-50">
+        <div class="max-w-7xl mx-auto px-6 md:px-8">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                
+                <!-- Content -->
+                <div>
+                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full text-sm font-bold mb-6 shadow-md border border-purple-200">
+                        <svg class="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+                        </svg>
+                        <span class="gradient-text">Para Estudiantes</span>
+                    </div>
+                    
+                    <h2 class="text-4xl md:text-5xl font-black mb-6 leading-tight">
+                        Tu talento merece ser <span class="gradient-text">descubierto</span>
+                    </h2>
+                    
+                    <p class="text-xl text-slate-600 mb-8 leading-relaxed">
+                        Crea un perfil profesional que destaque tus habilidades reales. Las empresas te encuentran, 
+                        no al revés.
+                    </p>
+                    
+                    <div class="space-y-4 mb-8">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl gradient-purple-blue flex items-center justify-center flex-shrink-0 shadow-lg">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-900 mb-1">Perfil profesional moderno</h3>
+                                <p class="text-slate-600">Muestra tus proyectos, habilidades y potencial. No solo un CV.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl gradient-purple-blue flex items-center justify-center flex-shrink-0 shadow-lg">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-900 mb-1">Las empresas te contactan</h3>
+                                <p class="text-slate-600">Recibe ofertas directas de empresas interesadas en tu perfil.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl gradient-purple-blue flex items-center justify-center flex-shrink-0 shadow-lg">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-900 mb-1">100% gratis para siempre</h3>
+                                <p class="text-slate-600">Sin costos ocultos. Acceso completo a todas las funciones.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn-primary gradient-purple-blue text-white px-8 py-4 rounded-xl font-bold shadow-clickup hover:shadow-clickup-hover text-lg">
+                        Crear mi perfil ahora →
+                    </button>
+                </div>
+                
+                <!-- Visual -->
+                <div class="relative">
+                    <div class="absolute inset-0 gradient-purple-blue opacity-10 rounded-3xl blur-3xl"></div>
+                    <div class="relative bg-white rounded-3xl p-8 shadow-clickup">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-16 h-16 gradient-purple-blue rounded-2xl"></div>
+                            <div>
+                                <div class="h-4 w-32 bg-slate-200 rounded mb-2"></div>
+                                <div class="h-3 w-24 bg-slate-100 rounded"></div>
+                            </div>
+                        </div>
+                        <div class="space-y-3 mb-6">
+                            <div class="h-3 bg-slate-100 rounded"></div>
+                            <div class="h-3 bg-slate-100 rounded w-5/6"></div>
+                            <div class="h-3 bg-slate-100 rounded w-4/6"></div>
+                        </div>
+                        <div class="flex gap-2">
+                            <span class="px-3 py-1.5 bg-purple-50 text-purple-700 rounded-lg text-sm font-bold">React</span>
+                            <span class="px-3 py-1.5 bg-blue-50 text-blue-700 rounded-lg text-sm font-bold">Python</span>
+                            <span class="px-3 py-1.5 bg-green-50 text-green-700 rounded-lg text-sm font-bold">Figma</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Section Para Empresas - Estilo ClickUp -->
+    <section id="empresas" class="py-20 bg-white">
+        <div class="max-w-7xl mx-auto px-6 md:px-8">
+            <div class="grid lg:grid-cols-2 gap-12 items-center">
+                
+                <!-- Visual -->
+                <div class="relative order-2 lg:order-1">
+                    <div class="absolute inset-0 gradient-green-blue opacity-10 rounded-3xl blur-3xl"></div>
+                    <div class="relative bg-slate-900 rounded-3xl p-8 shadow-clickup text-white">
+                        <div class="flex items-center justify-between mb-6">
+                            <h4 class="text-lg font-bold">Base de Talento</h4>
+                            <span class="px-3 py-1.5 bg-white/20 backdrop-blur rounded-lg text-sm font-bold">1,247 perfiles</span>
+                        </div>
+                        <div class="space-y-4">
+                            <div class="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/20">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="w-12 h-12 gradient-purple-blue rounded-xl"></div>
+                                    <div>
+                                        <div class="h-3 w-24 bg-white/40 rounded mb-1"></div>
+                                        <div class="h-2 w-32 bg-white/20 rounded"></div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <span class="px-2 py-1 bg-white/20 rounded text-xs font-semibold">React</span>
+                                    <span class="px-2 py-1 bg-white/20 rounded text-xs font-semibold">Node.js</span>
+                                </div>
+                            </div>
+                            <div class="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/20">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="w-12 h-12 gradient-pink-orange rounded-xl"></div>
+                                    <div>
+                                        <div class="h-3 w-24 bg-white/40 rounded mb-1"></div>
+                                        <div class="h-2 w-32 bg-white/20 rounded"></div>
+                                    </div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <span class="px-2 py-1 bg-white/20 rounded text-xs font-semibold">Figma</span>
+                                    <span class="px-2 py-1 bg-white/20 rounded text-xs font-semibold">UX/UI</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Content -->
+                <div class="order-1 lg:order-2">
+                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full text-sm font-bold mb-6 border border-slate-200">
+                        <svg class="w-5 h-5 text-slate-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                        </svg>
+                        <span class="text-slate-900">Para Empresas</span>
+                    </div>
+                    
+                    <h2 class="text-4xl md:text-5xl font-black mb-6 leading-tight">
+                        Encuentra talento <span class="gradient-text">verificado</span> en minutos
+                    </h2>
+                    
+                    <p class="text-xl text-slate-600 mb-8 leading-relaxed">
+                        Accede a una base de datos curada de estudiantes próximos a graduarse con habilidades 
+                        reales y verificadas.
+                    </p>
+                    
+                    <div class="space-y-4 mb-8">
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center flex-shrink-0 shadow-lg">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-900 mb-1">Perfiles verificados</h3>
+                                <p class="text-slate-600">Cada perfil incluye proyectos reales y habilidades comprobables.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center flex-shrink-0 shadow-lg">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-900 mb-1">Búsqueda inteligente</h3>
+                                <p class="text-slate-600">Filtra por habilidades, universidad, ubicación y disponibilidad.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="flex items-start gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center flex-shrink-0 shadow-lg">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 class="font-bold text-lg text-slate-900 mb-1">Contacto directo</h3>
+                                <p class="text-slate-600">Comunícate directamente con los candidatos sin intermediarios.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="bg-slate-900 text-white px-8 py-4 rounded-xl font-bold shadow-clickup hover:shadow-clickup-hover hover:bg-slate-800 transition text-lg">
+                        Explorar talento →
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Talent Section - Estilo Slack con alternancia de color -->
+    <section id="talento" class="py-20 bg-slate-50">
+        <div class="max-w-7xl mx-auto px-6 md:px-8">
+            <div class="text-center mb-16">
+                <h2 class="text-4xl md:text-5xl font-black mb-4">
+                    Conoce nuestro <span class="gradient-text">talento destacado</span>
+                </h2>
+                <p class="text-xl text-slate-600 max-w-2xl mx-auto">
+                    Estudiantes próximos a graduarse con habilidades verificadas y listos para aportar valor
+                </p>
+            </div>
+
+            <!-- Student Cards Grid -->
+            <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                
+                <!-- Card 1 - Purple -->
+                <div class="student-card bg-white rounded-3xl shadow-clickup hover:shadow-clickup-hover border border-slate-100 overflow-hidden">
+                    <div class="h-2 gradient-purple-blue"></div>
+                    <div class="p-6">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-16 h-16 rounded-2xl gradient-purple-blue flex items-center justify-center text-white text-2xl font-black shadow-lg">
+                                AM
+                            </div>
+                            <div>
+                                <h3 class="font-black text-xl text-slate-900">Alejandro Martínez</h3>
+                                <p class="text-sm text-slate-500 font-semibold">23 años</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-3 mb-6 text-sm">
+                            <div class="flex items-start gap-3">
+                                <div class="w-5 h-5 rounded-lg bg-purple-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                    </svg>
+                                </div>
+                                <span class="text-slate-700 font-medium leading-tight">Ing. en Sistemas Computacionales</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-5 h-5 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                </div>
+                                <span class="text-slate-700 font-medium">IPN</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-5 h-5 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <span class="text-slate-700 font-medium">Egreso: Junio 2026 • CDMX</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-slate-50 rounded-2xl p-4 mb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-black text-slate-600 uppercase tracking-wide">Python & Data</span>
+                                <span class="text-sm font-black text-purple-600">94%</span>
+                            </div>
+                            <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                <div class="gradient-purple-blue h-full rounded-full transition-all duration-500" style="width: 94%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-purple-50 text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg">Python</span>
+                            <span class="bg-blue-50 text-blue-700 text-xs font-bold px-3 py-1.5 rounded-lg">Django</span>
+                            <span class="bg-green-50 text-green-700 text-xs font-bold px-3 py-1.5 rounded-lg">SQL</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 2 - Pink -->
+                <div class="student-card bg-white rounded-3xl shadow-clickup hover:shadow-clickup-hover border border-slate-100 overflow-hidden">
+                    <div class="h-2 gradient-pink-orange"></div>
+                    <div class="p-6">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-16 h-16 rounded-2xl gradient-pink-orange flex items-center justify-center text-white text-2xl font-black shadow-lg">
+                                SR
+                            </div>
+                            <div>
+                                <h3 class="font-black text-xl text-slate-900">Sofía Rivera</h3>
+                                <p class="text-sm text-slate-500 font-semibold">22 años</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-3 mb-6 text-sm">
+                            <div class="flex items-start gap-3">
+                                <div class="w-5 h-5 rounded-lg bg-pink-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-pink-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                    </svg>
+                                </div>
+                                <span class="text-slate-700 font-medium leading-tight">Diseño y Comunicación Visual</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-5 h-5 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                </div>
+                                <span class="text-slate-700 font-medium">UNAM</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-5 h-5 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                    </svg>
+                                </div>
+                                <span class="text-slate-700 font-medium">Egreso: Dic 2025 • CDMX</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bg-slate-50 rounded-2xl p-4 mb-4">
+                            <div class="flex justify-between items-center mb-2">
+                                <span class="text-xs font-black text-slate-600 uppercase tracking-wide">UI/UX Design</span>
+                                <span class="text-sm font-black text-pink-600">97%</span>
+                            </div>
+                            <div class="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                                <div class="gradient-pink-orange h-full rounded-full transition-all duration-500" style="width: 97%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex flex-wrap gap-2">
+                            <span class="bg-pink-50 text-pink-700 text-xs font-bold px-3 py-1.5 rounded-lg">Figma</span>
+                            <span class="bg-purple-50 text-purple-700 text-xs font-bold px-3 py-1.5 rounded-lg">Adobe XD</span>
+                            <span class="bg-orange-50 text-orange-700 text-xs font-bold px-3 py-1.5 rounded-lg">Sketch</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 3 - Blue/Green -->
+                <div class="student-card bg-white rounded-3xl shadow-clickup hover:shadow-clickup-hover border border-slate-100 overflow-hidden">
+                    <div class="h-2 gradient-green-blue"></div>
+                    <div class="p-6">
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="w-16 h-16 rounded-2xl gradient-green-blue flex items-center justify-center text-white text-2xl font-black shadow-lg">
+                                CM
+                            </div>
+                            <div>
+                                <h3 class="font-black text-xl text-slate-900">Carlos Mendoza</h3>
+                                <p class="text-sm text-slate-500 font-semibold">24 años</p>
+                            </div>
+                        </div>
+                        
+                        <div class="space-y-3 mb-6 text-sm">
+                            <div class="flex items-start gap-3">
+                                <div class="w-5 h-5 rounded-lg bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                    </svg>
+                                </div>
+                                <span class="text-slate-700 font-medium leading-tight">Ingeniería en Software</span>
+                            </div>
+                            <div class="flex items-center gap-3">
+                                <div class="w-5 h-5 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-3 h-3 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                    </svg>
+                                </div>
+                                <span class="
