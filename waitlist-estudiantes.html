@@ -342,9 +342,28 @@
                 <span class="text-sm font-black text-amber-700">Insignia de Fundador reservada</span>
             </div>
 
-            <p class="text-sm text-slate-400 mb-10">
-                Mientras tanto, cuéntale a alguien más sobre ZentU.
-            </p>
+            <!-- Compartir -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-8">
+                <p class="text-sm font-black text-slate-900 mb-1">¿Conoces a alguien que lo necesite?</p>
+                <p class="text-xs text-slate-500 mb-4">Comparte ZentU — ellos también pueden conseguir su Insignia de Fundador.</p>
+                <div class="flex gap-3 justify-center">
+                    <a href="https://wa.me/?text=Acabo%20de%20unirme%20a%20ZentU%2C%20la%20plataforma%20que%20está%20cambiando%20el%20reclutamiento%20para%20nuestra%20generación.%20Únete%20aquí%3A%20https%3A%2F%2Fjoin.zentu.app" target="_blank"
+                        class="flex items-center gap-2 px-5 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl transition">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.532 5.845L.057 23.428a.5.5 0 00.609.61l5.652-1.462A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.808 9.808 0 01-5.003-1.374l-.36-.214-3.713.96.99-3.618-.235-.374A9.808 9.808 0 012.182 12C2.182 6.58 6.58 2.182 12 2.182S21.818 6.58 21.818 12 17.42 21.818 12 21.818z"/>
+                        </svg>
+                        WhatsApp
+                    </a>
+                    <button onclick="copyLink()" id="copyBtn"
+                        class="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-700 text-sm font-bold rounded-xl transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Copiar link
+                    </button>
+                </div>
+            </div>
 
             <a href="index.html" class="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -367,6 +386,18 @@
                 select.appendChild(opt);
             }
         })();
+
+        function copyLink() {
+            navigator.clipboard.writeText('https://join.zentu.app').then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> ¡Copiado!`;
+                btn.classList.add('border-green-400', 'text-green-600');
+                setTimeout(() => {
+                    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copiar link`;
+                    btn.classList.remove('border-green-400', 'text-green-600');
+                }, 2000);
+            });
+        }
 
         function togglePref(el) {
             el.classList.toggle('selected');
