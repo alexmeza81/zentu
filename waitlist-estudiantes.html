@@ -6,6 +6,9 @@
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <title>Únete a ZentU | Waitlist Estudiantes</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"
+        integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil"
+        crossorigin="anonymous"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
         body {
@@ -375,6 +378,11 @@
     </div>
 
     <script>
+        // Cliente Supabase (habilita el acceso al dashboard al registrarse)
+        const SB_URL = 'https://jlivxulenqbgsybqodiv.supabase.co';
+        const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsaXZ4dWxlbnFiZ3N5YnFvZGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMjQ5ODEsImV4cCI6MjA4MzYwMDk4MX0.qG4Tx7yB9185vypoZa91y3PPCdphwqXRz8WQKsKBH5g';
+        const sbClient = supabase.createClient(SB_URL, SB_KEY);
+
         // Poblar años dinámicamente
         (function populateYears() {
             const select = document.getElementById('egresoAnio');
@@ -445,6 +453,16 @@
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
             btn.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Enviando...`;
+
+            // Guardar en Supabase (habilita el acceso al dashboard). Best-effort: no bloquea el registro.
+            try {
+                await sbClient.from('waitlist_estudiantes').insert({
+                    nombre, apellido, email: correo, universidad: uni, carrera,
+                    egreso_mes: mes, egreso_year: anio, preferencias: prefs || null
+                });
+            } catch (err) {
+                console.error('Supabase waitlist insert failed:', err);
+            }
 
             // Enviar a Web3Forms
             const formData = new FormData(document.getElementById('waitlistForm'));
