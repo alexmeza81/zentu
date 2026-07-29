@@ -119,6 +119,9 @@
   .match-rank { width: 22px; height: 22px; border-radius: 8px; background: linear-gradient(135deg,#7B68EE,#4A9EFF); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 900; color: #fff; flex-shrink: 0; }
   .match-role { font-size: 13px; font-weight: 700; color: #0F172A; }
   .match-sector { font-size: 11px; color: #94A3B8; margin-top: 1px; }
+  .match-why { font-size: 10.5px; color: #7B68EE; margin-top: 2px; font-weight: 600; }
+  .match-nudge { font-size: 12px; color: #64748B; padding: 12px 20px; background: #F5F3FF; line-height: 1.4; }
+  .match-nudge strong { color: #4F46E5; }
   .match-pct { font-size: 15px; font-weight: 900; background: linear-gradient(135deg,#7B68EE,#4A9EFF); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
   .match-bar { width: 60px; height: 4px; background: #EEF2FF; border-radius: 999px; overflow: hidden; margin-top: 4px; }
   .match-bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#7B68EE,#4A9EFF); }
@@ -493,23 +496,89 @@
     }
 
     // ── ROLE MATCH COMPUTATION ──────────────────────────────
-    const ROLE_DEFINITIONS = [
-      { role: 'Analista de Datos Jr.', sector: 'Tecnología · Fintech', keys: ['pensamiento_analitico','resolucion_problemas','orientacion_resultados'], base: 88 },
-      { role: 'Product Manager Jr.', sector: 'Tech · Startups', keys: ['comunicacion_efectiva','trabajo_en_equipo','adaptabilidad'], base: 82 },
-      { role: 'Consultor Jr. (Big 4)', sector: 'Consultoría · Estrategia', keys: ['pensamiento_analitico','comunicacion_efectiva','orientacion_resultados'], base: 76 },
-      { role: 'Coordinador de Marketing', sector: 'Marketing · eCommerce', keys: ['comunicacion_efectiva','adaptabilidad','trabajo_en_equipo'], base: 71 },
+    const _norm = s => (s || '').toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    function _semNum(sem) {
+      if (!sem) return null;
+      const s = _norm(sem);
+      if (s.includes('egres')) return 10;
+      const m = s.match(/\d+/);
+      return m ? parseInt(m[0], 10) : null;
+    }
+
+    // Catálogo de roles corporativos Jr. (cubre la mayoría de carreras)
+    const ROLE_CATALOG = [
+      { role:'Desarrollador Frontend Jr.', sector:'Tecnología · Startups', careers:['sistemas','computac','software','informatic','tic','mecatron','telematic'], skills:['HTML','CSS','JavaScript','React','TypeScript','Git'], industries:['Tecnología','Startups','Fintech'], minSem:4, base:80 },
+      { role:'Desarrollador Backend Jr.', sector:'Tecnología · Fintech', careers:['sistemas','computac','software','informatic','tic'], skills:['Python','Java','Node','SQL','APIs','Git'], industries:['Tecnología','Startups','Fintech'], minSem:4, base:80 },
+      { role:'Ingeniero de Software Jr.', sector:'Tecnología', careers:['sistemas','computac','software','informatic','mecatron'], skills:['Java','Python','C++','Git','SQL'], industries:['Tecnología','Startups'], minSem:5, base:82 },
+      { role:'QA / Tester Jr.', sector:'Tecnología', careers:['sistemas','computac','software','informatic'], skills:['Testing','Selenium','SQL','Jira'], industries:['Tecnología','Startups'], minSem:4, base:70 },
+      { role:'Soporte TI / Help Desk', sector:'Tecnología', careers:['sistemas','informatic','ti','redes','computac'], skills:['Redes','Windows','Soporte','SQL'], industries:['Tecnología'], minSem:2, base:64 },
+      { role:'Analista de Datos Jr.', sector:'Datos · Fintech', careers:['datos','actuar','matemat','estadist','economia','sistemas','ingenieria','fisica'], skills:['SQL','Excel','Python','Power BI','Tableau','Estadística'], industries:['Tecnología','Fintech','Banca y Finanzas','Consultoría'], minSem:5, base:84 },
+      { role:'Data Engineer Jr.', sector:'Datos · Tech', careers:['sistemas','computac','datos','software'], skills:['SQL','Python','ETL','Spark','Cloud'], industries:['Tecnología','Fintech'], minSem:6, base:78 },
+      { role:'Analista de BI', sector:'Datos · Negocios', careers:['datos','sistemas','administrac','economia','industrial'], skills:['Power BI','Tableau','SQL','Excel'], industries:['Tecnología','Retail','Consumo (FMCG)','Banca y Finanzas'], minSem:5, base:76 },
+      { role:'Product Manager Jr.', sector:'Producto · Startups', careers:['sistemas','industrial','negocios','administrac','mercado','diseno'], skills:['Figma','SQL','Excel','Jira','Analytics'], industries:['Tecnología','Startups','Fintech'], minSem:6, base:76 },
+      { role:'Diseñador UX/UI Jr.', sector:'Producto · Diseño', careers:['diseno','comunicac','interactiv','arquitectur','multimedia'], skills:['Figma','Sketch','Adobe XD','Prototipado'], industries:['Tecnología','Startups'], minSem:4, base:78 },
+      { role:'Diseñador Gráfico Jr.', sector:'Diseño · Marketing', careers:['diseno','comunicac','publicidad','artes','multimedia'], skills:['Photoshop','Illustrator','InDesign','Figma'], industries:['Marketing','Medios y Entretenimiento','Retail'], minSem:3, base:70 },
+      { role:'Coordinador de Marketing Jr.', sector:'Marketing · Retail', careers:['mercado','marketing','comunicac','publicidad','administrac','negocios'], skills:['Meta Ads','Google Analytics','Excel','SEO','Canva'], industries:['Marketing','Retail','Consumo (FMCG)'], minSem:5, base:74 },
+      { role:'Growth / Performance Mkt Jr.', sector:'Marketing · Startups', careers:['mercado','marketing','datos','administrac','negocios'], skills:['Google Ads','Meta Ads','SQL','Analytics','A/B Testing'], industries:['Marketing','Startups','Fintech'], minSem:5, base:74 },
+      { role:'Community Manager', sector:'Marketing · Medios', careers:['comunicac','mercado','publicidad','periodis'], skills:['Redes Sociales','Canva','Copywriting'], industries:['Marketing','Medios y Entretenimiento'], minSem:3, base:66 },
+      { role:'Content / Copywriter Jr.', sector:'Marketing · Contenido', careers:['comunicac','letras','periodis','mercado'], skills:['Copywriting','SEO','Redacción'], industries:['Marketing','Medios y Entretenimiento'], minSem:3, base:64 },
+      { role:'Analista Financiero Jr.', sector:'Finanzas · Banca', careers:['finanz','economia','actuar','contad','administrac','negocios'], skills:['Excel','Modelaje Financiero','Power BI','SQL'], industries:['Banca y Finanzas','Fintech','Consultoría'], minSem:5, base:80 },
+      { role:'Consultor Jr. (Big 4)', sector:'Consultoría · Estrategia', careers:['administrac','negocios','economia','finanz','industrial','actuar','sistemas'], skills:['Excel','PowerPoint','SQL','Análisis'], industries:['Consultoría','Banca y Finanzas'], minSem:6, base:78 },
+      { role:'Auditor Jr.', sector:'Finanzas · Consultoría', careers:['contad','finanz','administrac'], skills:['Excel','Auditoría','NIF','SAP'], industries:['Consultoría','Banca y Finanzas'], minSem:5, base:70 },
+      { role:'Contador Jr.', sector:'Contabilidad', careers:['contad','finanz','administrac'], skills:['Excel','Contabilidad','SAP','CONTPAQ'], industries:['Banca y Finanzas','Consultoría'], minSem:5, base:70 },
+      { role:'Analista de Riesgos Jr.', sector:'Banca · Fintech', careers:['actuar','finanz','economia','matemat'], skills:['Excel','SQL','Estadística','Modelaje'], industries:['Banca y Finanzas','Fintech'], minSem:6, base:74 },
+      { role:'Analista de Negocios Jr.', sector:'Negocios · Tech', careers:['administrac','negocios','industrial','economia','sistemas'], skills:['Excel','SQL','Power BI','Procesos'], industries:['Consultoría','Tecnología','Retail'], minSem:5, base:74 },
+      { role:'Coordinador de Operaciones Jr.', sector:'Operaciones · Manufactura', careers:['industrial','administrac','negocios','logistic'], skills:['Excel','Procesos','ERP','SAP'], industries:['Manufactura','Logística','Retail'], minSem:5, base:72 },
+      { role:'Analista de Cadena de Suministro', sector:'Logística · Consumo', careers:['industrial','logistic','negocios','comercio'], skills:['Excel','SAP','SQL','Forecasting'], industries:['Logística','Manufactura','Consumo (FMCG)'], minSem:5, base:72 },
+      { role:'Project Manager Jr.', sector:'Gestión de Proyectos', careers:['industrial','administrac','sistemas','negocios'], skills:['Excel','MS Project','Jira','Scrum'], industries:['Tecnología','Consultoría','Manufactura'], minSem:6, base:72 },
+      { role:'Ejecutivo de Ventas / SDR Jr.', sector:'Ventas · SaaS', careers:['mercado','negocios','administrac','comercio','comunicac'], skills:['CRM','Salesforce','HubSpot','Excel'], industries:['Startups','Tecnología','Retail'], minSem:4, base:70 },
+      { role:'Key Account / Comercial Jr.', sector:'Comercial · Consumo', careers:['negocios','mercado','administrac','comercio'], skills:['CRM','Excel','Negociación'], industries:['Consumo (FMCG)','Retail','Manufactura'], minSem:5, base:68 },
+      { role:'Analista de Recursos Humanos Jr.', sector:'RRHH', careers:['recursos','psicolog','administrac','relaciones','negocios'], skills:['Excel','Reclutamiento','Nómina','ATS'], industries:['Consultoría','Manufactura','Retail'], minSem:5, base:70 },
+      { role:'Reclutador / Talent Jr.', sector:'RRHH · Talent', careers:['psicolog','recursos','administrac','comunicac'], skills:['LinkedIn Recruiter','ATS','Entrevistas'], industries:['Startups','Tecnología','Consultoría'], minSem:4, base:68 },
+      { role:'Ingeniero Industrial / Procesos Jr.', sector:'Manufactura · Industrial', careers:['industrial','mecanic','manufactur','produc','sistemas'], skills:['Lean','Six Sigma','AutoCAD','Excel','SAP'], industries:['Manufactura','Energía','Consumo (FMCG)'], minSem:6, base:74 },
+      { role:'Ingeniero de Calidad Jr.', sector:'Manufactura · Calidad', careers:['industrial','quimic','mecanic','aliment'], skills:['ISO','Six Sigma','Auditoría','Excel'], industries:['Manufactura','Salud','Consumo (FMCG)'], minSem:6, base:70 },
+      { role:'Ingeniero Civil Jr.', sector:'Construcción · Bienes raíces', careers:['civil','construc','arquitectur'], skills:['AutoCAD','Revit','MS Project','Presupuestos'], industries:['Bienes raíces','Energía'], minSem:6, base:72 },
+      { role:'Arquitecto Jr.', sector:'Arquitectura · Bienes raíces', careers:['arquitectur','diseno','urban'], skills:['AutoCAD','Revit','SketchUp','3ds Max','Photoshop'], industries:['Bienes raíces'], minSem:6, base:72 },
+      { role:'Abogado Jr. / Pasante Legal', sector:'Legal', careers:['derecho','legal','juridic'], skills:['Investigación Jurídica','Contratos','Redacción'], industries:['Consultoría','Gobierno y ONG'], minSem:6, base:68 },
+      { role:'Comunicación Corporativa / RRPP Jr.', sector:'Comunicación · Medios', careers:['comunicac','relaciones','periodis','mercado'], skills:['Redacción','Redes Sociales','Eventos'], industries:['Medios y Entretenimiento','Marketing'], minSem:4, base:66 },
     ];
 
-    function computeMatches(hab) {
-      return ROLE_DEFINITIONS.map(def => {
-        let pct = def.base;
-        if (Object.keys(hab).length > 0) {
-          const avg = def.keys.reduce((s, k) => s + (hab[k] || 70), 0) / def.keys.length;
-          pct = Math.round(avg * 0.6 + def.base * 0.4);
-          pct = Math.min(99, Math.max(50, pct));
-        }
-        return { ...def, pct };
-      }).sort((a, b) => b.pct - a.pct);
+    // Match usando carrera + hard skills + semestre + industrias
+    function computeMatches(student) {
+      const st = student || {};
+      const carrera = _norm(st.carrera);
+      const skills = (Array.isArray(st.hard_skills) ? st.hard_skills : []).map(_norm);
+      const inds = (Array.isArray(st.industrias) ? st.industrias : []).map(_norm);
+      const sem = _semNum(st.semestre);
+
+      const scored = ROLE_CATALOG.map(r => {
+        const careerHit = !!carrera && r.careers.some(k => carrera.includes(k));
+        const careerFit = carrera ? (careerHit ? 1 : 0.15) : 0.4;
+
+        const matchedSkills = r.skills.filter(rs => { const n = _norm(rs); return skills.some(us => us.includes(n) || n.includes(us)); });
+        const overlap = matchedSkills.length;
+        const skillFit = r.skills.length ? Math.min(1, overlap / Math.min(3, r.skills.length)) : 0;
+
+        const roleInds = (r.industries || []).map(_norm);
+        const indHit = roleInds.some(ri => inds.some(ui => ui.includes(ri) || ri.includes(ui)));
+        const indFit = inds.length ? (indHit ? 1 : 0.2) : 0.5;
+
+        let semFit = 0.6;
+        if (sem != null) semFit = sem >= (r.minSem || 1) ? 1 : Math.max(0.3, sem / (r.minSem || 1));
+
+        const score = 0.40 * careerFit + 0.30 * skillFit + 0.15 * indFit + 0.15 * semFit;
+        const pct = Math.max(45, Math.min(99, Math.round(45 + score * 54)));
+
+        const reasons = [];
+        if (careerHit) reasons.push('tu carrera');
+        if (overlap > 0) reasons.push(matchedSkills.slice(0, 2).join(', '));
+        if (indHit) reasons.push('tus industrias');
+
+        return { role: r.role, sector: r.sector, pct, reasons, careerHit, overlap };
+      });
+
+      scored.sort((a, b) => (b.pct - a.pct) || (b.careerHit - a.careerHit) || (b.overlap - a.overlap));
+      return scored;
     }
 
     // ── RENDER: PROGRESS CARD ───────────────────────────────
@@ -570,7 +639,7 @@
       const foto = st.foto_url ? escapeHTML(st.foto_url) : '';
       const headline = st.headline ? escapeHTML(st.headline) : '';
       const hab = testResults?.habilidades || {};
-      const matches = computeMatches(hab);
+      const matches = computeMatches(st);
       const industrias = Array.isArray(st.industrias) ? st.industrias : [];
       const carreraLine = ubicacion ? `${carrera} · ${ubicacion}` : carrera;
       const { pct: heroPct } = computeProgress(st, testResults);
@@ -642,14 +711,15 @@
         </div>
 
         <div class="section-title" style="padding-bottom:4px;">Match con roles</div>
-        <div class="section-desc">Traducimos tus <strong>habilidades</strong> y <strong>formación académica</strong> en los roles del mundo corporativo donde mejor encajas.</div>
+        <div class="section-desc">Traducimos tu <strong>carrera</strong>, <strong>habilidades</strong> e <strong>industrias</strong> en los roles del mundo corporativo donde mejor encajas.</div>
         <div class="card" style="margin:0 20px 24px;">
-          ${matches.map((m, i) => `
+          ${matches.slice(0, 6).map((m, i) => `
             <div class="match-item">
               <div class="match-rank">${i + 1}</div>
-              <div style="flex:1;">
-                <div class="match-role">${m.role}</div>
-                <div class="match-sector">${m.sector}</div>
+              <div style="flex:1;min-width:0;">
+                <div class="match-role">${escapeHTML(m.role)}</div>
+                <div class="match-sector">${escapeHTML(m.sector)}</div>
+                ${m.reasons.length ? `<div class="match-why">Por ${escapeHTML(m.reasons.join(' · '))}</div>` : ''}
               </div>
               <div style="text-align:right;">
                 <div class="match-pct">${m.pct}%</div>
@@ -657,6 +727,7 @@
               </div>
             </div>
           `).join('')}
+          ${(!st.carrera || !(Array.isArray(st.hard_skills) && st.hard_skills.length)) ? `<div class="match-nudge">💡 Agrega tu <strong>carrera</strong> y <strong>habilidades</strong> para afinar tus matches.</div>` : ''}
         </div>
       `;
 
@@ -682,7 +753,7 @@
       if (st.disponibilidad) buscoPills.push('Disponible: ' + st.disponibilidad);
       industrias.forEach(i => buscoPills.push(i));
       const hab = testResults?.habilidades || {};
-      const matches = computeMatches(hab);
+      const matches = computeMatches(st);
       const enBusqueda = state.student?.estado === 'en_busqueda';
       const foto = st.foto_url ? escapeHTML(st.foto_url) : '';
       const headline = st.headline ? escapeHTML(st.headline) : '';
