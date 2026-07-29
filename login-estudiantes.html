@@ -178,12 +178,12 @@
 
     <form id="codeForm" onsubmit="handleCodeSubmit(event)">
       <div class="code-row" id="codeRow">
-        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
-        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
-        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
-        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
-        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
-        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
+        <input class="code-box" type="text" inputmode="numeric" maxlength="6" autocomplete="one-time-code" aria-label="Código de acceso"/>
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code"/>
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code"/>
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code"/>
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code"/>
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="one-time-code"/>
       </div>
       <button type="submit" id="codeBtn" class="btn-primary" disabled>Acceder</button>
     </form>
@@ -295,9 +295,25 @@
     function initCodeBoxes() {
       const boxes = Array.from(document.querySelectorAll('.code-box'));
 
+      // Distribuye un código (autofill/paste/varios dígitos) en los 6 cuadros
+      function distribute(text) {
+        const digits = (text || '').replace(/\D/g, '').slice(0, 6);
+        if (!digits) return;
+        boxes.forEach((b, idx) => {
+          b.value = digits[idx] || '';
+          b.classList.toggle('filled', !!b.value);
+        });
+        boxes[Math.min(digits.length, 5)].focus();
+        checkCodeComplete();
+        if (digits.length === 6) document.getElementById('codeForm').requestSubmit();
+      }
+
       boxes.forEach((box, i) => {
         box.addEventListener('input', () => {
-          box.value = box.value.replace(/\D/g, '').slice(-1);
+          const digits = box.value.replace(/\D/g, '');
+          // Autofill del código (iOS one-time-code) o pegado: varios dígitos caen en un solo campo
+          if (digits.length > 1) { distribute(digits); return; }
+          box.value = digits.slice(-1);
           box.classList.toggle('filled', !!box.value);
           if (box.value && i < 5) boxes[i + 1].focus();
           checkCodeComplete();
@@ -313,22 +329,10 @@
         });
       });
 
-      // Paste support — paste 6-digit code into first box
+      // Pegar el código de 6 dígitos
       boxes[0].addEventListener('paste', (e) => {
-        const text = (e.clipboardData || window.clipboardData)
-          .getData('text').replace(/\D/g, '').slice(0, 6);
-        text.split('').forEach((ch, idx) => {
-          if (boxes[idx]) {
-            boxes[idx].value = ch;
-            boxes[idx].classList.add('filled');
-          }
-        });
-        if (text.length === 6) {
-          boxes[5].focus();
-          checkCodeComplete();
-          document.getElementById('codeForm').requestSubmit();
-        }
         e.preventDefault();
+        distribute((e.clipboardData || window.clipboardData).getData('text'));
       });
     }
 
