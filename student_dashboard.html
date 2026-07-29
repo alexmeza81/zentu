@@ -230,6 +230,8 @@
   .field-label { font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; display: block; }
   .hab-note { background: #F5F3FF; border: 1px solid #E0E7FF; border-radius: 12px; padding: 11px 13px; font-size: 12.5px; color: #4C1D95; line-height: 1.5; margin-bottom: 14px; }
   .hab-link { color: #7B68EE; font-weight: 800; cursor: pointer; white-space: nowrap; }
+  .chk-row { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13.5px; color: #334155; font-weight: 600; padding: 4px 0; }
+  .chk-row input { width: 18px; height: 18px; accent-color: #7B68EE; flex-shrink: 0; }
   .field-input, .field-textarea, .field-select { width: 100%; padding: 11px 13px; border: 1px solid #E2E8F0; border-radius: 12px; font-size: 14px; font-family: inherit; background: #fff; color: #0F172A; }
   .field-textarea { min-height: 70px; resize: vertical; }
   .field-input:focus, .field-textarea:focus, .field-select:focus { outline: none; border-color: #7B68EE; }
@@ -452,7 +454,7 @@
       { id:'intereses', label:'Intereses y preferencias', icon:'🔍', fields:[
         { key:'modalidad', label:'Modalidad', type:'select', required:true, options:['Remoto','Híbrido','Presencial'] },
         { key:'tipo_contrato', label:'Tipo de contrato', type:'select', required:true, options:['Tiempo completo','Medio tiempo','Prácticas'] },
-        { key:'industrias', label:'Industrias de interés', type:'tags', required:true, options:['Tecnología','Fintech','Consultoría','Marketing','Salud','Retail','Educación','Startups'] },
+        { key:'industrias', label:'Industrias de interés', type:'tags', required:true, options:['Tecnología','Fintech','Banca y Finanzas','Consultoría','Marketing','Medios y Entretenimiento','Retail','Consumo (FMCG)','Salud','Educación','Startups','Manufactura','Energía','Logística','Bienes raíces','Turismo','Gobierno y ONG'] },
         { key:'disponibilidad', label:'Disponibilidad', type:'select', required:true, options:['Inmediata','En 1 mes','Al egresar'] },
         { key:'expectativa_salarial', label:'Expectativa salarial (opcional)', type:'text', required:false, placeholder:'$18,000–22,000/mes' },
       ]},
@@ -460,6 +462,7 @@
         { key:'linkedin_url', label:'LinkedIn', type:'url', required:true, placeholder:'https://linkedin.com/in/…' },
         { key:'github_url', label:'GitHub (opcional)', type:'url', required:false, placeholder:'https://github.com/…' },
         { key:'portafolio_url', label:'Portafolio (opcional)', type:'url', required:false, placeholder:'https://…' },
+        { key:'links_later', label:'No los tengo a la mano — los añado después', type:'checkbox', required:false },
       ]},
     ];
 
@@ -473,6 +476,8 @@
     function isSectionComplete(sectionId, student, testResults) {
       const sec = PROFILE_SECTIONS.find(s => s.id === sectionId);
       if (!sec) return false;
+      // "Lo añado después" en Links permite completar la sección sin capturar el link.
+      if (sectionId === 'links' && student && student.links_later) return true;
       // Se completa con los campos requeridos. El Test IA es un bonus opcional (mejora el match), no bloquea el 100%.
       return sec.fields.filter(f => f.required).every(f => isFieldFilled(f, student, testResults));
     }
@@ -1065,6 +1070,9 @@
             <input id="foto-file-input" type="file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;" onchange="onPhotoPick(event)"/>
           </div></div>`;
       }
+      if (f.type === 'checkbox') {
+        return `<label class="chk-row" data-key="${f.key}" data-type="checkbox"><input type="checkbox" ${val ? 'checked' : ''}/><span>${escapeHTML(f.label)}</span></label>`;
+      }
       const t = f.type === 'url' ? 'url' : (f.type === 'tel' ? 'tel' : 'text');
       return `<input class="field-input" type="${t}" data-key="${f.key}" value="${escapeHTML(val||'')}" placeholder="${escapeHTML(f.placeholder||'')}"/>`;
     }
@@ -1080,7 +1088,9 @@
         ? `<div class="hab-note">🧠 Con 3+ herramientas ya completas esta sección. El <strong>Test IA</strong> es opcional y potencia tu match con las empresas. <span class="hab-link" onclick="goToTest()">Verlo en Test →</span></div>`
         : '';
       document.getElementById('edit-body').innerHTML = habNote + sec.fields.map(f =>
-        `<div class="field"><label class="field-label">${escapeHTML(f.label)}</label>${fieldHTML(f)}</div>`).join('');
+        f.type === 'checkbox'
+          ? `<div class="field">${fieldHTML(f)}</div>`
+          : `<div class="field"><label class="field-label">${escapeHTML(f.label)}</label>${fieldHTML(f)}</div>`).join('');
       document.getElementById('edit-error').style.display = 'none';
       document.getElementById('edit-modal').classList.add('open');
     }
@@ -1146,10 +1156,12 @@
         const type = el.getAttribute('data-type');
         if (type === 'tags') editDraft[key] = [...el.querySelectorAll('.tag-opt.sel')].map(t => t.textContent);
         else if (type === 'skills' || type === 'photo') { /* ya en editDraft */ }
+        else if (type === 'checkbox') editDraft[key] = el.querySelector('input').checked;
         else if (el.tagName === 'SELECT' || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') editDraft[key] = el.value.trim();
       });
     }
     function validateDraft(sec) {
+      if (sec.id === 'links' && editDraft.links_later) return null;
       for (const f of sec.fields) {
         if (!f.required) continue;
         if (f.type === 'skills' && (!(editDraft[f.key]||[]).length || editDraft[f.key].length < 3)) return 'Añade al menos 3 habilidades.';
