@@ -197,6 +197,9 @@
   @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
   .modal-handle { width: 36px; height: 4px; border-radius: 999px; background: #E2E8F0; margin: 12px auto; }
   .modal-title { text-align: center; font-size: 15px; font-weight: 800; color: #0F172A; padding: 4px 20px 16px; }
+  .modal-head { position: sticky; top: 0; z-index: 6; background: #F8FAFC; border-radius: 24px 24px 0 0; }
+  .sheet-close { position: absolute; top: 12px; right: 14px; width: 32px; height: 32px; border-radius: 999px; border: none; background: #EEF2FF; color: #475569; font-size: 15px; font-weight: 700; cursor: pointer; line-height: 1; display: flex; align-items: center; justify-content: center; }
+  .sheet-close:active { transform: scale(0.92); }
   .recruiter-card { margin: 0 20px; background: #fff; border-radius: 20px; border: 1px solid #E2E8F0; overflow: hidden; box-shadow: 0 8px 32px rgba(123,104,238,0.12); }
   .recruiter-card-top { height: 5px; background: linear-gradient(90deg,#7B68EE,#4A9EFF); }
   .recruiter-card-body { padding: 18px; }
@@ -293,8 +296,11 @@
 <!-- MODAL: Así te ven los reclutadores -->
 <div class="modal-overlay" id="modal" onclick="closeModalOutside(event)">
   <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-title">👀 Así te ven los reclutadores</div>
+    <div class="modal-head">
+      <div class="modal-handle"></div>
+      <div class="modal-title">👀 Así te ven los reclutadores</div>
+      <button class="sheet-close" onclick="closeModal()" aria-label="Cerrar">✕</button>
+    </div>
     <div class="recruiter-card">
       <div class="recruiter-card-top"></div>
       <div class="recruiter-card-body" id="recruiter-card-body">
@@ -311,8 +317,11 @@
 <!-- MODAL: Editar sección de perfil -->
 <div class="modal-overlay" id="edit-modal" onclick="closeEditOutside(event)">
   <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-title" id="edit-title">Editar</div>
+    <div class="modal-head">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="edit-title">Editar</div>
+      <button class="sheet-close" onclick="closeEditSheet()" aria-label="Cerrar">✕</button>
+    </div>
     <div id="edit-body" style="padding:0 20px;"></div>
     <div id="edit-error" style="display:none;color:#EF4444;font-size:12.5px;padding:6px 20px 0;"></div>
     <div class="modal-cta" onclick="saveEditSheet()"><div class="modal-cta-text">Guardar</div></div>
@@ -322,8 +331,11 @@
 <!-- MODAL: selector de tema del hero -->
 <div class="modal-overlay" id="theme-modal" onclick="closeThemeOutside(event)">
   <div class="modal-sheet">
-    <div class="modal-handle"></div>
-    <div class="modal-title">🎨 Tema de tu perfil</div>
+    <div class="modal-head">
+      <div class="modal-handle"></div>
+      <div class="modal-title">🎨 Tema de tu perfil</div>
+      <button class="sheet-close" onclick="document.getElementById('theme-modal').classList.remove('open')" aria-label="Cerrar">✕</button>
+    </div>
     <div id="theme-options" style="padding:0 20px 8px;"></div>
   </div>
 </div>
