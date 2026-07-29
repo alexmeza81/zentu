@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Iniciar sesión — ZentU Estudiantes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #F8F9FA; }
+
+    .gradient-purple-blue { background: linear-gradient(135deg, #7B68EE 0%, #4A9EFF 100%); }
+
+    .shadow-card {
+      box-shadow:
+        0 0 0 1px rgba(0,0,0,.04),
+        0 2px 6px rgba(0,0,0,.04),
+        0 10px 20px rgba(0,0,0,.08);
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in { animation: fadeInUp 0.6s ease forwards; }
+
+    .gradient-text {
+      background: linear-gradient(135deg, #7B68EE 0%, #4A9EFF 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 flex">
+
+  <!-- ===== COLUMNA IZQUIERDA ===== -->
+  <div class="hidden lg:flex lg:w-1/2 gradient-purple-blue flex-col justify-between p-12 relative overflow-hidden">
+
+    <!-- Blobs decorativos -->
+    <div class="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-400/20 rounded-full blur-2xl"></div>
+
+    <!-- Logo -->
+    <div class="relative z-10 flex items-center gap-3">
+      <div class="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+      <span class="text-white text-xl font-black tracking-tight">ZentU</span>
+    </div>
+
+    <!-- Contenido central -->
+    <div class="relative z-10">
+      <h2 class="text-4xl font-black text-white leading-tight mb-4">
+        Tu carrera comienza con un clic.
+      </h2>
+      <p class="text-purple-100 text-lg mb-10">
+        Las empresas más innovadoras de LATAM ya están buscando tu perfil en ZentU.
+      </p>
+
+      <!-- Beneficios -->
+      <div class="flex flex-col gap-5">
+        <div class="flex items-center gap-4">
+          <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <span class="text-white font-medium">Accede a tu perfil y completa tu información</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <span class="text-white font-medium">Realiza el Test de Habilidades IA</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <span class="text-white font-medium">Descubre tu match con roles corporativos</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <p class="relative z-10 text-purple-200 text-sm">© 2026 ZentU · zentu.app</p>
+  </div>
+
+  <!-- ===== COLUMNA DERECHA ===== -->
+  <div class="flex-1 flex items-center justify-center p-6 lg:p-12">
+    <div class="w-full max-w-md fade-in">
+
+      <!-- Logo solo en mobile -->
+      <div class="lg:hidden flex items-center gap-3 mb-10">
+        <div class="w-10 h-10 gradient-purple-blue rounded-2xl flex items-center justify-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+        </div>
+        <span class="text-slate-900 text-xl font-black tracking-tight">ZentU</span>
+      </div>
+
+      <!-- ===== ESTADO: FORMULARIO ===== -->
+      <div id="form-state">
+        <div class="mb-8">
+          <h1 class="text-3xl font-black text-slate-900 mb-2">Bienvenido de vuelta</h1>
+          <p class="text-slate-500">Escribe tu correo y te enviamos un enlace de acceso. Sin contraseña.</p>
+        </div>
+
+        <form id="login-form" novalidate>
+
+          <!-- Error -->
+          <div id="error-msg" class="hidden mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
+            <p class="text-red-600 text-sm font-medium">Ocurrió un error. Intenta de nuevo.</p>
+          </div>
+
+          <!-- Campo email -->
+          <div class="mb-6">
+            <label for="email-input" class="block text-sm font-semibold text-slate-700 mb-2">
+              Correo electrónico
+            </label>
+            <input
+              id="email-input"
+              type="email"
+              name="email"
+              autocomplete="email"
+              placeholder="tu@correo.com"
+              required
+              class="w-full px-4 py-3.5 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-purple-500 focus:outline-none transition-colors duration-200 text-base"
+            />
+          </div>
+
+          <!-- Botón submit -->
+          <button
+            id="submit-btn"
+            type="submit"
+            class="w-full gradient-purple-blue text-white font-black py-4 rounded-xl flex items-center justify-center gap-3 hover:opacity-90 active:scale-[0.98] transition-all duration-200 text-base shadow-card"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
+            <span id="submit-label">Enviarme el enlace de acceso</span>
+          </button>
+
+        </form>
+
+        <!-- Divider -->
+        <div class="mt-8 pt-6 border-t border-slate-100 text-center">
+          <p class="text-slate-500 text-sm">
+            ¿Eres empresa?
+            <a href="login-empresas.html" class="text-purple-600 font-bold hover:text-purple-700 transition-colors duration-150">
+              Accede aquí →
+            </a>
+          </p>
+        </div>
+
+        <!-- Volver -->
+        <div class="mt-4 text-center">
+          <a href="https://zentu.app" class="text-slate-400 text-sm hover:text-slate-600 transition-colors duration-150">
+            ← Volver a zentu.app
+          </a>
+        </div>
+      </div>
+
+      <!-- ===== ESTADO: ÉXITO ===== -->
+      <div id="success-state" class="hidden text-center" role="status" aria-live="polite">
+        <!-- Ícono mail grande -->
+        <div class="w-20 h-20 gradient-purple-blue rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-card">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </div>
+
+        <h2 class="text-3xl font-black text-slate-900 mb-3">Revisa tu bandeja</h2>
+        <p class="text-slate-500 mb-3">Te enviamos el enlace de acceso a:</p>
+        <p id="success-email" class="font-bold text-slate-900 text-lg mb-2 break-all"></p>
+        <p class="text-slate-400 text-sm mb-8">¿No lo ves? Revisa spam o espera un momento.</p>
+
+        <button
+          onclick="resetForm()"
+          class="w-full border-2 border-slate-200 text-slate-600 font-semibold py-4 rounded-xl hover:border-purple-300 hover:text-purple-600 transition-all duration-200"
+        >
+          Usar otro correo
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== JAVASCRIPT ===== -->
+  <script>
+    // Supabase client
+    const SUPABASE_URL = 'https://jlivxulenqbgsybqodiv.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_9GUTPz0szTAIbaXcTZAxHg_aiWbaQNg';
+    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // Si ya tiene sesión activa, redirigir al dashboard
+    supabaseClient.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        window.location.href = 'student_dashboard.html';
+      }
+    });
+
+    document.getElementById('login-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email-input').value.trim();
+      const btn = document.getElementById('submit-btn');
+      const submitLabel = document.getElementById('submit-label');
+      document.getElementById('error-msg').classList.add('hidden');
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        const errorEl = document.getElementById('error-msg');
+        errorEl.querySelector('p').textContent = 'Ingresa un correo válido.';
+        errorEl.classList.remove('hidden');
+        return;
+      }
+
+      btn.disabled = true;
+      submitLabel.textContent = 'Enviando...';
+
+      try {
+        const { error } = await supabaseClient.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: 'https://zentu.app/student_dashboard.html'
+          }
+        });
+        if (error) throw error;
+
+        document.getElementById('success-email').textContent = email;
+        document.getElementById('form-state').classList.add('hidden');
+        document.getElementById('success-state').classList.remove('hidden');
+        const successEl = document.getElementById('success-state');
+        successEl.setAttribute('tabindex', '-1');
+        successEl.focus();
+      } catch (err) {
+        const errorEl = document.getElementById('error-msg');
+        errorEl.querySelector('p').textContent = err.message || 'Ocurrió un error. Intenta de nuevo.';
+        errorEl.classList.remove('hidden');
+        btn.disabled = false;
+        submitLabel.textContent = 'Enviarme el enlace de acceso';
+      }
+    });
+
+    function resetForm() {
+      document.getElementById('form-state').classList.remove('hidden');
+      document.getElementById('success-state').classList.add('hidden');
+      document.getElementById('error-msg').classList.add('hidden');
+      document.getElementById('email-input').value = '';
+      const btn = document.getElementById('submit-btn');
+      btn.disabled = false;
+      document.getElementById('submit-label').textContent = 'Enviarme el enlace de acceso';
+    }
+  </script>
+
+</body>
+</html>

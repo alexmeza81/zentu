@@ -1,268 +1,430 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Iniciar sesión — ZentU Estudiantes</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Acceder — ZentU</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2">
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
-    body { font-family: 'Inter', sans-serif; background: #F8F9FA; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    .gradient-purple-blue { background: linear-gradient(135deg, #7B68EE 0%, #4A9EFF 100%); }
-
-    .shadow-card {
-      box-shadow:
-        0 0 0 1px rgba(0,0,0,.04),
-        0 2px 6px rgba(0,0,0,.04),
-        0 10px 20px rgba(0,0,0,.08);
+    body {
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      background-color: #F9FAFB;
+      background-image:
+        radial-gradient(circle at 12% 40%, rgba(123,104,238,0.09) 0%, transparent 50%),
+        radial-gradient(circle at 88% 70%, rgba(74,158,255,0.08)  0%, transparent 50%),
+        radial-gradient(circle at 55% 5%,  rgba(13,148,136,0.06)  0%, transparent 40%);
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
     }
+
+    .card {
+      background: #fff;
+      border-radius: 22px;
+      box-shadow: 0 0 0 1px rgba(0,0,0,.05), 0 4px 12px rgba(0,0,0,.06), 0 24px 48px rgba(0,0,0,.10);
+      width: 100%; max-width: 420px;
+      padding: 40px 36px;
+    }
+
+    .step { display: block; }
+    .step.off { display: none; }
 
     @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(20px); }
+      from { opacity: 0; transform: translateY(16px); }
       to   { opacity: 1; transform: translateY(0); }
     }
-    .fade-in { animation: fadeInUp 0.6s ease forwards; }
+    .card { animation: fadeInUp 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
 
-    .gradient-text {
-      background: linear-gradient(135deg, #7B68EE 0%, #4A9EFF 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
+    .logo {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 32px; text-decoration: none;
     }
+    .logo-icon {
+      width: 40px; height: 40px; border-radius: 12px;
+      background: linear-gradient(135deg, #7B68EE, #4A9EFF);
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px rgba(123,104,238,0.35);
+      flex-shrink: 0;
+    }
+    .logo-name { font-size: 22px; font-weight: 900; letter-spacing: -0.03em; color: #0F172A; }
+
+    .step-title { font-size: 20px; font-weight: 800; color: #0F172A; letter-spacing: -0.02em; margin-bottom: 6px; }
+    .step-sub   { font-size: 13.5px; color: #64748B; margin-bottom: 28px; line-height: 1.5; }
+
+    .f-label {
+      display: block; font-size: 11.5px; font-weight: 700;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      color: #64748B; margin-bottom: 7px;
+    }
+    .z-input {
+      width: 100%; background: #F8FAFC; border: 1.5px solid #E2E8F0;
+      border-radius: 11px; color: #0F172A;
+      padding: 13px 15px; font-family: 'Inter', sans-serif; font-size: 15px;
+      transition: all 0.2s; outline: none;
+    }
+    .z-input::placeholder { color: #CBD5E1; }
+    .z-input:focus { border-color: #7B68EE; background: #fff; box-shadow: 0 0 0 3px rgba(123,104,238,0.12); }
+
+    .fg { margin-bottom: 20px; }
+
+    .btn-primary {
+      width: 100%; padding: 13px; border-radius: 12px; border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-size: 15px; font-weight: 700;
+      color: #fff; background: linear-gradient(135deg, #7B68EE, #4A9EFF);
+      box-shadow: 0 4px 16px rgba(123,104,238,0.35);
+      transition: all 0.3s;
+    }
+    .btn-primary:hover    { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(123,104,238,0.45); }
+    .btn-primary:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+
+    .auth-msg { padding: 11px 14px; border-radius: 10px; font-size: 13px; font-weight: 500; margin-bottom: 18px; }
+    .msg-err  { background: #FEF2F2; border: 1px solid #FECACA; color: #B91C1C; }
+    .msg-ok   { background: #F0FDF4; border: 1px solid #BBF7D0; color: #166534; }
+
+    /* 6-digit code inputs */
+    .code-row {
+      display: flex; gap: 8px; justify-content: center;
+      margin-bottom: 24px;
+    }
+    .code-box {
+      width: 48px; height: 58px; border-radius: 11px;
+      border: 2px solid #E2E8F0; background: #F8FAFC;
+      font-family: 'Inter', sans-serif; font-size: 24px; font-weight: 900;
+      color: #0F172A; text-align: center; outline: none;
+      transition: all 0.2s; caret-color: transparent;
+    }
+    .code-box:focus { border-color: #7B68EE; background: #fff; box-shadow: 0 0 0 3px rgba(123,104,238,0.12); }
+    .code-box.filled { border-color: #7B68EE; color: #7B68EE; }
+
+    .resend-row { text-align: center; margin-top: 16px; font-size: 13px; color: #94A3B8; }
+    .resend-btn {
+      background: none; border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700;
+      color: #7B68EE; padding: 0; transition: color 0.2s;
+    }
+    .resend-btn:hover    { color: #4338CA; }
+    .resend-btn:disabled { color: #CBD5E1; cursor: not-allowed; }
+
+    .back-btn {
+      background: none; border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif; font-size: 12.5px; font-weight: 600;
+      color: #94A3B8; padding: 0; margin-top: 14px;
+      display: flex; align-items: center; gap: 5px; transition: color 0.2s;
+    }
+    .back-btn:hover { color: #475569; }
+
+    .email-display {
+      font-size: 13.5px; color: #0F172A; font-weight: 600;
+      background: #F1F5F9; border-radius: 8px;
+      padding: 8px 12px; margin-bottom: 24px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .email-display span { color: #64748B; font-size: 12px; font-weight: 400; }
   </style>
 </head>
-<body class="min-h-screen bg-slate-50 flex">
+<body>
 
-  <!-- ===== COLUMNA IZQUIERDA ===== -->
-  <div class="hidden lg:flex lg:w-1/2 gradient-purple-blue flex-col justify-between p-12 relative overflow-hidden">
-
-    <!-- Blobs decorativos -->
-    <div class="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
-    <div class="absolute bottom-0 left-0 w-64 h-64 bg-blue-400/20 rounded-full blur-2xl"></div>
-
-    <!-- Logo -->
-    <div class="relative z-10 flex items-center gap-3">
-      <div class="w-10 h-10 bg-white/20 rounded-2xl flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+  <!-- PASO 1 — Email -->
+  <div class="card step" id="step1">
+    <a href="index.html" class="logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="white">
+          <polygon points="4,4 20,4 20,8 8,16 20,16 20,20 4,20 4,16 15,8 4,8"/>
         </svg>
       </div>
-      <span class="text-white text-xl font-black tracking-tight">ZentU</span>
-    </div>
+      <span class="logo-name">ZentU</span>
+    </a>
 
-    <!-- Contenido central -->
-    <div class="relative z-10">
-      <h2 class="text-4xl font-black text-white leading-tight mb-4">
-        Tu carrera comienza con un clic.
-      </h2>
-      <p class="text-purple-100 text-lg mb-10">
-        Las empresas más innovadoras de LATAM ya están buscando tu perfil en ZentU.
-      </p>
+    <h1 class="step-title">Bienvenido de nuevo</h1>
+    <p class="step-sub">Ingresa tu correo y te enviamos un código de acceso.</p>
 
-      <!-- Beneficios -->
-      <div class="flex flex-col gap-5">
-        <div class="flex items-center gap-4">
-          <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <span class="text-white font-medium">Accede a tu perfil y completa tu información</span>
-        </div>
-        <div class="flex items-center gap-4">
-          <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <span class="text-white font-medium">Realiza el Test de Habilidades IA</span>
-        </div>
-        <div class="flex items-center gap-4">
-          <div class="w-8 h-8 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-            </svg>
-          </div>
-          <span class="text-white font-medium">Descubre tu match con roles corporativos</span>
-        </div>
+    <div id="msg1" style="display:none;"></div>
+
+    <form id="emailForm" onsubmit="handleEmailSubmit(event)">
+      <div class="fg">
+        <label class="f-label" for="emailInput">Correo electrónico</label>
+        <input id="emailInput" type="email" placeholder="ana@correo.com" required class="z-input" autocomplete="email"/>
       </div>
-    </div>
-
-    <!-- Footer -->
-    <p class="relative z-10 text-purple-200 text-sm">© 2026 ZentU · zentu.app</p>
+      <button type="submit" id="emailBtn" class="btn-primary">Enviar código</button>
+    </form>
   </div>
 
-  <!-- ===== COLUMNA DERECHA ===== -->
-  <div class="flex-1 flex items-center justify-center p-6 lg:p-12">
-    <div class="w-full max-w-md fade-in">
-
-      <!-- Logo solo en mobile -->
-      <div class="lg:hidden flex items-center gap-3 mb-10">
-        <div class="w-10 h-10 gradient-purple-blue rounded-2xl flex items-center justify-center">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-          </svg>
-        </div>
-        <span class="text-slate-900 text-xl font-black tracking-tight">ZentU</span>
+  <!-- PASO 2 — Código -->
+  <div class="card step off" id="step2">
+    <a href="index.html" class="logo">
+      <div class="logo-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
       </div>
+      <span class="logo-name">ZentU</span>
+    </a>
 
-      <!-- ===== ESTADO: FORMULARIO ===== -->
-      <div id="form-state">
-        <div class="mb-8">
-          <h1 class="text-3xl font-black text-slate-900 mb-2">Bienvenido de vuelta</h1>
-          <p class="text-slate-500">Escribe tu correo y te enviamos un enlace de acceso. Sin contraseña.</p>
-        </div>
+    <h1 class="step-title">Revisa tu correo</h1>
+    <p class="step-sub" id="codeSub">Enviamos un código de 6 dígitos a tu correo.</p>
 
-        <form id="login-form" novalidate>
+    <div class="email-display" id="emailDisplay">
+      <span id="emailShown">—</span>
+      <span>Código enviado</span>
+    </div>
 
-          <!-- Error -->
-          <div id="error-msg" class="hidden mb-4 p-4 bg-red-50 border border-red-200 rounded-xl">
-            <p class="text-red-600 text-sm font-medium">Ocurrió un error. Intenta de nuevo.</p>
-          </div>
+    <div id="msg2" style="display:none;"></div>
 
-          <!-- Campo email -->
-          <div class="mb-6">
-            <label for="email-input" class="block text-sm font-semibold text-slate-700 mb-2">
-              Correo electrónico
-            </label>
-            <input
-              id="email-input"
-              type="email"
-              name="email"
-              autocomplete="email"
-              placeholder="tu@correo.com"
-              required
-              class="w-full px-4 py-3.5 border-2 border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:border-purple-500 focus:outline-none transition-colors duration-200 text-base"
-            />
-          </div>
-
-          <!-- Botón submit -->
-          <button
-            id="submit-btn"
-            type="submit"
-            class="w-full gradient-purple-blue text-white font-black py-4 rounded-xl flex items-center justify-center gap-3 hover:opacity-90 active:scale-[0.98] transition-all duration-200 text-base shadow-card"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-            <span id="submit-label">Enviarme el enlace de acceso</span>
-          </button>
-
-        </form>
-
-        <!-- Divider -->
-        <div class="mt-8 pt-6 border-t border-slate-100 text-center">
-          <p class="text-slate-500 text-sm">
-            ¿Eres empresa?
-            <a href="login-empresas.html" class="text-purple-600 font-bold hover:text-purple-700 transition-colors duration-150">
-              Accede aquí →
-            </a>
-          </p>
-        </div>
-
-        <!-- Volver -->
-        <div class="mt-4 text-center">
-          <a href="https://zentu.app" class="text-slate-400 text-sm hover:text-slate-600 transition-colors duration-150">
-            ← Volver a zentu.app
-          </a>
-        </div>
+    <form id="codeForm" onsubmit="handleCodeSubmit(event)">
+      <div class="code-row" id="codeRow">
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
+        <input class="code-box" type="text" inputmode="numeric" maxlength="1" autocomplete="off"/>
       </div>
+      <button type="submit" id="codeBtn" class="btn-primary" disabled>Acceder</button>
+    </form>
 
-      <!-- ===== ESTADO: ÉXITO ===== -->
-      <div id="success-state" class="hidden text-center" role="status" aria-live="polite">
-        <!-- Ícono mail grande -->
-        <div class="w-20 h-20 gradient-purple-blue rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-card">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-          </svg>
-        </div>
+    <div class="resend-row">
+      ¿No llegó? <button class="resend-btn" id="resendBtn" onclick="handleResend()">Reenviar código</button>
+      <span id="resendTimer" style="display:none;"></span>
+    </div>
 
-        <h2 class="text-3xl font-black text-slate-900 mb-3">Revisa tu bandeja</h2>
-        <p class="text-slate-500 mb-3">Te enviamos el enlace de acceso a:</p>
-        <p id="success-email" class="font-bold text-slate-900 text-lg mb-2 break-all"></p>
-        <p class="text-slate-400 text-sm mb-8">¿No lo ves? Revisa spam o espera un momento.</p>
-
-        <button
-          onclick="resetForm()"
-          class="w-full border-2 border-slate-200 text-slate-600 font-semibold py-4 rounded-xl hover:border-purple-300 hover:text-purple-600 transition-all duration-200"
-        >
-          Usar otro correo
-        </button>
-      </div>
-
+    <div style="text-align:center;">
+      <button class="back-btn" onclick="goToStep1()">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Usar otro correo
+      </button>
     </div>
   </div>
 
-  <!-- ===== JAVASCRIPT ===== -->
   <script>
-    // Supabase client
+    // ── Config ───────────────────────────────────────────────
     const SUPABASE_URL = 'https://jlivxulenqbgsybqodiv.supabase.co';
-    const SUPABASE_ANON_KEY = 'sb_publishable_9GUTPz0szTAIbaXcTZAxHg_aiWbaQNg';
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsaXZ4dWxlbnFiZ3N5YnFvZGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMjQ5ODEsImV4cCI6MjA4MzYwMDk4MX0.qG4Tx7yB9185vypoZa91y3PPCdphwqXRz8WQKsKBH5g';
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Si ya tiene sesión activa, redirigir al dashboard
-    supabaseClient.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        window.location.href = 'student_dashboard.html';
-      }
-    });
+    const DASHBOARDS = {
+      student: 'student_dashboard.html',
+      company: 'zentu-company-dashboard.html'
+    };
 
-    document.getElementById('login-form').addEventListener('submit', async (e) => {
+    let currentEmail = '';
+    let detectedRole  = null;
+
+    // ── Helpers ──────────────────────────────────────────────
+    function showMsg(stepNum, text, isErr) {
+      const el = document.getElementById('msg' + stepNum);
+      el.className = 'auth-msg ' + (isErr ? 'msg-err' : 'msg-ok');
+      el.textContent = text;
+      el.style.display = 'block';
+    }
+    function clearMsg(stepNum) {
+      const el = document.getElementById('msg' + stepNum);
+      el.style.display = 'none';
+    }
+    function setLoading(btnId, on, label) {
+      const btn = document.getElementById(btnId);
+      btn.disabled = on;
+      btn.textContent = on ? 'Procesando...' : label;
+    }
+
+    // ── Waitlist check ───────────────────────────────────────
+    async function checkWaitlist(email) {
+      const { data, error } = await sb.rpc('check_waitlist_role', { p_email: email });
+      if (error || !data) return null;
+      return data; // 'student' | 'company'
+    }
+
+    // ── Step 1: Email submit ─────────────────────────────────
+    async function handleEmailSubmit(e) {
       e.preventDefault();
-      const email = document.getElementById('email-input').value.trim();
-      const btn = document.getElementById('submit-btn');
-      const submitLabel = document.getElementById('submit-label');
-      document.getElementById('error-msg').classList.add('hidden');
-
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        const errorEl = document.getElementById('error-msg');
-        errorEl.querySelector('p').textContent = 'Ingresa un correo válido.';
-        errorEl.classList.remove('hidden');
-        return;
-      }
-
-      btn.disabled = true;
-      submitLabel.textContent = 'Enviando...';
+      clearMsg(1);
+      const email = document.getElementById('emailInput').value.trim();
+      setLoading('emailBtn', true, 'Enviar código');
 
       try {
-        const { error } = await supabaseClient.auth.signInWithOtp({
+        const role = await checkWaitlist(email);
+        if (!role) {
+          showMsg(1, 'Este correo no está en nuestra lista de acceso.', true);
+          return;
+        }
+
+        const { error } = await sb.auth.signInWithOtp({
           email,
-          options: {
-            emailRedirectTo: 'https://zentu.app/student_dashboard.html'
-          }
+          options: { shouldCreateUser: true }
         });
         if (error) throw error;
 
-        document.getElementById('success-email').textContent = email;
-        document.getElementById('form-state').classList.add('hidden');
-        document.getElementById('success-state').classList.remove('hidden');
-        const successEl = document.getElementById('success-state');
-        successEl.setAttribute('tabindex', '-1');
-        successEl.focus();
+        currentEmail  = email;
+        detectedRole  = role;
+        localStorage.setItem('zentu_pending_role', role);
+
+        document.getElementById('emailShown').textContent = email;
+        goToStep2();
       } catch (err) {
-        const errorEl = document.getElementById('error-msg');
-        errorEl.querySelector('p').textContent = err.message || 'Ocurrió un error. Intenta de nuevo.';
-        errorEl.classList.remove('hidden');
-        btn.disabled = false;
-        submitLabel.textContent = 'Enviarme el enlace de acceso';
+        showMsg(1, err.message || 'No pudimos enviar el código. Intenta de nuevo.', true);
+      } finally {
+        setLoading('emailBtn', false, 'Enviar código');
       }
-    });
-
-    function resetForm() {
-      document.getElementById('form-state').classList.remove('hidden');
-      document.getElementById('success-state').classList.add('hidden');
-      document.getElementById('error-msg').classList.add('hidden');
-      document.getElementById('email-input').value = '';
-      const btn = document.getElementById('submit-btn');
-      btn.disabled = false;
-      document.getElementById('submit-label').textContent = 'Enviarme el enlace de acceso';
     }
-  </script>
 
+    // ── Step navigation ──────────────────────────────────────
+    function goToStep2() {
+      document.getElementById('step1').classList.add('off');
+      document.getElementById('step2').classList.remove('off');
+      clearMsg(2);
+      resetCodeBoxes();
+      setTimeout(() => document.querySelectorAll('.code-box')[0].focus(), 80);
+    }
+
+    function goToStep1() {
+      document.getElementById('step2').classList.add('off');
+      document.getElementById('step1').classList.remove('off');
+      clearMsg(1);
+      currentEmail = '';
+      detectedRole  = null;
+    }
+
+    // ── Code boxes ───────────────────────────────────────────
+    function initCodeBoxes() {
+      const boxes = Array.from(document.querySelectorAll('.code-box'));
+
+      boxes.forEach((box, i) => {
+        box.addEventListener('input', () => {
+          box.value = box.value.replace(/\D/g, '').slice(-1);
+          box.classList.toggle('filled', !!box.value);
+          if (box.value && i < 5) boxes[i + 1].focus();
+          checkCodeComplete();
+        });
+
+        box.addEventListener('keydown', (e) => {
+          if (e.key === 'Backspace' && !box.value && i > 0) {
+            boxes[i - 1].value = '';
+            boxes[i - 1].classList.remove('filled');
+            boxes[i - 1].focus();
+            checkCodeComplete();
+          }
+        });
+      });
+
+      // Paste support — paste 6-digit code into first box
+      boxes[0].addEventListener('paste', (e) => {
+        const text = (e.clipboardData || window.clipboardData)
+          .getData('text').replace(/\D/g, '').slice(0, 6);
+        text.split('').forEach((ch, idx) => {
+          if (boxes[idx]) {
+            boxes[idx].value = ch;
+            boxes[idx].classList.add('filled');
+          }
+        });
+        if (text.length === 6) {
+          boxes[5].focus();
+          checkCodeComplete();
+          document.getElementById('codeForm').requestSubmit();
+        }
+        e.preventDefault();
+      });
+    }
+
+    function getCodeValue() {
+      return Array.from(document.querySelectorAll('.code-box')).map(b => b.value).join('');
+    }
+
+    function checkCodeComplete() {
+      const btn = document.getElementById('codeBtn');
+      btn.disabled = getCodeValue().length < 6;
+    }
+
+    function resetCodeBoxes() {
+      document.querySelectorAll('.code-box').forEach(b => {
+        b.value = '';
+        b.classList.remove('filled');
+      });
+      document.getElementById('codeBtn').disabled = true;
+    }
+
+    // ── Step 2: Code submit ──────────────────────────────────
+    async function handleCodeSubmit(e) {
+      e.preventDefault();
+      clearMsg(2);
+      const token = getCodeValue();
+      if (token.length < 6) return;
+
+      setLoading('codeBtn', true, 'Acceder');
+
+      try {
+        const { data, error } = await sb.auth.verifyOtp({
+          email: currentEmail,
+          token,
+          type: 'email'
+        });
+        if (error) throw error;
+
+        // Guardar rol en user_metadata
+        const role = detectedRole || localStorage.getItem('zentu_pending_role');
+        if (role) {
+          await sb.auth.updateUser({ data: { role } });
+          localStorage.removeItem('zentu_pending_role');
+        }
+
+        window.location.href = DASHBOARDS[role] || DASHBOARDS.student;
+      } catch (err) {
+        const msg = err.message && err.message.toLowerCase().includes('expired')
+          ? 'El código expiró. Reenvía uno nuevo.'
+          : 'Código incorrecto. Intenta de nuevo.';
+        showMsg(2, msg, true);
+        setLoading('codeBtn', false, 'Acceder');
+        resetCodeBoxes();
+        setTimeout(() => document.querySelectorAll('.code-box')[0].focus(), 80);
+      }
+    }
+
+    // ── Resend with 30s cooldown ─────────────────────────────
+    let resendCountdown = null;
+
+    async function handleResend() {
+      clearMsg(2);
+      const resendBtn   = document.getElementById('resendBtn');
+      const resendTimer = document.getElementById('resendTimer');
+
+      resendBtn.disabled = true;
+      resendBtn.style.display = 'none';
+      resendTimer.style.display = 'inline';
+
+      let secs = 30;
+      resendTimer.textContent = `Reenviar en ${secs}s`;
+
+      try {
+        const { error } = await sb.auth.signInWithOtp({
+          email: currentEmail,
+          options: { shouldCreateUser: true }
+        });
+        if (error) throw error;
+        showMsg(2, 'Código reenviado. Revisa tu correo.', false);
+      } catch (err) {
+        showMsg(2, err.message || 'No pudimos reenviar el código.', true);
+      }
+
+      resendCountdown = setInterval(() => {
+        secs -= 1;
+        resendTimer.textContent = `Reenviar en ${secs}s`;
+        if (secs <= 0) {
+          clearInterval(resendCountdown);
+          resendTimer.style.display = 'none';
+          resendBtn.style.display = 'inline';
+          resendBtn.disabled = false;
+        }
+      }, 1000);
+    }
+
+    // ── Init ─────────────────────────────────────────────────
+    initCodeBoxes();
+  </script>
 </body>
 </html>
