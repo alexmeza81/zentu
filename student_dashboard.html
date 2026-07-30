@@ -14,6 +14,16 @@
   body { font-family: 'Inter', sans-serif; background: #F0F2FF; min-height: 100vh; }
 
   .app-shell { max-width: 430px; margin: 0 auto; min-height: 100vh; background: #F0F2FF; position: relative; display: flex; flex-direction: column; }
+  /* En navegador (desktop) la app se ve enmarcada sobre un fondo de marca, no como columna angosta */
+  @media (min-width: 560px) {
+    body { background:
+      radial-gradient(circle at 12% 18%, rgba(123,104,238,0.30), transparent 30%),
+      radial-gradient(circle at 88% 26%, rgba(74,158,255,0.28), transparent 32%),
+      radial-gradient(circle at 24% 88%, rgba(236,72,153,0.16), transparent 30%),
+      radial-gradient(circle at 80% 84%, rgba(45,212,191,0.16), transparent 30%),
+      #EAECF5; }
+    .app-shell { box-shadow: 0 20px 72px rgba(30,27,75,0.24); }
+  }
 
   /* Top bar */
   .topbar { position: sticky; top: 0; z-index: 20; background: rgba(240,242,255,0.92); backdrop-filter: blur(12px); padding: 14px 20px 10px; display: flex; align-items: center; justify-content: space-between; }
