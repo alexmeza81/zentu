@@ -386,14 +386,14 @@
       try {
         const { data: { session }, error } = await sb.auth.getSession();
         if (error || !session) {
-          window.location.href = 'login-estudiantes.html';
+          window.location.href = 'acceso.html';
           return;
         }
         document.getElementById('app').style.display = 'block';
         await loadDashboard(session.user);
       } catch (err) {
         console.error('Auth init failed:', err);
-        window.location.href = 'login-estudiantes.html';
+        window.location.href = 'acceso.html';
       }
     }
 
