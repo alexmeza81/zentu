@@ -1,509 +1,289 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <title>Diseñador UI | Búsqueda ZentU Empresas</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #F8F9FA;
-        }
-
-        .gradient-purple-blue {
-            background: linear-gradient(135deg, #7B68EE 0%, #4A9EFF 100%);
-        }
-        .gradient-pink-orange {
-            background: linear-gradient(135deg, #FF6B9D 0%, #FF8C42 100%);
-        }
-        .gradient-green-blue {
-            background: linear-gradient(135deg, #49CCB8 0%, #4A9EFF 100%);
-        }
-
-        .shadow-card {
-            box-shadow:
-                0 0 0 1px rgba(0,0,0,.04),
-                0 2px 6px rgba(0,0,0,.04),
-                0 10px 20px rgba(0,0,0,.06);
-        }
-
-        .shadow-card-hover {
-            box-shadow:
-                0 0 0 1px rgba(0,0,0,.04),
-                0 4px 12px rgba(0,0,0,.08),
-                0 16px 32px rgba(0,0,0,.10);
-        }
-
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.75rem;
-            font-weight: 700;
-        }
-
-        .card-hover {
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            cursor: pointer;
-        }
-
-        .card-hover:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 24px rgba(123, 104, 238, 0.12);
-        }
-
-        .gradient-text {
-            background: linear-gradient(135deg, #7B68EE 0%, #4A9EFF 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .pipeline-col {
-            min-height: 400px;
-        }
-
-        .drag-over {
-            background: rgba(123, 104, 238, 0.05);
-            border: 2px dashed rgba(123, 104, 238, 0.3);
-        }
-
-        @keyframes shimmer {
-            0% { background-position: -1000px 0; }
-            100% { background-position: 1000px 0; }
-        }
-
-        .ai-shimmer {
-            background: linear-gradient(90deg, transparent, rgba(123,104,238,0.08), transparent);
-            background-size: 1000px 100%;
-            animation: shimmer 3s infinite;
-        }
-    </style>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ZentU · Candidatos</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"
+    integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil"
+    crossorigin="anonymous"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .grad { background: linear-gradient(135deg,#7B68EE,#4A9EFF); }
+    .grad-text { background: linear-gradient(135deg,#7B68EE,#4A9EFF); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .cand-card { transition: transform .15s, box-shadow .15s; }
+    .cand-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(30,27,75,0.12); }
+  </style>
 </head>
-<body>
+<body class="bg-slate-100 text-slate-900">
 
-    <!-- Navbar -->
-    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
-        <div class="flex justify-between items-center px-6 md:px-8 py-4 max-w-7xl mx-auto">
-            <div class="flex items-center gap-8">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 gradient-purple-blue rounded-2xl flex items-center justify-center shadow-lg">
-                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
-                        </svg>
-                    </div>
-                    <div>
-                        <span class="text-2xl font-black tracking-tight">ZentU</span>
-                        <span class="ml-2 px-2 py-0.5 bg-purple-100 text-purple-700 text-xs font-bold rounded">Empresas</span>
-                    </div>
-                </div>
+  <div id="loading" class="min-h-screen flex items-center justify-center">
+    <div class="text-slate-400 font-semibold">Cargando…</div>
+  </div>
 
-                <div class="hidden md:flex items-center gap-6">
-                    <a href="empresas_busquedas.html" class="text-sm font-semibold text-slate-600 hover:text-purple-600 transition">Búsquedas</a>
-                    <a href="empresas-candidatos.html" class="text-sm font-semibold text-slate-600 hover:text-purple-600 transition">Candidatos</a>
-                    <a href="#" class="text-sm font-semibold text-slate-600 hover:text-purple-600 transition">Configuración</a>
-                </div>
-            </div>
-
-            <div class="flex items-center gap-4">
-                <button class="relative p-2 hover:bg-slate-100 rounded-xl transition" aria-label="Notificaciones">
-                    <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
-                    </svg>
-                    <span class="absolute top-1 right-1 w-2.5 h-2.5 bg-purple-500 rounded-full border-2 border-white"></span>
-                </button>
-
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-700 font-bold text-sm">
-                        TC
-                    </div>
-                    <div class="hidden md:block">
-                        <p class="text-sm font-bold text-slate-900">TechCorp</p>
-                        <p class="text-xs text-slate-500">Reclutador</p>
-                    </div>
-                </div>
-            </div>
+  <div id="app" class="hidden min-h-screen">
+    <nav class="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 grad rounded-xl flex items-center justify-center text-white font-black">Z</div>
+          <span class="text-xl font-black tracking-tight">ZentU</span>
+          <span class="text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2.5 py-1 rounded-full">Reclutador</span>
         </div>
+        <div class="flex items-center gap-4">
+          <span id="companyEmail" class="hidden sm:block text-sm font-semibold text-slate-500"></span>
+          <button onclick="logout()" class="text-sm font-bold text-slate-600 hover:text-slate-900 border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition">Salir</button>
+        </div>
+      </div>
     </nav>
 
-    <div class="max-w-7xl mx-auto px-6 md:px-8 py-8">
-
-        <!-- Breadcrumb + Header -->
-        <div class="mb-8">
-            <a href="empresas_busquedas.html" class="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-purple-600 transition mb-4">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
-                </svg>
-                Mis Búsquedas
-            </a>
-
-            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                <div>
-                    <div class="flex items-center gap-3 mb-2 flex-wrap">
-                        <h1 class="text-4xl font-black text-slate-900">Diseñador UI</h1>
-                        <span class="badge bg-green-100 text-green-700 border border-green-200">Activa</span>
-                    </div>
-                    <p class="text-slate-600 mb-1">Buscamos diseñador UI con experiencia en Figma y sistemas de diseño</p>
-                    <p class="text-sm text-slate-400">Creada el 15 Ene 2026 · Graduación 2026</p>
-                    <div class="flex flex-wrap gap-2 mt-3">
-                        <span class="badge bg-purple-50 text-purple-700 border border-purple-200">Figma</span>
-                        <span class="badge bg-purple-50 text-purple-700 border border-purple-200">Adobe XD</span>
-                        <span class="badge bg-purple-50 text-purple-700 border border-purple-200">UI Design</span>
-                        <span class="badge bg-purple-50 text-purple-700 border border-purple-200">Prototyping</span>
-                    </div>
-                </div>
-
-                <div class="flex gap-3 flex-shrink-0">
-                    <button class="px-5 py-3 bg-white border-2 border-slate-200 text-slate-700 font-bold rounded-xl hover:border-purple-300 hover:text-purple-600 transition shadow-card">
-                        Pausar búsqueda
-                    </button>
-                    <button onclick="openInviteModal()" class="px-6 py-3 gradient-purple-blue text-white font-bold rounded-xl hover:opacity-90 transition shadow-lg flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                        </svg>
-                        Invitar candidato
-                    </button>
-                </div>
-            </div>
+    <main class="max-w-7xl mx-auto px-6 py-8">
+      <div class="flex items-end justify-between flex-wrap gap-3 mb-6">
+        <div>
+          <h1 class="text-3xl font-black tracking-tight">Candidatos disponibles</h1>
+          <p class="text-slate-500 font-medium mt-1"><span id="count" class="font-bold text-slate-700">0</span> estudiantes reclutables · listos para tu equipo</p>
         </div>
+      </div>
 
-        <!-- Stats rápidas -->
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <div class="bg-white rounded-2xl p-5 shadow-card text-center">
-                <p class="text-3xl font-black text-slate-900">48</p>
-                <p class="text-sm font-bold text-slate-500 mt-1">Candidatos totales</p>
-            </div>
-            <div class="bg-white rounded-2xl p-5 shadow-card text-center">
-                <p class="text-3xl font-black text-purple-600">12</p>
-                <p class="text-sm font-bold text-slate-500 mt-1">En proceso</p>
-            </div>
-            <div class="bg-white rounded-2xl p-5 shadow-card text-center">
-                <p class="text-3xl font-black text-orange-500">5</p>
-                <p class="text-sm font-bold text-slate-500 mt-1">Favoritos</p>
-            </div>
-            <div class="bg-white rounded-2xl p-5 shadow-card text-center border-2 border-green-200">
-                <p class="text-3xl font-black text-green-600">0</p>
-                <p class="text-sm font-bold text-green-600 mt-1">Contratados</p>
-            </div>
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-wrap gap-3 items-center">
+        <div class="relative flex-1 min-w-[220px]">
+          <svg class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+          <input id="fSearch" oninput="renderGrid()" type="text" placeholder="Buscar por nombre, carrera o universidad…" class="w-full pl-11 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-purple-400 focus:outline-none"/>
         </div>
+        <select id="fCarrera" onchange="renderGrid()" class="py-2.5 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 focus:border-purple-400 focus:outline-none"><option value="">Todas las carreras</option></select>
+        <select id="fIndustria" onchange="renderGrid()" class="py-2.5 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 focus:border-purple-400 focus:outline-none"><option value="">Todas las industrias</option></select>
+        <select id="fDisp" onchange="renderGrid()" class="py-2.5 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 focus:border-purple-400 focus:outline-none">
+          <option value="">Cualquier disponibilidad</option><option>Inmediata</option><option>En 1 mes</option><option>Al egresar</option>
+        </select>
+        <button onclick="clearFilters()" class="text-sm font-bold text-purple-700 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition">Limpiar</button>
+      </div>
 
-        <!-- AI Banner -->
-        <div class="ai-shimmer bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-2xl p-5 mb-8 flex items-center gap-4">
-            <div class="w-12 h-12 rounded-2xl gradient-purple-blue flex items-center justify-center flex-shrink-0 shadow-lg">
-                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                </svg>
-            </div>
-            <div class="flex-1">
-                <p class="font-black text-slate-900 text-sm">IA recomienda 6 candidatos nuevos esta semana</p>
-                <p class="text-xs text-slate-600 mt-0.5">Todos con match superior al 85% basado en tus criterios de búsqueda.</p>
-            </div>
-            <button class="px-5 py-2.5 gradient-purple-blue text-white text-sm font-bold rounded-xl hover:opacity-90 transition flex-shrink-0">
-                Ver recomendados
-            </button>
-        </div>
+      <div id="grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
+      <div id="empty" class="hidden text-center py-24">
+        <div class="text-5xl mb-4">🔍</div>
+        <div class="text-lg font-bold text-slate-700">Sin candidatos que coincidan</div>
+        <div class="text-slate-500 mt-1">Ajusta los filtros o vuelve más tarde.</div>
+      </div>
+    </main>
+  </div>
 
-        <!-- Pipeline Kanban -->
-        <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-
-            <!-- Columna: Nuevos -->
-            <div id="col-nuevos" class="pipeline-col bg-white rounded-2xl shadow-card overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-3 h-3 rounded-full bg-slate-400"></div>
-                        <h3 class="font-black text-slate-900">Nuevos</h3>
-                    </div>
-                    <span class="badge bg-slate-100 text-slate-600">36</span>
-                </div>
-                <div id="list-nuevos" class="p-4 space-y-3"></div>
-            </div>
-
-            <!-- Columna: Contactados -->
-            <div id="col-contactados" class="pipeline-col bg-white rounded-2xl shadow-card overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-3 h-3 rounded-full bg-blue-400"></div>
-                        <h3 class="font-black text-slate-900">Contactados</h3>
-                    </div>
-                    <span class="badge bg-blue-100 text-blue-600">7</span>
-                </div>
-                <div id="list-contactados" class="p-4 space-y-3"></div>
-            </div>
-
-            <!-- Columna: En proceso -->
-            <div id="col-proceso" class="pipeline-col bg-white rounded-2xl shadow-card overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-3 h-3 rounded-full bg-purple-400"></div>
-                        <h3 class="font-black text-slate-900">En proceso</h3>
-                    </div>
-                    <span class="badge bg-purple-100 text-purple-600">5</span>
-                </div>
-                <div id="list-proceso" class="p-4 space-y-3"></div>
-            </div>
-
-            <!-- Columna: Contratados -->
-            <div id="col-contratados" class="pipeline-col bg-white rounded-2xl shadow-card overflow-hidden">
-                <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                    <div class="flex items-center gap-3">
-                        <div class="w-3 h-3 rounded-full bg-green-400"></div>
-                        <h3 class="font-black text-slate-900">Contratados</h3>
-                    </div>
-                    <span class="badge bg-green-100 text-green-600">0</span>
-                </div>
-                <div id="list-contratados" class="p-4 space-y-3">
-                    <!-- Empty state -->
-                    <div class="flex flex-col items-center justify-center py-10 text-center">
-                        <div class="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center mb-3">
-                            <svg class="w-7 h-7 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                            </svg>
-                        </div>
-                        <p class="text-sm font-bold text-slate-400">Sin contrataciones aún</p>
-                        <p class="text-xs text-slate-300 mt-1">Mueve candidatos aquí cuando los contrates</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+  <div id="modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-start md:items-center justify-center p-4 overflow-y-auto" onclick="closeModalOutside(event)">
+    <div class="bg-white rounded-3xl max-w-lg w-full my-8" style="max-height:90vh;overflow-y:auto;">
+      <div id="modalBody"></div>
     </div>
+  </div>
 
-    <!-- Modal: Detalle candidato -->
-    <div id="candidateModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl">
-            <div id="modalContent"></div>
-        </div>
-    </div>
+  <script>
+    const sb = supabase.createClient(
+      'https://jlivxulenqbgsybqodiv.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsaXZ4dWxlbnFiZ3N5YnFvZGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMjQ5ODEsImV4cCI6MjA4MzYwMDk4MX0.qG4Tx7yB9185vypoZa91y3PPCdphwqXRz8WQKsKBH5g'
+    );
 
-    <!-- Modal: Invitar candidato -->
-    <div id="inviteModal" class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl max-w-lg w-full shadow-2xl">
-            <div class="sticky top-0 bg-white border-b border-slate-200 px-8 py-6 flex items-center justify-between rounded-t-3xl">
-                <div>
-                    <h2 class="text-2xl font-black text-slate-900">Invitar candidato</h2>
-                    <p class="text-sm text-slate-600 mt-1">Busca por nombre, universidad o habilidad</p>
-                </div>
-                <button onclick="closeInviteModal()" class="p-2 hover:bg-slate-100 rounded-xl transition">
-                    <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
+    function escapeHTML(str){ if(!str) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+    const _norm = s => (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    function _semNum(sem){ if(!sem) return null; const s=_norm(sem); if(s.includes('egres')) return 10; const m=s.match(/\d+/); return m?parseInt(m[0],10):null; }
+    const ROLE_CATALOG = [
+      { role:'Desarrollador Frontend Jr.', sector:'Tecnología · Startups', careers:['sistemas','computac','software','informatic','tic','mecatron','telematic'], skills:['HTML','CSS','JavaScript','React','TypeScript','Git'], industries:['Tecnología','Startups','Fintech'], minSem:4 },
+      { role:'Desarrollador Backend Jr.', sector:'Tecnología · Fintech', careers:['sistemas','computac','software','informatic','tic'], skills:['Python','Java','Node','SQL','APIs','Git'], industries:['Tecnología','Startups','Fintech'], minSem:4 },
+      { role:'Ingeniero de Software Jr.', sector:'Tecnología', careers:['sistemas','computac','software','informatic','mecatron'], skills:['Java','Python','C++','Git','SQL'], industries:['Tecnología','Startups'], minSem:5 },
+      { role:'Analista de Datos Jr.', sector:'Datos · Fintech', careers:['datos','actuar','matemat','estadist','economia','sistemas','ingenieria','fisica'], skills:['SQL','Excel','Python','Power BI','Tableau','Estadística'], industries:['Tecnología','Fintech','Banca y Finanzas','Consultoría'], minSem:5 },
+      { role:'Analista de BI', sector:'Datos · Negocios', careers:['datos','sistemas','administrac','economia','industrial'], skills:['Power BI','Tableau','SQL','Excel'], industries:['Tecnología','Retail','Consumo (FMCG)','Banca y Finanzas'], minSem:5 },
+      { role:'Product Manager Jr.', sector:'Producto · Startups', careers:['sistemas','industrial','negocios','administrac','mercado','diseno'], skills:['Figma','SQL','Excel','Jira','Analytics'], industries:['Tecnología','Startups','Fintech'], minSem:6 },
+      { role:'Diseñador UX/UI Jr.', sector:'Producto · Diseño', careers:['diseno','comunicac','interactiv','arquitectur','multimedia'], skills:['Figma','Sketch','Adobe XD','Prototipado'], industries:['Tecnología','Startups'], minSem:4 },
+      { role:'Diseñador Gráfico Jr.', sector:'Diseño · Marketing', careers:['diseno','comunicac','publicidad','artes','multimedia'], skills:['Photoshop','Illustrator','InDesign','Figma'], industries:['Marketing','Medios y Entretenimiento','Retail'], minSem:3 },
+      { role:'Coordinador de Marketing Jr.', sector:'Marketing · Retail', careers:['mercado','marketing','comunicac','publicidad','administrac','negocios'], skills:['Meta Ads','Google Analytics','Excel','SEO','Canva'], industries:['Marketing','Retail','Consumo (FMCG)'], minSem:5 },
+      { role:'Growth / Performance Mkt Jr.', sector:'Marketing · Startups', careers:['mercado','marketing','datos','administrac','negocios'], skills:['Google Ads','Meta Ads','SQL','Analytics','A/B Testing'], industries:['Marketing','Startups','Fintech'], minSem:5 },
+      { role:'Community Manager', sector:'Marketing · Medios', careers:['comunicac','mercado','publicidad','periodis'], skills:['Redes Sociales','Canva','Copywriting'], industries:['Marketing','Medios y Entretenimiento'], minSem:3 },
+      { role:'Analista Financiero Jr.', sector:'Finanzas · Banca', careers:['finanz','economia','actuar','contad','administrac','negocios'], skills:['Excel','Modelaje Financiero','Power BI','SQL'], industries:['Banca y Finanzas','Fintech','Consultoría'], minSem:5 },
+      { role:'Consultor Jr. (Big 4)', sector:'Consultoría · Estrategia', careers:['administrac','negocios','economia','finanz','industrial','actuar','sistemas'], skills:['Excel','PowerPoint','SQL','Análisis'], industries:['Consultoría','Banca y Finanzas'], minSem:6 },
+      { role:'Auditor Jr.', sector:'Finanzas · Consultoría', careers:['contad','finanz','administrac'], skills:['Excel','Auditoría','NIF','SAP'], industries:['Consultoría','Banca y Finanzas'], minSem:5 },
+      { role:'Contador Jr.', sector:'Contabilidad', careers:['contad','finanz','administrac'], skills:['Excel','Contabilidad','SAP','CONTPAQ'], industries:['Banca y Finanzas','Consultoría'], minSem:5 },
+      { role:'Analista de Riesgos Jr.', sector:'Banca · Fintech', careers:['actuar','finanz','economia','matemat'], skills:['Excel','SQL','Estadística','Modelaje'], industries:['Banca y Finanzas','Fintech'], minSem:6 },
+      { role:'Analista de Negocios Jr.', sector:'Negocios · Tech', careers:['administrac','negocios','industrial','economia','sistemas'], skills:['Excel','SQL','Power BI','Procesos'], industries:['Consultoría','Tecnología','Retail'], minSem:5 },
+      { role:'Coordinador de Operaciones Jr.', sector:'Operaciones · Manufactura', careers:['industrial','administrac','negocios','logistic'], skills:['Excel','Procesos','ERP','SAP'], industries:['Manufactura','Logística','Retail'], minSem:5 },
+      { role:'Analista de Cadena de Suministro', sector:'Logística · Consumo', careers:['industrial','logistic','negocios','comercio'], skills:['Excel','SAP','SQL','Forecasting'], industries:['Logística','Manufactura','Consumo (FMCG)'], minSem:5 },
+      { role:'Project Manager Jr.', sector:'Gestión de Proyectos', careers:['industrial','administrac','sistemas','negocios'], skills:['Excel','MS Project','Jira','Scrum'], industries:['Tecnología','Consultoría','Manufactura'], minSem:6 },
+      { role:'Ejecutivo de Ventas / SDR Jr.', sector:'Ventas · SaaS', careers:['mercado','negocios','administrac','comercio','comunicac'], skills:['CRM','Salesforce','HubSpot','Excel'], industries:['Startups','Tecnología','Retail'], minSem:4 },
+      { role:'Analista de Recursos Humanos Jr.', sector:'RRHH', careers:['recursos','psicolog','administrac','relaciones','negocios'], skills:['Excel','Reclutamiento','Nómina','ATS'], industries:['Consultoría','Manufactura','Retail'], minSem:5 },
+      { role:'Ingeniero Industrial / Procesos Jr.', sector:'Manufactura · Industrial', careers:['industrial','mecanic','manufactur','produc','sistemas'], skills:['Lean','Six Sigma','AutoCAD','Excel','SAP'], industries:['Manufactura','Energía','Consumo (FMCG)'], minSem:6 },
+      { role:'Ingeniero de Calidad Jr.', sector:'Manufactura · Calidad', careers:['industrial','quimic','mecanic','aliment'], skills:['ISO','Six Sigma','Auditoría','Excel'], industries:['Manufactura','Salud','Consumo (FMCG)'], minSem:6 },
+      { role:'Ingeniero Civil Jr.', sector:'Construcción · Bienes raíces', careers:['civil','construc','arquitectur'], skills:['AutoCAD','Revit','MS Project','Presupuestos'], industries:['Bienes raíces','Energía'], minSem:6 },
+      { role:'Arquitecto Jr.', sector:'Arquitectura · Bienes raíces', careers:['arquitectur','diseno','urban'], skills:['AutoCAD','Revit','SketchUp','3ds Max','Photoshop'], industries:['Bienes raíces'], minSem:6 },
+      { role:'Abogado Jr. / Pasante Legal', sector:'Legal', careers:['derecho','legal','juridic'], skills:['Investigación Jurídica','Contratos','Redacción'], industries:['Consultoría','Gobierno y ONG'], minSem:6 },
+      { role:'Comunicación Corporativa / RRPP Jr.', sector:'Comunicación · Medios', careers:['comunicac','relaciones','periodis','mercado'], skills:['Redacción','Redes Sociales','Eventos'], industries:['Medios y Entretenimiento','Marketing'], minSem:4 },
+    ];
+    function computeMatches(st){
+      const carrera=_norm(st.carrera), skills=(Array.isArray(st.hard_skills)?st.hard_skills:[]).map(_norm), inds=(Array.isArray(st.industrias)?st.industrias:[]).map(_norm), sem=_semNum(st.semestre);
+      return ROLE_CATALOG.map(r=>{
+        const careerHit=!!carrera && r.careers.some(k=>carrera.includes(k));
+        const careerFit=carrera?(careerHit?1:0.15):0.4;
+        const matched=r.skills.filter(rs=>{const n=_norm(rs);return skills.some(us=>us.includes(n)||n.includes(us));});
+        const skillFit=r.skills.length?Math.min(1,matched.length/Math.min(3,r.skills.length)):0;
+        const roleInds=(r.industries||[]).map(_norm);
+        const indHit=roleInds.some(ri=>inds.some(ui=>ui.includes(ri)||ri.includes(ui)));
+        const indFit=inds.length?(indHit?1:0.2):0.5;
+        let semFit=0.6; if(sem!=null) semFit=sem>=(r.minSem||1)?1:Math.max(0.3,sem/(r.minSem||1));
+        const score=0.40*careerFit+0.30*skillFit+0.15*indFit+0.15*semFit;
+        const pct=Math.max(45,Math.min(99,Math.round(45+score*54)));
+        return { role:r.role, sector:r.sector, pct, careerHit, overlap:matched.length };
+      }).sort((a,b)=>(b.pct-a.pct)||(b.careerHit-a.careerHit)||(b.overlap-a.overlap));
+    }
+    const SKILLS_CONFIG=[
+      {key:'pensamiento_analitico',label:'Pensamiento analítico',emoji:'💡'},{key:'comunicacion_efectiva',label:'Comunicación efectiva',emoji:'🗣️'},
+      {key:'adaptabilidad',label:'Adaptabilidad',emoji:'🔄'},{key:'resolucion_problemas',label:'Resolución de problemas',emoji:'🧩'},
+      {key:'trabajo_en_equipo',label:'Trabajo en equipo',emoji:'🤝'},{key:'orientacion_resultados',label:'Orientación a resultados',emoji:'🎯'},
+      {key:'liderazgo',label:'Liderazgo',emoji:'🚀'},{key:'iniciativa',label:'Iniciativa y proactividad',emoji:'⚡'},
+      {key:'inteligencia_emocional',label:'Inteligencia emocional',emoji:'❤️'},{key:'gestion_tiempo',label:'Gestión del tiempo',emoji:'⏱️'},
+      {key:'resiliencia',label:'Resiliencia',emoji:'💪'},
+    ];
+
+    let ALL = [];
+    const testCache = {};
+
+    async function init(){
+      const { data:{ session } } = await sb.auth.getSession();
+      if (!session){ location.replace('acceso.html'); return; }
+      document.getElementById('companyEmail').textContent = session.user.email;
+      document.getElementById('loading').classList.add('hidden');
+      document.getElementById('app').classList.remove('hidden');
+      await loadCandidates();
+    }
+    async function logout(){ await sb.auth.signOut(); location.replace('acceso.html'); }
+
+    async function loadCandidates(){
+      const { data, error } = await sb.from('students')
+        .select('id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, modalidad, tipo_contrato, disponibilidad, linkedin_url, telefono, estado')
+        .eq('estado','en_busqueda').order('updated_at',{ascending:false});
+      if (error) console.error(error);
+      ALL = data || [];
+      populateFilters();
+      renderGrid();
+    }
+
+    function initials(st){ const n=(st.nombre||st.email||'?'); const a=(st.apellido||''); return ((n[0]||'').toUpperCase()+(a[0]||'').toUpperCase())||'?'; }
+    function fullName(st){ return escapeHTML(`${st.nombre||st.email.split('@')[0]} ${st.apellido||''}`.trim()); }
+
+    function populateFilters(){
+      const carreras=[...new Set(ALL.map(s=>s.carrera).filter(Boolean))].sort();
+      const inds=[...new Set(ALL.flatMap(s=>Array.isArray(s.industrias)?s.industrias:[]))].sort();
+      document.getElementById('fCarrera').innerHTML='<option value="">Todas las carreras</option>'+carreras.map(c=>`<option>${escapeHTML(c)}</option>`).join('');
+      document.getElementById('fIndustria').innerHTML='<option value="">Todas las industrias</option>'+inds.map(i=>`<option>${escapeHTML(i)}</option>`).join('');
+    }
+    function clearFilters(){ ['fSearch','fCarrera','fIndustria','fDisp'].forEach(id=>document.getElementById(id).value=''); renderGrid(); }
+
+    function renderGrid(){
+      const q=_norm(document.getElementById('fSearch').value);
+      const fc=document.getElementById('fCarrera').value, fi=document.getElementById('fIndustria').value, fd=document.getElementById('fDisp').value;
+      const list=ALL.filter(s=>{
+        if(q){ const hay=_norm(`${s.nombre} ${s.apellido} ${s.carrera} ${s.universidad}`); if(!hay.includes(q)) return false; }
+        if(fc && s.carrera!==fc) return false;
+        if(fi && !(Array.isArray(s.industrias)&&s.industrias.includes(fi))) return false;
+        if(fd && s.disponibilidad!==fd) return false;
+        return true;
+      });
+      document.getElementById('count').textContent = ALL.length;
+      const grid=document.getElementById('grid'), empty=document.getElementById('empty');
+      if(!list.length){ grid.innerHTML=''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      grid.innerHTML = list.map(cardHTML).join('');
+    }
+
+    function cardHTML(st){
+      const m=computeMatches(st)[0];
+      const skills=(Array.isArray(st.hard_skills)?st.hard_skills:[]).slice(0,4);
+      const carreraLine=escapeHTML([st.carrera, st.ubicacion].filter(Boolean).join(' · '));
+      const avatar=st.foto_url ? `<img src="${escapeHTML(st.foto_url)}" class="w-14 h-14 rounded-2xl object-cover"/>` : `<div class="w-14 h-14 rounded-2xl grad flex items-center justify-center text-white font-black text-lg">${initials(st)}</div>`;
+      return `
+      <div class="cand-card bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer" onclick="openCandidate('${st.id}')">
+        <div class="h-1.5 grad"></div>
+        <div class="p-5">
+          <div class="flex items-start gap-3">
+            ${avatar}
+            <div class="flex-1 min-w-0">
+              <div class="font-black text-slate-900 truncate">${fullName(st)}</div>
+              <div class="text-xs text-slate-500 font-semibold truncate">${escapeHTML(st.universidad||'')}</div>
+              <div class="text-xs text-slate-400 truncate">${carreraLine}</div>
             </div>
-            <div class="p-8">
-                <div class="relative mb-6">
-                    <svg class="absolute left-4 top-3.5 w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
-                    </svg>
-                    <input type="text" placeholder="Buscar candidatos..." class="w-full pl-12 pr-4 py-3 border-2 border-slate-200 rounded-xl focus:border-purple-400 focus:outline-none font-semibold">
-                </div>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Recomendados por IA</p>
-                <div class="space-y-3">
-                    <div class="flex items-center gap-4 p-4 border-2 border-purple-100 rounded-xl hover:border-purple-300 cursor-pointer transition">
-                        <div class="w-12 h-12 rounded-2xl gradient-purple-blue flex items-center justify-center text-white font-black text-sm flex-shrink-0">MG</div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-bold text-slate-900">María González</p>
-                            <p class="text-xs text-slate-500 truncate">ITESM · UI Design · 92% match</p>
-                        </div>
-                        <button class="px-4 py-2 gradient-purple-blue text-white text-xs font-bold rounded-lg hover:opacity-90 transition">Invitar</button>
-                    </div>
-                    <div class="flex items-center gap-4 p-4 border-2 border-slate-100 rounded-xl hover:border-purple-300 cursor-pointer transition">
-                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-pink-400 to-orange-400 flex items-center justify-center text-white font-black text-sm flex-shrink-0">RL</div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-bold text-slate-900">Rodrigo López</p>
-                            <p class="text-xs text-slate-500 truncate">UNAM · Figma · 88% match</p>
-                        </div>
-                        <button class="px-4 py-2 gradient-purple-blue text-white text-xs font-bold rounded-lg hover:opacity-90 transition">Invitar</button>
-                    </div>
-                    <div class="flex items-center gap-4 p-4 border-2 border-slate-100 rounded-xl hover:border-purple-300 cursor-pointer transition">
-                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-400 to-blue-400 flex items-center justify-center text-white font-black text-sm flex-shrink-0">AT</div>
-                        <div class="flex-1 min-w-0">
-                            <p class="font-bold text-slate-900">Ana Torres</p>
-                            <p class="text-xs text-slate-500 truncate">UP · Prototyping · 85% match</p>
-                        </div>
-                        <button class="px-4 py-2 gradient-purple-blue text-white text-xs font-bold rounded-lg hover:opacity-90 transition">Invitar</button>
-                    </div>
-                </div>
-            </div>
+            <span class="text-[10px] font-black text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full whitespace-nowrap">🔍 Activo</span>
+          </div>
+          <div class="mt-4 flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
+            <div class="min-w-0"><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Mejor match</div><div class="text-sm font-bold text-slate-800 truncate">${escapeHTML(m.role)}</div></div>
+            <div class="text-lg font-black grad-text ml-2">${m.pct}%</div>
+          </div>
+          ${skills.length?`<div class="mt-3 flex flex-wrap gap-1.5">${skills.map(s=>`<span class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md">${escapeHTML(s)}</span>`).join('')}</div>`:''}
+          <div class="mt-4 flex items-center justify-between">
+            <span class="text-xs text-slate-500 font-medium">${st.disponibilidad?('📅 '+escapeHTML(st.disponibilidad)):''}</span>
+            <span class="text-sm font-bold text-purple-700">Ver perfil →</span>
+          </div>
         </div>
-    </div>
+      </div>`;
+    }
 
-    <script>
-        const candidates = {
-            nuevos: [
-                { id: 1, initials: "MG", color: "gradient-purple-blue", name: "María González", uni: "ITESM", match: 92, ai: true, skills: ["Figma", "UI Design"] },
-                { id: 2, initials: "RL", color: "from-pink-400 to-orange-400", name: "Rodrigo López", uni: "UNAM", match: 88, ai: true, skills: ["Figma", "Adobe XD"] },
-                { id: 3, initials: "AT", color: "from-green-400 to-blue-400", name: "Ana Torres", uni: "UP", match: 85, ai: false, skills: ["Prototyping", "Wireframing"] },
-                { id: 4, initials: "JR", color: "from-orange-400 to-red-400", name: "Jorge Ramírez", uni: "UNAM", match: 81, ai: false, skills: ["Figma", "CSS"] },
-                { id: 5, initials: "SL", color: "from-teal-400 to-blue-400", name: "Sofía Luna", uni: "ITESM", match: 79, ai: false, skills: ["Adobe XD", "UI Design"] },
-            ],
-            contactados: [
-                { id: 6, initials: "PM", color: "from-purple-400 to-pink-400", name: "Pablo Morales", uni: "Tec de Monterrey", match: 90, ai: true, skills: ["Figma", "Prototyping"] },
-                { id: 7, initials: "LH", color: "from-blue-400 to-cyan-400", name: "Laura Hernández", uni: "UNAM", match: 83, ai: false, skills: ["UI Design", "Figma"] },
-            ],
-            proceso: [
-                { id: 8, initials: "CM", color: "gradient-purple-blue", name: "Carlos Mendez", uni: "UP", match: 95, ai: true, skills: ["Figma", "Design Systems"] },
-                { id: 9, initials: "VR", color: "from-pink-400 to-red-400", name: "Valeria Ruiz", uni: "ITESM", match: 87, ai: false, skills: ["Adobe XD", "UI"] },
-            ],
-            contratados: []
-        };
+    async function openCandidate(id){
+      const st=ALL.find(s=>s.id===id); if(!st) return;
+      let hab={};
+      if(testCache[id]!==undefined){ hab=testCache[id]; }
+      else {
+        const { data }=await sb.from('test_results').select('habilidades').eq('student_id',id).order('completado_at',{ascending:false}).limit(1).maybeSingle();
+        hab=(data&&data.habilidades)||{}; testCache[id]=hab;
+      }
+      renderDetail(st, hab);
+      document.getElementById('modal').classList.remove('hidden');
+    }
+    function closeModal(){ document.getElementById('modal').classList.add('hidden'); }
+    function closeModalOutside(e){ if(e.target.id==='modal') closeModal(); }
 
-        function renderCard(c, stage) {
-            return `
-                <div class="bg-white border-2 ${c.ai ? 'border-purple-200' : 'border-slate-100'} rounded-2xl p-4 card-hover"
-                     onclick="openCandidateModal(${c.id})">
-                    <div class="flex items-center gap-3 mb-3">
-                        <div class="w-10 h-10 rounded-xl ${c.color.includes('gradient') ? c.color : 'bg-gradient-to-br ' + c.color} flex items-center justify-center text-white font-black text-xs flex-shrink-0">
-                            ${c.initials}
-                        </div>
-                        <div class="flex-1 min-w-0">
-                            <div class="flex items-center gap-2">
-                                <p class="font-bold text-slate-900 text-sm truncate">${c.name}</p>
-                                ${c.ai ? '<span class="text-xs">✦</span>' : ''}
-                            </div>
-                            <p class="text-xs text-slate-500 truncate">${c.uni}</p>
-                        </div>
-                        <div class="text-right flex-shrink-0">
-                            <p class="text-lg font-black ${c.match >= 90 ? 'text-purple-600' : 'text-slate-700'}">${c.match}%</p>
-                            <p class="text-[10px] text-slate-400">match</p>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap gap-1.5">
-                        ${c.skills.map(s => `<span class="text-[10px] font-bold px-2 py-0.5 bg-slate-100 text-slate-600 rounded-md">${s}</span>`).join('')}
-                    </div>
-                    <div class="flex gap-2 mt-3">
-                        ${stage !== 'contratados' ? `
-                            <button onclick="event.stopPropagation(); moveNext(${c.id}, '${stage}')"
-                                class="flex-1 py-2 bg-purple-50 text-purple-700 text-xs font-bold rounded-lg hover:bg-purple-100 transition">
-                                Avanzar →
-                            </button>
-                        ` : ''}
-                        <button onclick="event.stopPropagation(); openCandidateModal(${c.id})"
-                            class="flex-1 py-2 bg-slate-50 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-100 transition">
-                            Ver perfil
-                        </button>
-                    </div>
-                </div>
-            `;
-        }
+    function renderDetail(st, hab){
+      const matches=computeMatches(st).slice(0,4);
+      const carreraLine=escapeHTML([st.carrera, st.ubicacion].filter(Boolean).join(' · '));
+      const egreso = st.egreso_mes&&st.egreso_year ? `${escapeHTML(st.egreso_mes)} ${escapeHTML(st.egreso_year)}` : '—';
+      const skills=(Array.isArray(st.hard_skills)?st.hard_skills:[]);
+      const inds=(Array.isArray(st.industrias)?st.industrias:[]);
+      const topSkills=SKILLS_CONFIG.map(s=>({label:s.label,emoji:s.emoji,pct:hab[s.key]||0})).filter(s=>s.pct>0).sort((a,b)=>b.pct-a.pct);
+      const avatar=st.foto_url ? `<img src="${escapeHTML(st.foto_url)}" class="w-16 h-16 rounded-2xl object-cover border-2 border-white/40"/>` : `<div class="w-16 h-16 rounded-2xl bg-white/25 flex items-center justify-center text-white font-black text-xl border-2 border-white/40">${initials(st)}</div>`;
+      const lk=st.linkedin_url?escapeHTML(st.linkedin_url):'';
+      document.getElementById('modalBody').innerHTML = `
+        <div class="grad rounded-t-3xl p-5 text-white relative">
+          <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white">✕</button>
+          <div class="flex items-center gap-4">
+            ${avatar}
+            <div class="min-w-0">
+              <div class="text-xl font-black">${fullName(st)}</div>
+              <div class="text-white/80 text-sm">${escapeHTML(st.universidad||'')}</div>
+              <div class="text-white/60 text-xs">${carreraLine}</div>
+            </div>
+          </div>
+          <div class="flex gap-2 mt-3 flex-wrap">
+            <span class="text-[11px] font-bold bg-white/20 px-2.5 py-1 rounded-full">🔍 Activo</span>
+            <span class="text-[11px] font-bold bg-white/20 px-2.5 py-1 rounded-full">🎓 ${(_semNum(st.semestre)===10)?'Egresó':'Egresa'} ${egreso}</span>
+            ${st.disponibilidad?`<span class="text-[11px] font-bold bg-white/20 px-2.5 py-1 rounded-full">📅 ${escapeHTML(st.disponibilidad)}</span>`:''}
+          </div>
+        </div>
+        <div class="p-5 space-y-4">
+          ${st.headline?`<div class="bg-slate-50 rounded-xl p-3.5"><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Sobre mí</div><div class="text-sm text-slate-700 leading-relaxed">${escapeHTML(st.headline)}</div></div>`:''}
+          <div>
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Match con roles</div>
+            ${matches.map(m=>`<div class="mb-2"><div class="flex justify-between text-sm"><span class="font-semibold text-slate-700">${escapeHTML(m.role)}</span><span class="font-black grad-text">${m.pct}%</span></div><div class="h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1"><div class="h-full grad rounded-full" style="width:${m.pct}%"></div></div></div>`).join('')}
+          </div>
+          ${topSkills.length?`<div class="bg-slate-50 rounded-xl p-3.5"><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Test de habilidades</div>${topSkills.map(s=>`<div class="flex items-center gap-2 mb-1.5"><span class="text-sm flex-1 text-slate-600 font-medium">${s.emoji} ${s.label}</span><div class="w-20 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="h-full grad rounded-full" style="width:${s.pct}%"></div></div><span class="text-xs font-bold text-purple-700 w-9 text-right">${s.pct}%</span></div>`).join('')}</div>`:''}
+          ${skills.length?`<div><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Habilidades técnicas</div><div class="flex flex-wrap gap-1.5">${skills.map(s=>`<span class="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">${escapeHTML(s)}</span>`).join('')}</div></div>`:''}
+          ${inds.length?`<div><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Industrias de interés</div><div class="flex flex-wrap gap-1.5">${inds.map(s=>`<span class="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">${escapeHTML(s)}</span>`).join('')}</div></div>`:''}
+          <div class="border-t border-slate-100 pt-4">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Contacto</div>
+            <div class="space-y-1.5 text-sm text-slate-700">
+              <div>📧 <a href="mailto:${escapeHTML(st.email)}" class="text-blue-600 font-semibold">${escapeHTML(st.email)}</a></div>
+              ${st.telefono?`<div>📱 <a href="tel:${escapeHTML(String(st.telefono).replace(/[^0-9+]/g,''))}" class="text-blue-600 font-semibold">${escapeHTML(st.telefono)}</a></div>`:''}
+              ${lk?`<div>🔗 <a href="${lk}" target="_blank" rel="noopener" class="text-blue-600 font-semibold">LinkedIn</a></div>`:''}
+            </div>
+            <a href="mailto:${escapeHTML(st.email)}?subject=Oportunidad%20en%20ZentU" class="mt-3 block text-center grad text-white font-bold py-3 rounded-xl hover:opacity-90 transition">✉️ Contactar candidato</a>
+          </div>
+        </div>`;
+    }
 
-        const stageOrder = ['nuevos', 'contactados', 'proceso', 'contratados'];
-
-        function renderPipeline() {
-            ['nuevos', 'contactados', 'proceso'].forEach(stage => {
-                const list = document.getElementById('list-' + stage);
-                if (candidates[stage].length === 0) {
-                    list.innerHTML = `<div class="flex flex-col items-center justify-center py-8 text-center">
-                        <p class="text-sm font-bold text-slate-300">Sin candidatos</p>
-                    </div>`;
-                } else {
-                    list.innerHTML = candidates[stage].map(c => renderCard(c, stage)).join('');
-                }
-            });
-        }
-
-        function moveNext(candidateId, currentStage) {
-            const nextStage = stageOrder[stageOrder.indexOf(currentStage) + 1];
-            if (!nextStage) return;
-            const idx = candidates[currentStage].findIndex(c => c.id === candidateId);
-            if (idx === -1) return;
-            const [candidate] = candidates[currentStage].splice(idx, 1);
-            candidates[nextStage].push(candidate);
-            renderPipeline();
-            // Actualizar contratados si aplica
-            if (nextStage === 'contratados') {
-                const listEl = document.getElementById('list-contratados');
-                listEl.innerHTML = candidates.contratados.map(c => renderCard(c, 'contratados')).join('');
-                document.querySelector('#col-contratados .badge').textContent = candidates.contratados.length;
-            }
-            // Actualizar badges
-            updateBadges();
-        }
-
-        function updateBadges() {
-            const badgeColors = {
-                nuevos: 'bg-slate-100 text-slate-600',
-                contactados: 'bg-blue-100 text-blue-600',
-                proceso: 'bg-purple-100 text-purple-600',
-                contratados: 'bg-green-100 text-green-600'
-            };
-            stageOrder.forEach(stage => {
-                const col = document.getElementById('col-' + stage);
-                if (col) {
-                    const badge = col.querySelector('.badge');
-                    if (badge) badge.textContent = candidates[stage].length;
-                }
-            });
-        }
-
-        function openCandidateModal(candidateId) {
-            const allCandidates = [...candidates.nuevos, ...candidates.contactados, ...candidates.proceso, ...candidates.contratados];
-            const c = allCandidates.find(x => x.id === candidateId);
-            if (!c) return;
-            document.getElementById('modalContent').innerHTML = `
-                <div class="sticky top-0 bg-white border-b border-slate-200 px-8 py-6 flex items-center justify-between rounded-t-3xl">
-                    <h2 class="text-2xl font-black text-slate-900">${c.name}</h2>
-                    <button onclick="closeCandidateModal()" class="p-2 hover:bg-slate-100 rounded-xl transition">
-                        <svg class="w-6 h-6 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
-                    </button>
-                </div>
-                <div class="p-8">
-                    <div class="flex items-center gap-5 mb-6">
-                        <div class="w-20 h-20 rounded-3xl ${c.color.includes('gradient') ? c.color : 'bg-gradient-to-br ' + c.color} flex items-center justify-center text-white font-black text-2xl shadow-lg">
-                            ${c.initials}
-                        </div>
-                        <div>
-                            <h3 class="text-2xl font-black text-slate-900">${c.name}</h3>
-                            <p class="text-slate-500">${c.uni}</p>
-                            <div class="flex items-center gap-2 mt-2">
-                                <span class="text-3xl font-black ${c.match >= 90 ? 'gradient-text' : 'text-slate-700'}">${c.match}%</span>
-                                <span class="text-sm text-slate-400 font-semibold">match con esta búsqueda</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex flex-wrap gap-2 mb-6">
-                        ${c.skills.map(s => `<span class="badge bg-purple-100 text-purple-700 border border-purple-200">${s}</span>`).join('')}
-                    </div>
-                    <div class="flex gap-3">
-                        <button class="flex-1 py-3 gradient-purple-blue text-white font-bold rounded-xl hover:opacity-90 transition">
-                            Contactar
-                        </button>
-                        <button class="px-5 py-3 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200 transition">
-                            ★ Favorito
-                        </button>
-                    </div>
-                </div>
-            `;
-            document.getElementById('candidateModal').classList.remove('hidden');
-        }
-
-        function closeCandidateModal() {
-            document.getElementById('candidateModal').classList.add('hidden');
-        }
-
-        function openInviteModal() {
-            document.getElementById('inviteModal').classList.remove('hidden');
-        }
-
-        function closeInviteModal() {
-            document.getElementById('inviteModal').classList.add('hidden');
-        }
-
-        // Cerrar modals con ESC
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeCandidateModal();
-                closeInviteModal();
-            }
-        });
-
-        // Init
-        renderPipeline();
-    </script>
-
+    init();
+  </script>
 </body>
 </html>
