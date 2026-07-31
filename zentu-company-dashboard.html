@@ -190,6 +190,7 @@
       document.getElementById('loading').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
       await loadCandidates();
+      loadInbox(); // pobla el badge de no leídos sin bloquear
     }
 
     async function loadMyPipelineIds(){
@@ -568,6 +569,7 @@
     async function openCandidate(id){
       let st=ALL.find(s=>s.id===id);
       if(!st){ const r=pipe.rows.find(r=>r.student&&r.student.id===id); st=r&&r.student; }
+      if(!st && inbox.students) st=inbox.students[id];
       if(!st) return;
       let hab={};
       if(testCache[id]!==undefined){ hab=testCache[id]; }
@@ -681,6 +683,151 @@
         renderThread(studentId);
         alert('No se pudo enviar el mensaje. Intenta de nuevo.');
       } else if(data){ optimistic.id=data.id; if(data.created_at) optimistic.created_at=data.created_at; }
+    }
+
+    // ── Sección de Mensajes (bandeja de dos paneles) ───────────
+    let inbox = { convos:[], students:{}, activeStudent:null };
+
+    function timeShort(dateStr){
+      const d=new Date(dateStr), now=new Date();
+      if(d.toDateString()===now.toDateString()) return d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+      return d.toLocaleDateString('es-MX',{day:'numeric',month:'short'});
+    }
+
+    async function loadInbox(){
+      const cont=document.getElementById('inbox');
+      if(!companyId){ if(cont) cont.innerHTML='<div class="text-slate-400 py-10">Tu cuenta aún no está vinculada a una empresa registrada.</div>'; return; }
+      const { data:msgs } = await sb.from('messages')
+        .select('id, contenido, sender_type, leido, created_at, student_id')
+        .eq('company_id',companyId).order('created_at',{ascending:true});
+      const all=msgs||[];
+      const byStudent={};
+      all.forEach(m=>{ (byStudent[m.student_id]=byStudent[m.student_id]||[]).push(m); });
+      const ids=Object.keys(byStudent);
+      let studentsMap={};
+      if(ids.length){
+        const { data:studs } = await sb.from('students')
+          .select('id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, linkedin_url, telefono, estado')
+          .in('id', ids);
+        (studs||[]).forEach(s=>{ studentsMap[s.id]=s; });
+      }
+      inbox.students=studentsMap;
+      inbox.convos=ids.map(sid=>{
+        const arr=byStudent[sid];
+        threadCache[sid]=arr;
+        return { studentId:sid, last:arr[arr.length-1], unread:arr.filter(m=>m.sender_type==='student'&&!m.leido).length };
+      }).sort((a,b)=> new Date(b.last.created_at)-new Date(a.last.created_at));
+      if(inbox.activeStudent && !byStudent[inbox.activeStudent]) inbox.activeStudent=null;
+      renderInbox();
+      updateUnreadBadge();
+    }
+
+    function updateUnreadBadge(){
+      const total=inbox.convos.reduce((n,c)=>n+(c.unread||0),0);
+      const badge=document.getElementById('tabUnread');
+      if(!badge) return;
+      if(total>0){ badge.textContent=total; badge.classList.remove('hidden'); badge.classList.add('inline-flex'); }
+      else { badge.classList.add('hidden'); badge.classList.remove('inline-flex'); }
+    }
+
+    function renderInbox(){
+      const cont=document.getElementById('inbox');
+      if(!cont) return;
+      if(!inbox.convos.length){
+        cont.innerHTML='<div class="bg-white rounded-2xl border border-slate-200 p-12 text-center"><div class="text-4xl mb-3">📭</div><div class="font-bold text-slate-700">Sin conversaciones aún</div><div class="text-slate-500 text-sm mt-1">Escríbele a un candidato desde su perfil para iniciar una conversación.</div></div>';
+        return;
+      }
+      cont.innerHTML=`
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden flex" style="height:calc(100vh - 250px); min-height:440px;">
+          <div class="w-80 flex-shrink-0 border-r border-slate-200 overflow-y-auto">${inbox.convos.map(convoRowHTML).join('')}</div>
+          <div class="flex-1 flex flex-col min-w-0" id="inboxThread"><div class="flex-1 flex items-center justify-center text-slate-400 text-sm">Selecciona una conversación</div></div>
+        </div>`;
+      if(inbox.activeStudent) renderInboxThread(inbox.activeStudent);
+    }
+
+    function convoRowHTML(c){
+      const st=inbox.students[c.studentId]||{};
+      const active=inbox.activeStudent===c.studentId;
+      const avatar=st.foto_url?`<img src="${escapeHTML(st.foto_url)}" class="w-11 h-11 rounded-xl object-cover"/>`:`<div class="w-11 h-11 rounded-xl grad flex items-center justify-center text-white font-black">${initials(st)}</div>`;
+      const preview=escapeHTML((c.last.sender_type==='company'?'Tú: ':'')+(c.last.contenido.length>40?c.last.contenido.slice(0,40)+'…':c.last.contenido));
+      return `<div onclick="openConversation('${c.studentId}')" class="flex items-center gap-3 p-3 cursor-pointer border-b border-slate-100 ${active?'bg-purple-50':'hover:bg-slate-50'}">
+        ${avatar}
+        <div class="flex-1 min-w-0">
+          <div class="font-bold text-sm text-slate-800 truncate">${fullName(st)}</div>
+          <div class="text-xs text-slate-500 truncate">${preview}</div>
+        </div>
+        <div class="flex flex-col items-end gap-1 flex-shrink-0">
+          <span class="text-[10px] text-slate-400">${timeShort(c.last.created_at)}</span>
+          ${c.unread?`<span class="min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-purple-600 rounded-full flex items-center justify-center">${c.unread}</span>`:''}
+        </div>
+      </div>`;
+    }
+
+    function renderInboxThread(studentId){
+      const pane=document.getElementById('inboxThread');
+      if(!pane) return;
+      const st=inbox.students[studentId]||{};
+      const msgs=threadCache[studentId]||[];
+      const avatar=st.foto_url?`<img src="${escapeHTML(st.foto_url)}" class="w-9 h-9 rounded-lg object-cover"/>`:`<div class="w-9 h-9 rounded-lg grad flex items-center justify-center text-white font-black text-xs">${initials(st)}</div>`;
+      const bubbles=msgs.map(m=>{
+        const mine=m.sender_type==='company';
+        return `<div class="flex ${mine?'justify-end':'justify-start'}"><div class="${mine?'grad text-white rounded-br-md':'bg-slate-100 text-slate-700 rounded-bl-md'} max-w-[75%] px-3.5 py-2 rounded-2xl text-sm leading-snug break-words">${escapeHTML(m.contenido)}</div></div>`;
+      }).join('') || '<div class="text-center text-xs text-slate-400 py-6">Aún no hay mensajes.</div>';
+      pane.innerHTML=`
+        <div class="flex items-center gap-3 p-4 border-b border-slate-200 flex-shrink-0">
+          ${avatar}
+          <div class="min-w-0"><div class="font-bold text-slate-800 truncate">${fullName(st)}</div><div class="text-xs text-slate-500 truncate">${escapeHTML(st.carrera||st.email||'')}</div></div>
+          <button onclick="openCandidate('${studentId}')" class="ml-auto text-xs font-bold text-purple-700 hover:bg-purple-50 px-3 py-1.5 rounded-lg flex-shrink-0">Ver perfil</button>
+        </div>
+        <div id="inboxBody" class="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-50/40">${bubbles}</div>
+        <form onsubmit="return sendInboxMessage(event)" class="flex items-end gap-2 p-3 border-t border-slate-200 flex-shrink-0">
+          <input id="inboxInput" type="text" maxlength="1000" autocomplete="off" placeholder="Escribe un mensaje…" class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/>
+          <button type="submit" class="grad text-white font-bold px-4 py-2.5 rounded-xl hover:opacity-90 transition">Enviar</button>
+        </form>`;
+      const body=document.getElementById('inboxBody'); if(body) body.scrollTop=body.scrollHeight;
+      const inp=document.getElementById('inboxInput'); if(inp) inp.focus();
+    }
+
+    async function openConversation(studentId){
+      inbox.activeStudent=studentId;
+      if(!threadCache[studentId]){
+        const { data }=await sb.from('messages').select('id, contenido, sender_type, leido, created_at').eq('company_id',companyId).eq('student_id',studentId).order('created_at',{ascending:true});
+        threadCache[studentId]=data||[];
+      }
+      renderInbox();
+      const convo=inbox.convos.find(c=>c.studentId===studentId);
+      if(convo && convo.unread){
+        (threadCache[studentId]||[]).forEach(m=>{ if(m.sender_type==='student') m.leido=true; });
+        convo.unread=0;
+        renderInbox(); updateUnreadBadge();
+        await sb.from('messages').update({ leido:true }).eq('company_id',companyId).eq('student_id',studentId).eq('sender_type','student').eq('leido',false);
+      }
+    }
+
+    async function sendInboxMessage(e){
+      e.preventDefault();
+      const inp=document.getElementById('inboxInput');
+      const text=(inp.value||'').trim();
+      const sid=inbox.activeStudent;
+      if(!text||!sid||!companyId) return false;
+      inp.value='';
+      const optimistic={ id:'tmp'+Date.now(), contenido:text, sender_type:'company', leido:false, created_at:new Date().toISOString() };
+      threadCache[sid]=(threadCache[sid]||[]).concat(optimistic);
+      renderInboxThread(sid);
+      try {
+        const { data, error }=await sb.from('messages').insert({ company_id:companyId, student_id:sid, contenido:text, sender_type:'company', leido:false }).select('id, created_at').single();
+        if(error) throw error;
+        if(data){ optimistic.id=data.id; if(data.created_at) optimistic.created_at=data.created_at; }
+      } catch(err){
+        threadCache[sid]=threadCache[sid].filter(m=>m!==optimistic);
+        renderInboxThread(sid);
+        alert('No se pudo enviar el mensaje. Intenta de nuevo.');
+        return false;
+      }
+      const convo=inbox.convos.find(c=>c.studentId===sid);
+      if(convo){ convo.last=optimistic; inbox.convos.sort((a,b)=> new Date(b.last.created_at)-new Date(a.last.created_at)); }
+      renderInbox();
+      return false;
     }
 
     init();
