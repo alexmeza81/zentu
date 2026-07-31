@@ -85,6 +85,9 @@
             <p class="text-slate-500 font-medium mt-1">Arrastra a los candidatos entre etapas. Personaliza tus etapas a tu proceso.</p>
           </div>
         </div>
+        <div id="pipelineHint" class="hidden bg-purple-50 border border-purple-100 rounded-2xl p-5 mb-5 text-sm text-purple-900">
+          💜 Dale <strong>like</strong> a un candidato en la pestaña <strong>Candidatos</strong> para agregarlo a tu pipeline. Aquí lo moverás entre etapas.
+        </div>
         <div id="board" class="flex gap-4 overflow-x-auto pb-4 items-start"></div>
       </div><!-- /sec-pipeline -->
 
@@ -245,6 +248,69 @@
     function refreshPipelineIfOpen(){
       if(typeof loadPipeline==='function' && !document.getElementById('sec-pipeline').classList.contains('hidden')) loadPipeline();
     }
+
+    // ── Pipeline (tablero kanban) ──────────────────────────────
+    let pipe = { stages:[], rows:[] };
+
+    async function loadPipeline(){
+      const board=document.getElementById('board');
+      if(!companyId){ board.innerHTML='<div class="text-slate-400 py-10">Tu cuenta aún no está vinculada a una empresa registrada.</div>'; return; }
+      await sb.rpc('ensure_pipeline_stages',{p_company:companyId});
+      const { data:stages } = await sb.from('pipeline_stages').select('id,nombre,posicion,color').eq('company_id',companyId).order('posicion');
+      pipe.stages = stages||[];
+      const { data:rows } = await sb.from('pipeline_candidates')
+        .select('id, stage_id, posicion, student:students(id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, linkedin_url, telefono, estado)')
+        .eq('company_id',companyId).order('posicion');
+      pipe.rows = (rows||[]).map(r=>({ id:r.id, stage_id:r.stage_id, posicion:r.posicion, student:r.student }));
+      renderBoard();
+    }
+
+    function renderBoard(){
+      const board=document.getElementById('board');
+      const hint=document.getElementById('pipelineHint');
+      if(!companyId){ board.innerHTML=''; return; }
+      if(hint) hint.classList.toggle('hidden', pipe.rows.length>0);
+      board.innerHTML = pipe.stages.map(stg=>{
+        const rows = pipe.rows.filter(r=>r.stage_id===stg.id).sort((a,b)=>a.posicion-b.posicion);
+        return `
+          <div class="pipe-col flex-shrink-0 w-72 bg-slate-100 rounded-2xl p-3" data-stage="${stg.id}" ondragover="onColDragOver(event)" ondragleave="onColDragLeave(event)" ondrop="onColDrop(event,'${stg.id}')">
+            <div class="flex items-center justify-between mb-3 px-1" draggable="true" ondragstart="onColHeadDragStart(event,'${stg.id}')" ondragend="onColHeadDragEnd(event)">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${escapeHTML(stg.color)}"></span>
+                <span class="font-bold text-slate-700 text-sm truncate">${escapeHTML(stg.nombre)}</span>
+                <span class="text-xs font-bold text-slate-400">${rows.length}</span>
+              </div>
+              <button onclick="openStageMenu(event,'${stg.id}')" class="stage-menu-btn w-6 h-6 rounded-lg text-slate-400 hover:bg-slate-200 flex items-center justify-center flex-shrink-0" title="Opciones de la etapa">⋯</button>
+            </div>
+            <div class="space-y-2 min-h-[44px]">
+              ${rows.map(pipelineCardHTML).join('') || '<div class="text-xs text-slate-300 text-center py-6 select-none">Sin candidatos</div>'}
+            </div>
+          </div>`;
+      }).join('') + `
+        <div class="flex-shrink-0 w-64 pt-1">
+          <button onclick="addStage()" class="w-full text-sm font-bold text-slate-500 hover:text-purple-700 border-2 border-dashed border-slate-300 hover:border-purple-300 rounded-2xl py-3 transition">+ Agregar etapa</button>
+        </div>`;
+    }
+
+    function pipelineCardHTML(row){
+      const st=row.student||{};
+      const m=computeMatches(st)[0];
+      const avatar=st.foto_url ? `<img src="${escapeHTML(st.foto_url)}" class="w-9 h-9 rounded-lg object-cover"/>` : `<div class="w-9 h-9 rounded-lg grad flex items-center justify-center text-white font-black text-xs">${initials(st)}</div>`;
+      return `
+        <div class="pipe-card bg-white rounded-xl border border-slate-200 p-3 cursor-pointer shadow-sm hover:shadow-md transition" draggable="true" data-pc="${row.id}" ondragstart="onCardDragStart(event,'${row.id}')" ondragend="onCardDragEnd(event)" onclick="openCandidate('${st.id}')">
+          <div class="flex items-center gap-2.5">
+            ${avatar}
+            <div class="min-w-0 flex-1">
+              <div class="font-bold text-sm text-slate-800 truncate">${fullName(st)}</div>
+              <div class="text-[11px] text-slate-500 truncate">${escapeHTML(st.carrera||'')}</div>
+            </div>
+          </div>
+          <div class="mt-2 flex items-center justify-between">
+            <span class="text-[10px] text-slate-400 truncate">${m?escapeHTML(m.role):''}</span>
+            <span class="text-xs font-black grad-text ml-1 flex-shrink-0">${m?m.pct+'%':''}</span>
+          </div>
+        </div>`;
+    }
     async function logout(){ await sb.auth.signOut(); location.replace('acceso.html'); }
 
     function showTab(id){
@@ -332,7 +398,9 @@
     }
 
     async function openCandidate(id){
-      const st=ALL.find(s=>s.id===id); if(!st) return;
+      let st=ALL.find(s=>s.id===id);
+      if(!st){ const r=pipe.rows.find(r=>r.student&&r.student.id===id); st=r&&r.student; }
+      if(!st) return;
       let hab={};
       if(testCache[id]!==undefined){ hab=testCache[id]; }
       else {
