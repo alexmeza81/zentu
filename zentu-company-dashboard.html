@@ -66,6 +66,7 @@
         <select id="fDisp" onchange="renderGrid()" class="py-2.5 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 focus:border-purple-400 focus:outline-none">
           <option value="">Cualquier disponibilidad</option><option>Inmediata</option><option>En 1 mes</option><option>Al egresar</option>
         </select>
+        <label class="flex items-center gap-2 text-sm font-semibold text-slate-600 cursor-pointer select-none whitespace-nowrap"><input id="fHidePipe" type="checkbox" onchange="renderGrid()" class="w-4 h-4 accent-purple-600"/> Ocultar los de mi pipeline</label>
         <button onclick="clearFilters()" class="text-sm font-bold text-purple-700 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition">Limpiar</button>
       </div>
 
@@ -170,6 +171,7 @@
 
     let ALL = [];
     let companyId = null;
+    let likedIds = new Set();
     const testCache = {};
     const threadCache = {};
 
@@ -178,9 +180,70 @@
       if (!session){ location.replace('acceso.html'); return; }
       document.getElementById('companyEmail').textContent = session.user.email;
       try { const { data } = await sb.rpc('ensure_my_company'); companyId = data || null; } catch(e){ companyId = null; }
+      await loadMyPipelineIds();
       document.getElementById('loading').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
       await loadCandidates();
+    }
+
+    async function loadMyPipelineIds(){
+      likedIds = new Set();
+      if(!companyId) return;
+      const { data } = await sb.from('pipeline_candidates').select('student_id').eq('company_id',companyId);
+      (data||[]).forEach(r=>likedIds.add(r.student_id));
+    }
+
+    // ── Like / Unlike (shortlist privado → pipeline) ───────────
+    function heartSVG(filled){
+      return filled
+        ? `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="#7B68EE"><path d="M12 21s-7.5-4.9-10-9.5C.5 8 2 4.5 5.5 4.5c2 0 3.3 1.1 4.5 2.6 1.2-1.5 2.5-2.6 4.5-2.6C18 4.5 19.5 8 22 11.5 19.5 16.1 12 21 12 21z"/></svg>`
+        : `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7.5-4.9-10-9.5C.5 8 2 4.5 5.5 4.5c2 0 3.3 1.1 4.5 2.6 1.2-1.5 2.5-2.6 4.5-2.6C18 4.5 19.5 8 22 11.5 19.5 16.1 12 21 12 21z"/></svg>`;
+    }
+    function modalHeartSVG(filled){
+      return filled
+        ? `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="white"><path d="M12 21s-7.5-4.9-10-9.5C.5 8 2 4.5 5.5 4.5c2 0 3.3 1.1 4.5 2.6 1.2-1.5 2.5-2.6 4.5-2.6C18 4.5 19.5 8 22 11.5 19.5 16.1 12 21 12 21z"/></svg>`
+        : `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7.5-4.9-10-9.5C.5 8 2 4.5 5.5 4.5c2 0 3.3 1.1 4.5 2.6 1.2-1.5 2.5-2.6 4.5-2.6C18 4.5 19.5 8 22 11.5 19.5 16.1 12 21 12 21z"/></svg>`;
+    }
+    async function toggleLike(id){
+      if(!companyId){ alert('Tu cuenta aún no está vinculada a una empresa registrada, por eso el pipeline está deshabilitado.'); return; }
+      if(likedIds.has(id)) await unlikeCandidate(id);
+      else await likeCandidate(id);
+    }
+    async function likeCandidate(id){
+      likedIds.add(id); refreshLikeUI(id);
+      try {
+        await sb.rpc('ensure_pipeline_stages',{p_company:companyId});
+        const { data:stages } = await sb.from('pipeline_stages').select('id').eq('company_id',companyId).order('posicion').limit(1);
+        const stageId = stages && stages[0] && stages[0].id;
+        if(!stageId) throw new Error('sin etapas');
+        const { data:rows } = await sb.from('pipeline_candidates').select('posicion').eq('company_id',companyId).eq('stage_id',stageId).order('posicion',{ascending:false}).limit(1);
+        const pos = (rows && rows[0] ? rows[0].posicion : -1) + 1;
+        const { error } = await sb.from('pipeline_candidates').insert({ company_id:companyId, student_id:id, stage_id:stageId, posicion:pos });
+        if(error && error.code!=='23505') throw error; // 23505 = ya existe, idempotente
+      } catch(e){
+        likedIds.delete(id); refreshLikeUI(id); alert('No se pudo agregar al pipeline. Intenta de nuevo.');
+      }
+      refreshPipelineIfOpen();
+    }
+    async function unlikeCandidate(id){
+      likedIds.delete(id); refreshLikeUI(id);
+      try {
+        const { error } = await sb.from('pipeline_candidates').delete().eq('company_id',companyId).eq('student_id',id);
+        if(error) throw error;
+      } catch(e){
+        likedIds.add(id); refreshLikeUI(id); alert('No se pudo quitar del pipeline. Intenta de nuevo.');
+      }
+      refreshPipelineIfOpen();
+    }
+    function refreshLikeUI(id){
+      renderGrid();
+      const btn=document.getElementById('modalLikeBtn');
+      if(btn && btn.dataset.sid===id && !document.getElementById('modal').classList.contains('hidden')){
+        btn.innerHTML = modalHeartSVG(likedIds.has(id));
+      }
+    }
+    function refreshPipelineIfOpen(){
+      if(typeof loadPipeline==='function' && !document.getElementById('sec-pipeline').classList.contains('hidden')) loadPipeline();
     }
     async function logout(){ await sb.auth.signOut(); location.replace('acceso.html'); }
 
@@ -217,7 +280,9 @@
     function renderGrid(){
       const q=_norm(document.getElementById('fSearch').value);
       const fc=document.getElementById('fCarrera').value, fi=document.getElementById('fIndustria').value, fd=document.getElementById('fDisp').value;
+      const hidePipe=document.getElementById('fHidePipe') && document.getElementById('fHidePipe').checked;
       const list=ALL.filter(s=>{
+        if(hidePipe && likedIds.has(s.id)) return false;
         if(q){ const hay=_norm(`${s.nombre} ${s.apellido} ${s.carrera} ${s.universidad}`); if(!hay.includes(q)) return false; }
         if(fc && s.carrera!==fc) return false;
         if(fi && !(Array.isArray(s.industrias)&&s.industrias.includes(fi))) return false;
@@ -235,6 +300,7 @@
       const m=computeMatches(st)[0];
       const skills=(Array.isArray(st.hard_skills)?st.hard_skills:[]).slice(0,4);
       const carreraLine=escapeHTML([st.carrera, st.ubicacion].filter(Boolean).join(' · '));
+      const liked=likedIds.has(st.id);
       const avatar=st.foto_url ? `<img src="${escapeHTML(st.foto_url)}" class="w-14 h-14 rounded-2xl object-cover"/>` : `<div class="w-14 h-14 rounded-2xl grad flex items-center justify-center text-white font-black text-lg">${initials(st)}</div>`;
       return `
       <div class="cand-card bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer" onclick="openCandidate('${st.id}')">
@@ -247,7 +313,10 @@
               <div class="text-xs text-slate-500 font-semibold truncate">${escapeHTML(st.universidad||'')}</div>
               <div class="text-xs text-slate-400 truncate">${carreraLine}</div>
             </div>
-            <span class="text-[10px] font-black text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full whitespace-nowrap">🔍 Activo</span>
+            <div class="flex flex-col items-end gap-2 flex-shrink-0">
+              <button onclick="event.stopPropagation(); toggleLike('${st.id}')" title="${liked?'Quitar de mi pipeline':'Agregar a mi pipeline'}" class="w-9 h-9 rounded-full flex items-center justify-center border transition ${liked?'bg-purple-50 border-purple-200':'bg-white border-slate-200 hover:bg-slate-50'}">${heartSVG(liked)}</button>
+              <span class="text-[10px] font-black text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full whitespace-nowrap">🔍 Activo</span>
+            </div>
           </div>
           <div class="mt-4 flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
             <div class="min-w-0"><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Mejor match</div><div class="text-sm font-bold text-slate-800 truncate">${escapeHTML(m.role)}</div></div>
@@ -256,7 +325,7 @@
           ${skills.length?`<div class="mt-3 flex flex-wrap gap-1.5">${skills.map(s=>`<span class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md">${escapeHTML(s)}</span>`).join('')}</div>`:''}
           <div class="mt-4 flex items-center justify-between">
             <span class="text-xs text-slate-500 font-medium">${st.disponibilidad?('📅 '+escapeHTML(st.disponibilidad)):''}</span>
-            <span class="text-sm font-bold text-purple-700">Ver perfil →</span>
+            ${liked?'<span class="text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">💜 En pipeline</span>':'<span class="text-sm font-bold text-purple-700">Ver perfil →</span>'}
           </div>
         </div>
       </div>`;
@@ -289,6 +358,7 @@
       document.getElementById('modalBody').innerHTML = `
         <div class="grad rounded-t-3xl p-5 text-white relative">
           <button onclick="closeModal()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white">✕</button>
+          <button id="modalLikeBtn" data-sid="${st.id}" onclick="toggleLike('${st.id}')" title="${likedIds.has(st.id)?'Quitar de mi pipeline':'Agregar a mi pipeline'}" class="absolute top-4 right-14 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center text-white">${modalHeartSVG(likedIds.has(st.id))}</button>
           <div class="flex items-center gap-4">
             ${avatar}
             <div class="min-w-0">
