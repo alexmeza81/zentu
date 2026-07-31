@@ -329,19 +329,18 @@
       document.querySelectorAll('.pipe-col').forEach(c=>c.classList.remove('drop-target'));
     }
     function onColDragOver(e){
-      if(dragColStageId) return;            // reorden de columnas: no resaltar como drop de tarjeta
       e.preventDefault();
       e.dataTransfer.dropEffect='move';
-      e.currentTarget.classList.add('drop-target');
+      if(!dragColStageId) e.currentTarget.classList.add('drop-target'); // resaltar solo para drop de tarjeta
     }
     function onColDragLeave(e){
       if(e.currentTarget.contains(e.relatedTarget)) return;
       e.currentTarget.classList.remove('drop-target');
     }
     async function onColDrop(e, toStageId){
-      e.currentTarget.classList.remove('drop-target');
-      if(dragColStageId){ return; }         // manejado por reorden de columnas (B5)
       e.preventDefault();
+      e.currentTarget.classList.remove('drop-target');
+      if(dragColStageId){ const from=dragColStageId; dragColStageId=null; await reorderStages(from, toStageId); return; }
       const pcId = dragPcId || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
       if(!pcId) return;
       await moveCandidate(pcId, toStageId);
@@ -362,10 +361,124 @@
       }
     }
 
-    // Reorden de columnas — implementado en B5 (stubs para evitar errores en drag de encabezado)
+    // ── Gestión de etapas (agregar/renombrar/color/eliminar/reordenar) ──
+    const STAGE_COLORS = ['#7B68EE','#4A9EFF','#F59E0B','#10B981','#22C55E','#EC4899','#EF4444','#64748B'];
     let dragColStageId = null;
-    function onColHeadDragStart(e, stageId){ dragColStageId = stageId; }
-    function onColHeadDragEnd(e){ dragColStageId = null; }
+
+    function onColHeadDragStart(e, stageId){
+      dragColStageId = stageId;
+      e.dataTransfer.effectAllowed='move';
+      const col=e.currentTarget.closest('.pipe-col'); if(col) col.classList.add('col-dragging');
+    }
+    function onColHeadDragEnd(e){
+      dragColStageId = null;
+      document.querySelectorAll('.pipe-col').forEach(c=>{ c.classList.remove('col-dragging'); c.classList.remove('drop-target'); });
+    }
+
+    async function reloadStages(){
+      const { data } = await sb.from('pipeline_stages').select('id,nombre,posicion,color').eq('company_id',companyId).order('posicion');
+      pipe.stages = data||[];
+    }
+
+    async function addStage(){
+      if(!companyId) return;
+      const nombre=(prompt('Nombre de la nueva etapa:','Nueva etapa')||'').trim();
+      if(!nombre) return;
+      const maxPos=pipe.stages.reduce((m,s)=>Math.max(m,s.posicion),-1);
+      const { error }=await sb.from('pipeline_stages').insert({ company_id:companyId, nombre, posicion:maxPos+1, color:STAGE_COLORS[pipe.stages.length % STAGE_COLORS.length] });
+      if(error){ alert('No se pudo crear la etapa.'); return; }
+      await reloadStages(); renderBoard();
+    }
+
+    async function renameStage(stageId){
+      closeStageMenu();
+      const stg=pipe.stages.find(s=>s.id===stageId); if(!stg) return;
+      const nombre=(prompt('Renombrar etapa:', stg.nombre)||'').trim();
+      if(!nombre || nombre===stg.nombre) return;
+      const old=stg.nombre; stg.nombre=nombre; renderBoard();
+      const { error }=await sb.from('pipeline_stages').update({ nombre }).eq('id',stageId).eq('company_id',companyId);
+      if(error){ stg.nombre=old; renderBoard(); alert('No se pudo renombrar.'); }
+    }
+
+    async function setStageColor(stageId, color){
+      closeStageMenu();
+      const stg=pipe.stages.find(s=>s.id===stageId); if(!stg) return;
+      const old=stg.color; stg.color=color; renderBoard();
+      const { error }=await sb.from('pipeline_stages').update({ color }).eq('id',stageId).eq('company_id',companyId);
+      if(error){ stg.color=old; renderBoard(); alert('No se pudo cambiar el color.'); }
+    }
+
+    async function deleteStage(stageId){
+      closeStageMenu();
+      if(pipe.stages.length<=1){ alert('Debe quedar al menos una etapa.'); return; }
+      const stg=pipe.stages.find(s=>s.id===stageId); if(!stg) return;
+      const cands=pipe.rows.filter(r=>r.stage_id===stageId);
+      if(cands.length){
+        const others=pipe.stages.filter(s=>s.id!==stageId);
+        const destId=await pickStage(others, `"${stg.nombre}" tiene ${cands.length} candidato(s). ¿A qué etapa los muevo?`);
+        if(!destId) return;
+        const { error:mErr }=await sb.from('pipeline_candidates').update({ stage_id:destId }).eq('company_id',companyId).eq('stage_id',stageId);
+        if(mErr){ alert('No se pudieron mover los candidatos.'); await loadPipeline(); return; }
+      } else {
+        if(!confirm(`¿Eliminar la etapa "${stg.nombre}"?`)) return;
+      }
+      const { error }=await sb.from('pipeline_stages').delete().eq('id',stageId).eq('company_id',companyId);
+      if(error){ alert('No se pudo eliminar la etapa.'); }
+      await loadPipeline();
+    }
+
+    async function reorderStages(fromId, toId){
+      if(fromId===toId) return;
+      const arr=[...pipe.stages].sort((a,b)=>a.posicion-b.posicion);
+      const fromIdx=arr.findIndex(s=>s.id===fromId), toIdx=arr.findIndex(s=>s.id===toId);
+      if(fromIdx<0||toIdx<0) return;
+      const [moved]=arr.splice(fromIdx,1);
+      arr.splice(toIdx,0,moved);
+      arr.forEach((s,i)=>s.posicion=i);
+      pipe.stages=arr; renderBoard();
+      try {
+        for(const s of arr){ const { error }=await sb.from('pipeline_stages').update({ posicion:s.posicion }).eq('id',s.id).eq('company_id',companyId); if(error) throw error; }
+      } catch(err){ await loadPipeline(); alert('No se pudo reordenar las etapas.'); }
+    }
+
+    function pickStage(stages, message){
+      return new Promise(resolve=>{
+        const ov=document.createElement('div');
+        ov.className='fixed inset-0 z-[70] bg-slate-900/50 flex items-center justify-center p-4';
+        ov.innerHTML=`<div class="bg-white rounded-2xl p-5 max-w-sm w-full">
+          <div class="font-bold text-slate-800 mb-3">${escapeHTML(message)}</div>
+          <div class="space-y-2 mb-3">${stages.map(s=>`<button data-id="${s.id}" class="pick-opt w-full text-left px-3 py-2.5 rounded-xl border border-slate-200 hover:border-purple-300 hover:bg-purple-50 font-semibold text-sm flex items-center gap-2"><span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${escapeHTML(s.color)}"></span>${escapeHTML(s.nombre)}</button>`).join('')}</div>
+          <button class="pick-cancel w-full py-2 text-sm font-bold text-slate-500 hover:text-slate-800">Cancelar</button>
+        </div>`;
+        document.body.appendChild(ov);
+        ov.addEventListener('click',e=>{
+          const opt=e.target.closest('.pick-opt');
+          if(opt){ ov.remove(); resolve(opt.dataset.id); return; }
+          if(e.target.closest('.pick-cancel') || e.target===ov){ ov.remove(); resolve(null); }
+        });
+      });
+    }
+
+    function openStageMenu(e, stageId){
+      e.stopPropagation();
+      closeStageMenu();
+      const menu=document.createElement('div');
+      menu.id='stageMenu';
+      menu.className='fixed z-[70] bg-white rounded-xl border border-slate-200 shadow-xl p-2 w-52';
+      const rect=e.currentTarget.getBoundingClientRect();
+      menu.style.top=(rect.bottom+6)+'px';
+      menu.style.left=Math.min(rect.left, window.innerWidth-220)+'px';
+      menu.innerHTML=`
+        <button onclick="renameStage('${stageId}')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 text-sm font-semibold text-slate-700">✏️ Renombrar</button>
+        <div class="px-3 py-2">
+          <div class="text-[11px] font-bold text-slate-400 mb-1.5">Color</div>
+          <div class="flex flex-wrap gap-1.5">${STAGE_COLORS.map(c=>`<button onclick="setStageColor('${stageId}','${c}')" class="w-5 h-5 rounded-full border border-white shadow" style="background:${c}" title="${c}"></button>`).join('')}</div>
+        </div>
+        <button onclick="deleteStage('${stageId}')" class="w-full text-left px-3 py-2 rounded-lg hover:bg-red-50 text-sm font-semibold text-red-600">🗑️ Eliminar</button>`;
+      document.body.appendChild(menu);
+      setTimeout(()=>document.addEventListener('click', closeStageMenu, { once:true }), 0);
+    }
+    function closeStageMenu(){ const m=document.getElementById('stageMenu'); if(m) m.remove(); }
     async function logout(){ await sb.auth.signOut(); location.replace('acceso.html'); }
 
     function showTab(id){
