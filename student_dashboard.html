@@ -183,6 +183,32 @@
   .inbox-meta { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-left: auto; flex-shrink: 0; }
   .inbox-time { font-size: 11px; color: #94A3B8; }
   .inbox-dot { width: 9px; height: 9px; border-radius: 999px; background: #7B68EE; }
+  .inbox-hint { font-size: 12.5px; color: #64748B; padding: 0 20px 12px; line-height: 1.5; }
+  .inbox-badge-count { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px; background: #7B68EE; color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; }
+
+  /* Chat (hilo de conversación) */
+  #chat-overlay { position: absolute; inset: 0; z-index: 40; background: #F0F2FF; display: none; flex-direction: column; }
+  #chat-overlay.open { display: flex; }
+  .chat-head { flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: max(12px, env(safe-area-inset-top)) 14px 12px; background: rgba(255,255,255,0.96); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(0,0,0,0.06); }
+  .chat-back { border: none; background: transparent; padding: 4px; cursor: pointer; display: flex; border-radius: 10px; }
+  .chat-back:active { background: #EEF0FF; }
+  .chat-avatar { width: 38px; height: 38px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 900; color: #fff; flex-shrink: 0; }
+  .chat-title { font-size: 14.5px; font-weight: 800; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-sub { font-size: 12px; color: #64748B; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .chat-body { flex: 1; overflow-y: auto; padding: 18px 16px; display: flex; flex-direction: column; }
+  .chat-intro { text-align: center; font-size: 12px; color: #94A3B8; margin: 0 auto 18px; max-width: 260px; line-height: 1.5; }
+  .bubble-row { display: flex; flex-direction: column; align-items: flex-start; margin-bottom: 6px; }
+  .bubble-row.mine { align-items: flex-end; }
+  .bubble { max-width: 78%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.45; word-wrap: break-word; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .bubble-them { background: #fff; color: #0F172A; border-bottom-left-radius: 6px; box-shadow: 0 1px 2px rgba(30,27,75,0.06); }
+  .bubble-mine { background: linear-gradient(135deg,#7B68EE,#4A9EFF); color: #fff; border-bottom-right-radius: 6px; }
+  .bubble-time { font-size: 10.5px; color: #94A3B8; margin: 3px 4px 4px; }
+  .chat-composer { flex-shrink: 0; display: flex; align-items: center; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(255,255,255,0.96); backdrop-filter: blur(12px); border-top: 1px solid rgba(0,0,0,0.06); }
+  .chat-input { flex: 1; border: 1px solid #E2E8F0; background: #F8FAFC; border-radius: 22px; padding: 11px 16px; font-size: 14px; font-family: inherit; color: #0F172A; outline: none; }
+  .chat-input:focus { border-color: #7B68EE; background: #fff; }
+  .chat-send { width: 42px; height: 42px; flex-shrink: 0; border: none; border-radius: 999px; background: linear-gradient(135deg,#7B68EE,#4A9EFF); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .chat-send:disabled { opacity: 0.5; }
+  .chat-send:active { transform: scale(0.94); }
 
   /* Ofertas */
   .swipe-stats { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin: 16px 20px 0; }
@@ -316,6 +342,9 @@
       </div>
     </div>
 
+    <!-- CHAT OVERLAY (hilo de conversación) -->
+    <div id="chat-overlay"></div>
+
   </div><!-- /app-shell -->
 </div><!-- /app -->
 
@@ -397,7 +426,7 @@
       }
     }
 
-    const state = { user:null, waitlist:null, student:null, testResults:null, messages:[] };
+    const state = { user:null, waitlist:null, student:null, testResults:null, messages:[], companies:{}, activeThread:null };
 
     async function dbGetStudent(user) {
       const { data } = await sb.from('students').select('*').eq('user_id', user.id).maybeSingle();
@@ -423,6 +452,29 @@
       if (!state.student) return;
       const { error } = await sb.from('test_results').insert({ student_id: state.student.id, habilidades });
       if (error) throw error;
+    }
+
+    async function dbLoadCompanies(ids) {
+      const uniq = [...new Set(ids)].filter(Boolean);
+      if (!uniq.length) return {};
+      const { data } = await sb.from('companies')
+        .select('id, nombre_empresa, nombre_contacto, apellido_contacto, cargo, email_corporativo')
+        .in('id', uniq);
+      const map = {};
+      (data || []).forEach(c => { map[c.id] = c; });
+      return map;
+    }
+    async function dbSendMessage(companyId, contenido) {
+      const { data, error } = await sb.from('messages')
+        .insert({ student_id: state.student.id, company_id: companyId, contenido, sender_type: 'student', leido: true })
+        .select('id, created_at').single();
+      if (error) throw error;
+      return data;
+    }
+    async function dbMarkThreadRead(companyId) {
+      await sb.from('messages').update({ leido: true })
+        .eq('student_id', state.student.id).eq('company_id', companyId)
+        .eq('sender_type', 'company').eq('leido', false);
     }
 
     async function loadDashboard(user) {
@@ -452,6 +504,7 @@
         .select('id, contenido, leido, created_at, sender_type, company_id')
         .eq('student_id', student.id).order('created_at', { ascending:false }).limit(20);
       state.messages = msgs || [];
+      state.companies = await dbLoadCompanies(state.messages.map(m => m.company_id));
 
       renderAll();
     }
@@ -1031,42 +1084,153 @@
       return new Date(dateStr).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' });
     }
 
+    function companyMeta(id) {
+      const c = (state.companies || {})[id] || {};
+      const name = c.nombre_empresa || c.email_corporativo || 'Empresa';
+      const contact = [c.nombre_contacto, c.apellido_contacto].filter(Boolean).join(' ');
+      return { name, contact, cargo: c.cargo || '' };
+    }
+    function avatarColor(id) {
+      const s = (id || '').toString();
+      let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+      return COMPANY_COLORS[h % COMPANY_COLORS.length];
+    }
+    function initialsOf(name) {
+      return (name || 'E').trim().slice(0, 2).toUpperCase();
+    }
+    function buildConversations(messages) {
+      const by = {};
+      messages.forEach(m => { (by[m.company_id] = by[m.company_id] || []).push(m); });
+      return Object.keys(by).map(cid => {
+        const msgs = by[cid].slice().sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const last = msgs[msgs.length - 1];
+        const unread = msgs.filter(m => !m.leido && m.sender_type === 'company').length;
+        return { companyId: cid, msgs, last, unread };
+      }).sort((a, b) => new Date(b.last.created_at) - new Date(a.last.created_at));
+    }
+
     function renderInbox({ messages }) {
-      const unreadCount = messages.filter(m => !m.leido && m.sender_type === 'company').length;
+      const convos = buildConversations(messages);
+      const unreadTotal = messages.filter(m => !m.leido && m.sender_type === 'company').length;
 
       const badge = document.getElementById('inbox-badge');
       const notifDot = document.getElementById('notif-dot');
-      if (unreadCount > 0) {
-        badge.textContent = unreadCount;
-        badge.style.display = 'flex';
-        notifDot.style.display = 'block';
+      if (unreadTotal > 0) {
+        badge.textContent = unreadTotal; badge.style.display = 'flex'; notifDot.style.display = 'block';
+      } else {
+        badge.style.display = 'none'; notifDot.style.display = 'none';
       }
 
-      const itemsHTML = messages.length === 0
-        ? `<div style="padding:32px 20px;text-align:center;"><div style="font-size:36px;margin-bottom:12px;">📭</div><div style="font-size:14px;font-weight:700;color:#0F172A;">Sin mensajes aún</div><div style="font-size:13px;color:#64748B;margin-top:6px;">Las empresas te contactarán aquí.</div></div>`
-        : messages.map((msg, i) => {
-            const isUnread = !msg.leido && msg.sender_type === 'company';
-            const initials = (msg.company_id || 'E').toString().slice(0, 2).toUpperCase();
-            const preview = escapeHTML(msg.contenido.length > 60 ? msg.contenido.slice(0, 60) + '…' : msg.contenido);
+      const itemsHTML = convos.length === 0
+        ? `<div style="padding:44px 20px;text-align:center;"><div style="font-size:38px;margin-bottom:12px;">📭</div><div style="font-size:14px;font-weight:800;color:#0F172A;">Aún no tienes mensajes</div><div style="font-size:13px;color:#64748B;margin-top:6px;line-height:1.5;">Completa tu perfil para que las empresas te descubran y te escriban aquí.</div></div>`
+        : convos.map(cv => {
+            const meta = companyMeta(cv.companyId);
+            const preview = escapeHTML(cv.last.contenido.length > 58 ? cv.last.contenido.slice(0, 58) + '…' : cv.last.contenido);
+            const mine = cv.last.sender_type === 'student';
             return `
-              <div class="inbox-item ${isUnread ? 'unread' : ''}">
-                <div class="inbox-avatar" style="background:${COMPANY_COLORS[i % COMPANY_COLORS.length]}">${initials}</div>
+              <div class="inbox-item ${cv.unread ? 'unread' : ''}" role="button" tabindex="0" data-cid="${escapeHTML(cv.companyId)}" onclick="openThread(this.dataset.cid)">
+                <div class="inbox-avatar" style="background:${avatarColor(cv.companyId)}">${escapeHTML(initialsOf(meta.name))}</div>
                 <div style="flex:1;min-width:0;">
-                  <div class="inbox-company">Empresa</div>
-                  <div class="inbox-preview">${preview}</div>
+                  <div class="inbox-company">${escapeHTML(meta.name)}</div>
+                  <div class="inbox-preview">${mine ? '<span style="color:#94A3B8;">Tú: </span>' : ''}${preview}</div>
                 </div>
                 <div class="inbox-meta">
-                  <span class="inbox-time">${timeAgo(msg.created_at)}</span>
-                  ${isUnread ? '<div class="inbox-dot"></div>' : ''}
+                  <span class="inbox-time">${timeAgo(cv.last.created_at)}</span>
+                  ${cv.unread ? `<div class="inbox-badge-count">${cv.unread}</div>` : ''}
                 </div>
-              </div>
-            `;
+              </div>`;
           }).join('');
 
       document.getElementById('sec-inbox').innerHTML = `
-        <div class="section-title" style="padding-top:16px;">Mensajes recientes</div>
-        <div class="card" style="margin:0 20px 24px;">${itemsHTML}</div>
+        <div class="section-title" style="padding-top:16px;">Mensajes</div>
+        <div class="inbox-hint">Empresas interesadas en tu perfil. Responde para empezar la conversación.</div>
+        <div class="card" style="margin:0 20px 24px;overflow:hidden;">${itemsHTML}</div>
       `;
+    }
+
+    // ── Hilo de conversación ────────────────────────────────
+    function openThread(companyId) {
+      state.activeThread = companyId;
+      const toMark = state.messages.filter(m => m.company_id === companyId && m.sender_type === 'company' && !m.leido);
+      if (toMark.length) {
+        toMark.forEach(m => { m.leido = true; });
+        dbMarkThreadRead(companyId).catch(() => {});
+      }
+      document.getElementById('chat-overlay').classList.add('open');
+      renderThread(companyId);
+      renderInbox(state);
+    }
+    function closeThread() {
+      state.activeThread = null;
+      document.getElementById('chat-overlay').classList.remove('open');
+      document.getElementById('chat-overlay').innerHTML = '';
+    }
+    function renderThread(companyId) {
+      const meta = companyMeta(companyId);
+      const msgs = state.messages
+        .filter(m => m.company_id === companyId)
+        .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+
+      const bubbles = msgs.map((m, i) => {
+        const mine = m.sender_type === 'student';
+        const next = msgs[i + 1];
+        const showTime = !next || next.sender_type !== m.sender_type || (new Date(next.created_at) - new Date(m.created_at) > 1000 * 60 * 10);
+        return `
+          <div class="bubble-row ${mine ? 'mine' : ''}">
+            <div class="bubble ${mine ? 'bubble-mine' : 'bubble-them'}">${escapeHTML(m.contenido)}</div>
+            ${showTime ? `<div class="bubble-time">${timeAgo(m.created_at)}</div>` : ''}
+          </div>`;
+      }).join('');
+
+      const subtitle = [meta.contact, meta.cargo].filter(Boolean).join(' · ');
+
+      document.getElementById('chat-overlay').innerHTML = `
+        <div class="chat-head">
+          <button class="chat-back" onclick="closeThread()" aria-label="Volver">
+            <svg width="22" height="22" fill="none" stroke="#0F172A" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <div class="chat-avatar" style="background:${avatarColor(companyId)}">${escapeHTML(initialsOf(meta.name))}</div>
+          <div style="min-width:0;flex:1;">
+            <div class="chat-title">${escapeHTML(meta.name)}</div>
+            ${subtitle ? `<div class="chat-sub">${escapeHTML(subtitle)}</div>` : ''}
+          </div>
+        </div>
+        <div class="chat-body" id="chat-body">
+          <div class="chat-intro">🔒 Esta conversación es privada entre tú y ${escapeHTML(meta.name)}.</div>
+          ${bubbles}
+        </div>
+        <form class="chat-composer" onsubmit="return sendThreadMessage(event)">
+          <input id="chat-input" class="chat-input" type="text" placeholder="Escribe un mensaje…" autocomplete="off" maxlength="1000" />
+          <button type="submit" class="chat-send" aria-label="Enviar">
+            <svg width="20" height="20" fill="none" stroke="#fff" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12h14M13 6l6 6-6 6"/></svg>
+          </button>
+        </form>`;
+
+      const body = document.getElementById('chat-body');
+      if (body) body.scrollTop = body.scrollHeight;
+      const input = document.getElementById('chat-input');
+      if (input) input.focus();
+    }
+    async function sendThreadMessage(e) {
+      e.preventDefault();
+      const input = document.getElementById('chat-input');
+      const text = (input.value || '').trim();
+      if (!text || !state.activeThread) return false;
+      const companyId = state.activeThread;
+      input.value = '';
+      const optimistic = { id: 'tmp-' + Date.now(), company_id: companyId, contenido: text, leido: true, sender_type: 'student', created_at: new Date().toISOString() };
+      state.messages.push(optimistic);
+      renderThread(companyId);
+      try {
+        const saved = await dbSendMessage(companyId, text);
+        if (saved) { optimistic.id = saved.id; if (saved.created_at) optimistic.created_at = saved.created_at; }
+      } catch (err) {
+        state.messages = state.messages.filter(m => m !== optimistic);
+        renderThread(companyId);
+        alert('No se pudo enviar el mensaje. Intenta de nuevo.');
+      }
+      renderInbox(state);
+      return false;
     }
 
     // ── RENDER: OFERTAS DE EMPLEO ───────────────────────────

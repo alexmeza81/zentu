@@ -141,12 +141,15 @@
     ];
 
     let ALL = [];
+    let companyId = null;
     const testCache = {};
+    const threadCache = {};
 
     async function init(){
       const { data:{ session } } = await sb.auth.getSession();
       if (!session){ location.replace('acceso.html'); return; }
       document.getElementById('companyEmail').textContent = session.user.email;
+      try { const { data } = await sb.rpc('ensure_my_company'); companyId = data || null; } catch(e){ companyId = null; }
       document.getElementById('loading').classList.add('hidden');
       document.getElementById('app').classList.remove('hidden');
       await loadCandidates();
@@ -232,6 +235,7 @@
       }
       renderDetail(st, hab);
       document.getElementById('modal').classList.remove('hidden');
+      loadThread(id);
     }
     function closeModal(){ document.getElementById('modal').classList.add('hidden'); }
     function closeModalOutside(e){ if(e.target.id==='modal') closeModal(); }
@@ -278,9 +282,62 @@
               ${st.telefono?`<div>📱 <a href="tel:${escapeHTML(String(st.telefono).replace(/[^0-9+]/g,''))}" class="text-blue-600 font-semibold">${escapeHTML(st.telefono)}</a></div>`:''}
               ${lk?`<div>🔗 <a href="${lk}" target="_blank" rel="noopener" class="text-blue-600 font-semibold">LinkedIn</a></div>`:''}
             </div>
-            <a href="mailto:${escapeHTML(st.email)}?subject=Oportunidad%20en%20ZentU" class="mt-3 block text-center grad text-white font-bold py-3 rounded-xl hover:opacity-90 transition">✉️ Contactar candidato</a>
+          </div>
+          <div class="border-t border-slate-100 pt-4">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">💬 Mensaje directo</div>
+            ${companyId ? `
+              <div id="msgThread" class="space-y-2 max-h-52 overflow-y-auto mb-3 pr-1"></div>
+              <div class="flex items-end gap-2">
+                <textarea id="msgInput" rows="2" maxlength="1000" placeholder="Escríbele a ${fullName(st)}…" class="flex-1 border border-slate-200 rounded-xl px-3 py-2 text-sm resize-none focus:outline-none focus:border-purple-400" onkeydown="if(event.key==='Enter'&&(event.metaKey||event.ctrlKey)){event.preventDefault();sendToStudent('${st.id}');}"></textarea>
+                <button onclick="sendToStudent('${st.id}')" class="grad text-white font-bold px-4 py-2.5 rounded-xl hover:opacity-90 transition whitespace-nowrap">Enviar</button>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-2">El candidato verá tu mensaje en su bandeja de ZentU. (⌘/Ctrl + Enter para enviar)</div>
+            ` : `
+              <a href="mailto:${escapeHTML(st.email)}?subject=Oportunidad%20en%20ZentU" class="block text-center grad text-white font-bold py-3 rounded-xl hover:opacity-90 transition">✉️ Contactar por correo</a>
+              <div class="text-[11px] text-slate-400 mt-2">Tu cuenta aún no está vinculada a una empresa registrada, por eso el chat interno está deshabilitado. Mientras tanto puedes escribir por correo.</div>
+            `}
           </div>
         </div>`;
+    }
+
+    async function loadThread(studentId){
+      if(!companyId) return;
+      const el=document.getElementById('msgThread');
+      if(el) el.innerHTML='<div class="text-xs text-slate-400 text-center py-2">Cargando…</div>';
+      const { data }=await sb.from('messages')
+        .select('id, contenido, sender_type, created_at')
+        .eq('company_id',companyId).eq('student_id',studentId)
+        .order('created_at',{ascending:true});
+      threadCache[studentId]=data||[];
+      renderThread(studentId);
+    }
+    function renderThread(studentId){
+      const el=document.getElementById('msgThread');
+      if(!el) return;
+      const msgs=threadCache[studentId]||[];
+      if(!msgs.length){ el.innerHTML='<div class="text-xs text-slate-400 text-center py-3">Aún no le escribes a este candidato. Rompe el hielo 👋</div>'; return; }
+      el.innerHTML=msgs.map(m=>{
+        const mine=m.sender_type==='company';
+        return `<div class="flex ${mine?'justify-end':'justify-start'}"><div class="${mine?'grad text-white rounded-br-md':'bg-slate-100 text-slate-700 rounded-bl-md'} max-w-[80%] px-3 py-2 rounded-2xl text-sm leading-snug break-words">${escapeHTML(m.contenido)}</div></div>`;
+      }).join('');
+      el.scrollTop=el.scrollHeight;
+    }
+    async function sendToStudent(studentId){
+      const input=document.getElementById('msgInput');
+      const text=(input.value||'').trim();
+      if(!text||!companyId) return;
+      input.value='';
+      const optimistic={ id:'tmp'+Date.now(), contenido:text, sender_type:'company', created_at:new Date().toISOString() };
+      threadCache[studentId]=(threadCache[studentId]||[]).concat(optimistic);
+      renderThread(studentId);
+      const { data, error }=await sb.from('messages')
+        .insert({ company_id:companyId, student_id:studentId, contenido:text, sender_type:'company', leido:false })
+        .select('id, created_at').single();
+      if(error){
+        threadCache[studentId]=threadCache[studentId].filter(m=>m!==optimistic);
+        renderThread(studentId);
+        alert('No se pudo enviar el mensaje. Intenta de nuevo.');
+      } else if(data){ optimistic.id=data.id; if(data.created_at) optimistic.created_at=data.created_at; }
     }
 
     init();
