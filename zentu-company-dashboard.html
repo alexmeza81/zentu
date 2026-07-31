@@ -16,6 +16,9 @@
     .grad-text { background: linear-gradient(135deg,#7B68EE,#4A9EFF); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     .cand-card { transition: transform .15s, box-shadow .15s; }
     .cand-card:hover { transform: translateY(-3px); box-shadow: 0 14px 34px rgba(30,27,75,0.12); }
+    .tab-btn { padding: 12px 16px; font-size: 14px; font-weight: 700; color: #64748B; border-bottom: 2px solid transparent; cursor: pointer; background: transparent; margin-bottom: -1px; }
+    .tab-btn:hover { color: #0F172A; }
+    .tab-btn.active { color: #6D28D9; border-bottom-color: #7B68EE; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-900">
@@ -37,9 +40,15 @@
           <button onclick="logout()" class="text-sm font-bold text-slate-600 hover:text-slate-900 border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition">Salir</button>
         </div>
       </div>
+      <div class="max-w-7xl mx-auto px-6 flex items-center gap-1 border-t border-slate-100">
+        <button id="tab-candidatos" onclick="showTab('candidatos')" class="tab-btn active">Candidatos</button>
+        <button id="tab-pipeline" onclick="showTab('pipeline')" class="tab-btn">Pipeline</button>
+        <button id="tab-mensajes" onclick="showTab('mensajes')" class="tab-btn">Mensajes<span id="tabUnread" class="hidden ml-1.5 items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-purple-600 rounded-full align-middle">0</span></button>
+      </div>
     </nav>
 
     <main class="max-w-7xl mx-auto px-6 py-8">
+      <div id="sec-candidatos" class="tab-sec">
       <div class="flex items-end justify-between flex-wrap gap-3 mb-6">
         <div>
           <h1 class="text-3xl font-black tracking-tight">Candidatos disponibles</h1>
@@ -66,6 +75,25 @@
         <div class="text-lg font-bold text-slate-700">Sin candidatos que coincidan</div>
         <div class="text-slate-500 mt-1">Ajusta los filtros o vuelve más tarde.</div>
       </div>
+      </div><!-- /sec-candidatos -->
+
+      <div id="sec-pipeline" class="tab-sec hidden">
+        <div class="flex items-end justify-between flex-wrap gap-3 mb-6">
+          <div>
+            <h1 class="text-3xl font-black tracking-tight">Tu pipeline</h1>
+            <p class="text-slate-500 font-medium mt-1">Arrastra a los candidatos entre etapas. Personaliza tus etapas a tu proceso.</p>
+          </div>
+        </div>
+        <div id="board" class="flex gap-4 overflow-x-auto pb-4 items-start"></div>
+      </div><!-- /sec-pipeline -->
+
+      <div id="sec-mensajes" class="tab-sec hidden">
+        <div class="mb-6">
+          <h1 class="text-3xl font-black tracking-tight">Mensajes</h1>
+          <p class="text-slate-500 font-medium mt-1">Todas tus conversaciones con candidatos en un solo lugar.</p>
+        </div>
+        <div id="inbox"></div>
+      </div><!-- /sec-mensajes -->
     </main>
   </div>
 
@@ -155,6 +183,15 @@
       await loadCandidates();
     }
     async function logout(){ await sb.auth.signOut(); location.replace('acceso.html'); }
+
+    function showTab(id){
+      document.querySelectorAll('.tab-sec').forEach(s=>s.classList.add('hidden'));
+      const sec=document.getElementById('sec-'+id); if(sec) sec.classList.remove('hidden');
+      document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+      const btn=document.getElementById('tab-'+id); if(btn) btn.classList.add('active');
+      if(id==='pipeline' && typeof loadPipeline==='function') loadPipeline();
+      if(id==='mensajes' && typeof loadInbox==='function') loadInbox();
+    }
 
     async function loadCandidates(){
       const { data, error } = await sb.from('students')
