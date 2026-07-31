@@ -19,6 +19,9 @@
     .tab-btn { padding: 12px 16px; font-size: 14px; font-weight: 700; color: #64748B; border-bottom: 2px solid transparent; cursor: pointer; background: transparent; margin-bottom: -1px; }
     .tab-btn:hover { color: #0F172A; }
     .tab-btn.active { color: #6D28D9; border-bottom-color: #7B68EE; }
+    .pipe-col.drop-target { background: #ede9fe; outline: 2px dashed #a78bfa; outline-offset: -3px; }
+    .pipe-card.dragging { opacity: .45; }
+    .pipe-col.col-dragging { opacity: .5; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-900">
@@ -311,6 +314,58 @@
           </div>
         </div>`;
     }
+
+    // ── Drag & drop de candidatos entre etapas ─────────────────
+    let dragPcId = null;
+    function onCardDragStart(e, pcId){
+      dragPcId = pcId;
+      e.dataTransfer.effectAllowed='move';
+      try { e.dataTransfer.setData('text/plain', pcId); } catch(_){}
+      e.currentTarget.classList.add('dragging');
+    }
+    function onCardDragEnd(e){
+      e.currentTarget.classList.remove('dragging');
+      dragPcId = null;
+      document.querySelectorAll('.pipe-col').forEach(c=>c.classList.remove('drop-target'));
+    }
+    function onColDragOver(e){
+      if(dragColStageId) return;            // reorden de columnas: no resaltar como drop de tarjeta
+      e.preventDefault();
+      e.dataTransfer.dropEffect='move';
+      e.currentTarget.classList.add('drop-target');
+    }
+    function onColDragLeave(e){
+      if(e.currentTarget.contains(e.relatedTarget)) return;
+      e.currentTarget.classList.remove('drop-target');
+    }
+    async function onColDrop(e, toStageId){
+      e.currentTarget.classList.remove('drop-target');
+      if(dragColStageId){ return; }         // manejado por reorden de columnas (B5)
+      e.preventDefault();
+      const pcId = dragPcId || (e.dataTransfer && e.dataTransfer.getData('text/plain'));
+      if(!pcId) return;
+      await moveCandidate(pcId, toStageId);
+    }
+    async function moveCandidate(pcId, toStageId){
+      const row = pipe.rows.find(r=>r.id===pcId);
+      if(!row || row.stage_id===toStageId) return;
+      const fromStage = row.stage_id, fromPos = row.posicion;
+      const maxPos = pipe.rows.filter(r=>r.stage_id===toStageId).reduce((mx,r)=>Math.max(mx,r.posicion), -1);
+      row.stage_id = toStageId; row.posicion = maxPos+1;
+      renderBoard();
+      try {
+        const { error } = await sb.from('pipeline_candidates').update({ stage_id:toStageId, posicion:maxPos+1 }).eq('id',pcId).eq('company_id',companyId);
+        if(error) throw error;
+      } catch(err){
+        row.stage_id = fromStage; row.posicion = fromPos; renderBoard();
+        alert('No se pudo mover el candidato. Intenta de nuevo.');
+      }
+    }
+
+    // Reorden de columnas — implementado en B5 (stubs para evitar errores en drag de encabezado)
+    let dragColStageId = null;
+    function onColHeadDragStart(e, stageId){ dragColStageId = stageId; }
+    function onColHeadDragEnd(e){ dragColStageId = null; }
     async function logout(){ await sb.auth.signOut(); location.replace('acceso.html'); }
 
     function showTab(id){
