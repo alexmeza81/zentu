@@ -82,16 +82,25 @@
       </div><!-- /sec-candidatos -->
 
       <div id="sec-pipeline" class="tab-sec hidden">
-        <div class="flex items-end justify-between flex-wrap gap-3 mb-6">
+        <div class="flex items-end justify-between flex-wrap gap-3 mb-5">
           <div>
             <h1 class="text-3xl font-black tracking-tight">Tu pipeline</h1>
             <p class="text-slate-500 font-medium mt-1">Arrastra a los candidatos entre etapas. Personaliza tus etapas a tu proceso.</p>
+          </div>
+          <div class="flex items-center gap-2">
+            <select id="pipeOfferFilter" onchange="renderBoard()" class="py-2 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 focus:border-purple-400 focus:outline-none">
+              <option value="">Todas las ofertas</option>
+            </select>
+            <button onclick="openPipelineConfig()" class="flex items-center gap-1.5 text-sm font-bold text-slate-600 border border-slate-200 px-3 py-2 rounded-xl hover:bg-slate-50 transition" title="Configuración del pipeline">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+              Configurar
+            </button>
           </div>
         </div>
         <div id="pipelineHint" class="hidden bg-purple-50 border border-purple-100 rounded-2xl p-5 mb-5 text-sm text-purple-900">
           💜 Dale <strong>like</strong> a un candidato en la pestaña <strong>Candidatos</strong> para agregarlo a tu pipeline. Aquí lo moverás entre etapas.
         </div>
-        <div id="board" class="flex gap-4 overflow-x-auto pb-4 items-start"></div>
+        <div id="board" class="flex gap-3 overflow-x-auto pb-4 items-start"></div>
       </div><!-- /sec-pipeline -->
 
       <div id="sec-mensajes" class="tab-sec hidden">
@@ -107,6 +116,36 @@
   <div id="modal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-start md:items-center justify-center p-4 overflow-y-auto" onclick="closeModalOutside(event)">
     <div class="bg-white rounded-3xl max-w-lg w-full my-8" style="max-height:90vh;overflow-y:auto;">
       <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <div id="pipeConfigModal" class="hidden fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target.id==='pipeConfigModal')closePipelineConfig()">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-black">Configuración del pipeline</h3>
+        <button onclick="closePipelineConfig()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center">✕</button>
+      </div>
+      <div class="space-y-3">
+        <div class="border border-slate-200 rounded-2xl p-4">
+          <div class="font-bold text-slate-800 mb-1">Etapas</div>
+          <p class="text-sm text-slate-500 mb-3">Agrega, renombra, colorea, reordena o elimina etapas directamente en el tablero.</p>
+          <button onclick="closePipelineConfig(); addStage();" class="text-sm font-bold text-white grad px-4 py-2 rounded-xl hover:opacity-90 transition">+ Agregar etapa</button>
+        </div>
+        <div class="border border-slate-200 rounded-2xl p-4 opacity-70">
+          <div class="flex items-center justify-between mb-1">
+            <div class="font-bold text-slate-800">Automatizaciones</div>
+            <span class="text-[10px] font-black text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">FASE 2</span>
+          </div>
+          <p class="text-sm text-slate-500">Mueve candidatos entre etapas automáticamente (p. ej. al responder un mensaje o al aplicar a una vacante) y envía mensajes en automático.</p>
+        </div>
+        <div class="border border-slate-200 rounded-2xl p-4 opacity-70">
+          <div class="flex items-center justify-between mb-1">
+            <div class="font-bold text-slate-800">Plantillas de mensajes</div>
+            <span class="text-[10px] font-black text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">FASE 2</span>
+          </div>
+          <p class="text-sm text-slate-500">Guarda mensajes reutilizables para contactar candidatos más rápido en cada etapa.</p>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -277,7 +316,7 @@
       board.innerHTML = pipe.stages.map(stg=>{
         const rows = pipe.rows.filter(r=>r.stage_id===stg.id).sort((a,b)=>a.posicion-b.posicion);
         return `
-          <div class="pipe-col flex-shrink-0 w-72 bg-slate-100 rounded-2xl p-3" data-stage="${stg.id}" ondragover="onColDragOver(event)" ondragleave="onColDragLeave(event)" ondrop="onColDrop(event,'${stg.id}')">
+          <div class="pipe-col flex-shrink-0 w-64 bg-slate-100 rounded-2xl p-2.5" data-stage="${stg.id}" ondragover="onColDragOver(event)" ondragleave="onColDragLeave(event)" ondrop="onColDrop(event,'${stg.id}')">
             <div class="flex items-center justify-between mb-3 px-1" draggable="true" ondragstart="onColHeadDragStart(event,'${stg.id}')" ondragend="onColHeadDragEnd(event)">
               <div class="flex items-center gap-2 min-w-0">
                 <span class="w-2.5 h-2.5 rounded-full flex-shrink-0" style="background:${escapeHTML(stg.color)}"></span>
@@ -480,6 +519,9 @@
       setTimeout(()=>document.addEventListener('click', closeStageMenu, { once:true }), 0);
     }
     function closeStageMenu(){ const m=document.getElementById('stageMenu'); if(m) m.remove(); }
+
+    function openPipelineConfig(){ document.getElementById('pipeConfigModal').classList.remove('hidden'); }
+    function closePipelineConfig(){ document.getElementById('pipeConfigModal').classList.add('hidden'); }
     async function logout(){ await sb.auth.signOut(); location.replace('acceso.html'); }
 
     function showTab(id){
