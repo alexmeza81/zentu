@@ -304,6 +304,19 @@
                                 </div>
                             </div>
 
+                            <!-- Consentimiento y edad -->
+                            <div class="mt-2 space-y-2.5">
+                                <label class="flex items-start gap-2.5 cursor-pointer text-sm text-slate-600 select-none">
+                                    <input type="checkbox" id="chkEdad" class="mt-0.5 w-4 h-4 accent-purple-600 flex-shrink-0">
+                                    <span>Confirmo que tengo <b>18 años o más</b>.</span>
+                                </label>
+                                <label class="flex items-start gap-2.5 cursor-pointer text-sm text-slate-600 select-none">
+                                    <input type="checkbox" id="chkAviso" class="mt-0.5 w-4 h-4 accent-purple-600 flex-shrink-0">
+                                    <span>He leído y acepto el <a href="aviso-privacidad.html" target="_blank" rel="noopener" class="font-bold text-purple-700 underline">Aviso de Privacidad</a> y los <a href="terminos.html" target="_blank" rel="noopener" class="font-bold text-purple-700 underline">Términos y Condiciones</a>.</span>
+                                </label>
+                                <p id="consentErr" class="hidden text-xs font-semibold text-red-500">Debes confirmar tu edad y aceptar el aviso para continuar.</p>
+                            </div>
+
                             <!-- Submit -->
                             <button type="submit" id="submitBtn" class="w-full gradient-purple-blue text-white py-4 rounded-xl font-black text-base hover:opacity-90 transition shadow-lg flex items-center justify-center gap-2 mt-2">
                                 Unirme al movimiento
@@ -441,6 +454,13 @@
                 { id: 'egresoAnio',  val: anio },
             ].forEach(f => { if (!f.val) { markError(f.id); valid = false; } });
 
+            // Edad (18+) y consentimiento obligatorios
+            const edadOk  = document.getElementById('chkEdad').checked;
+            const avisoOk = document.getElementById('chkAviso').checked;
+            const consentErr = document.getElementById('consentErr');
+            if (!edadOk || !avisoOk) { consentErr.classList.remove('hidden'); valid = false; }
+            else { consentErr.classList.add('hidden'); }
+
             if (!valid) return;
 
             // Recolectar preferencias seleccionadas
@@ -455,6 +475,7 @@
             btn.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Enviando...`;
 
             // Guardar en Supabase (habilita el acceso al dashboard). Best-effort: no bloquea el registro.
+            const CONSENT_VERSION = '2026-08-03';
             try {
                 await sbClient.from('waitlist_estudiantes').insert({
                     nombre, apellido, email: correo, universidad: uni, carrera,
@@ -462,6 +483,18 @@
                 });
             } catch (err) {
                 console.error('Supabase waitlist insert failed:', err);
+            }
+
+            // Bitácora de consentimiento (LFPDPPP)
+            try {
+                await sbClient.from('consent_log').insert({
+                    email: correo, rol: 'estudiante',
+                    acepto_aviso: avisoOk, acepto_terminos: avisoOk, mayor_de_edad: edadOk,
+                    aviso_version: CONSENT_VERSION, terminos_version: CONSENT_VERSION,
+                    fuente: 'waitlist-estudiantes', user_agent: navigator.userAgent
+                });
+            } catch (err) {
+                console.error('consent_log insert failed:', err);
             }
 
             // Enviar a Web3Forms
