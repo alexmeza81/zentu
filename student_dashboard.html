@@ -426,7 +426,7 @@
       }
     }
 
-    const state = { user:null, waitlist:null, student:null, testResults:null, messages:[], companies:{}, activeThread:null };
+    const state = { user:null, waitlist:null, student:null, testResults:null, messages:[], companies:{}, activeThread:null, offers:[], offersIdx:0, appliedCount:0, savedCount:0 };
 
     async function dbGetStudent(user) {
       const { data } = await sb.from('students').select('*').eq('user_id', user.id).maybeSingle();
@@ -452,6 +452,23 @@
       if (!state.student) return;
       const { error } = await sb.from('test_results').insert({ student_id: state.student.id, habilidades });
       if (error) throw error;
+    }
+
+    async function dbLoadOffers() {
+      state.offers = []; state.offersIdx = 0; state.appliedCount = 0; state.savedCount = 0;
+      if (!state.student) return;
+      const { data: apps } = await sb.from('job_applications').select('offer_id, estado').eq('student_id', state.student.id);
+      const acted = new Set();
+      (apps || []).forEach(a => { acted.add(a.offer_id); if (a.estado === 'aplicada') state.appliedCount++; else if (a.estado === 'guardada') state.savedCount++; });
+      const { data: offs } = await sb.from('job_offers')
+        .select('id, empresa_nombre, titulo, area, ubicacion, modalidad, salario, descripcion, tags')
+        .eq('estado', 'publicada').order('created_at', { ascending: false });
+      state.offers = (offs || []).filter(o => !acted.has(o.id));
+    }
+    async function dbApplyOffer(offerId, estado) {
+      if (!state.student) return;
+      const { error } = await sb.from('job_applications').insert({ offer_id: offerId, student_id: state.student.id, estado });
+      if (error && error.code !== '23505') throw error; // 23505 = ya registrado
     }
 
     async function dbLoadCompanies(ids) {
@@ -505,6 +522,7 @@
         .eq('student_id', student.id).order('created_at', { ascending:false }).limit(20);
       state.messages = msgs || [];
       state.companies = await dbLoadCompanies(state.messages.map(m => m.company_id));
+      await dbLoadOffers();
 
       renderAll();
     }
@@ -1234,24 +1252,23 @@
     }
 
     // ── RENDER: OFERTAS DE EMPLEO ───────────────────────────
-    const JOB_OFFERS = [
-      { id:1, company:'Nubank', location:'CDMX · Híbrido', salary:'$18,000–22,000/mes', title:'Product Analyst Jr.', logoColor:'linear-gradient(135deg,#6366F1,#8B5CF6)', logoInitial:'N', accentColor:'#6366F1', tags:['SQL','Python','Tableau','Fintech'], desc:'Analizarás datos de comportamiento de usuarios para mejorar productos financieros en un equipo data-driven.', match:91 },
-      { id:2, company:'Grupo Bimbo', location:'Cuautitlán · Presencial', salary:'$15,000–18,000/mes', title:'Analista de Marketing Jr.', logoColor:'linear-gradient(135deg,#EF4444,#F97316)', logoInitial:'B', accentColor:'#EF4444', tags:['Excel','Meta Ads','Google Analytics','FMCG'], desc:'Coordinarás campañas digitales para las marcas del portafolio Bimbo en México.', match:85 },
-      { id:3, company:'Clip', location:'CDMX · Remoto', salary:'$20,000–25,000/mes', title:'Data Analyst Jr.', logoColor:'linear-gradient(135deg,#10B981,#4A9EFF)', logoInitial:'Cl', accentColor:'#10B981', tags:['SQL','Looker','Python','Pagos'], desc:'Construirás dashboards y reportes de pagos para el equipo de operaciones de Clip.', match:88 },
-      { id:4, company:'Deloitte', location:'CDMX · Híbrido', salary:'$16,000–20,000/mes', title:'Analista Consultor Jr.', logoColor:'linear-gradient(135deg,#0EA5E9,#6366F1)', logoInitial:'D', accentColor:'#0EA5E9', tags:['Excel','PowerPoint','Consultoría','Big 4'], desc:'Participarás en proyectos de transformación digital para clientes de distintas industrias.', match:81 },
-      { id:5, company:'Rappi', location:'CDMX · Híbrido', salary:'$17,000–21,000/mes', title:'Growth Analyst Jr.', logoColor:'linear-gradient(135deg,#F59E0B,#EF4444)', logoInitial:'R', accentColor:'#F59E0B', tags:['SQL','Growth','A/B Testing','Latam'], desc:'Analizarás métricas de retención y activación para el equipo de crecimiento de Rappi.', match:79 },
-    ];
-
-    let currentOffer = 0;
-    let appliedCount = 0;
-    let savedCount = 0;
+    function offerMatch(o) {
+      const st = state.student || {};
+      const skills = (Array.isArray(st.hard_skills) ? st.hard_skills : []).map(_norm);
+      const inds = (Array.isArray(st.industrias) ? st.industrias : []).map(_norm);
+      const tags = (Array.isArray(o.tags) ? o.tags : []).map(_norm);
+      let hits = 0;
+      tags.forEach(t => { if (skills.some(s => s.includes(t) || t.includes(s)) || inds.some(i => i.includes(t) || t.includes(i))) hits++; });
+      const ratio = tags.length ? hits / tags.length : 0;
+      return Math.max(62, Math.min(98, Math.round(62 + ratio * 36)));
+    }
 
     function renderOfertas() {
       document.getElementById('sec-ofertas').innerHTML = `
         <div class="swipe-stats">
-          <div class="swipe-stat"><div class="swipe-stat-n" style="color:#10B981;" id="stat-applied">${appliedCount}</div><div class="swipe-stat-l">Aplicadas</div></div>
-          <div class="swipe-stat"><div class="swipe-stat-n" style="color:#F59E0B;" id="stat-saved">${savedCount}</div><div class="swipe-stat-l">Guardadas</div></div>
-          <div class="swipe-stat"><div class="swipe-stat-n" style="color:#7B68EE;">${JOB_OFFERS.length}</div><div class="swipe-stat-l">Disponibles</div></div>
+          <div class="swipe-stat"><div class="swipe-stat-n" style="color:#10B981;">${state.appliedCount}</div><div class="swipe-stat-l">Aplicadas</div></div>
+          <div class="swipe-stat"><div class="swipe-stat-n" style="color:#F59E0B;">${state.savedCount}</div><div class="swipe-stat-l">Guardadas</div></div>
+          <div class="swipe-stat"><div class="swipe-stat-n" style="color:#7B68EE;">${state.offers.length}</div><div class="swipe-stat-l">Disponibles</div></div>
         </div>
         <div class="swipe-wrapper" id="swipe-wrapper"></div>
       `;
@@ -1260,38 +1277,42 @@
 
     function renderJobCard() {
       const wrapper = document.getElementById('swipe-wrapper');
-      if (currentOffer >= JOB_OFFERS.length) {
+      if (!state.offers.length || state.offersIdx >= state.offers.length) {
+        const done = state.offers.length > 0;
         wrapper.innerHTML = `
           <div style="text-align:center;padding:48px 20px;">
-            <div style="font-size:48px;margin-bottom:16px;">🎉</div>
-            <div style="font-size:16px;font-weight:800;color:#0F172A;margin-bottom:6px;">¡Revisaste todas las ofertas!</div>
-            <div style="font-size:13px;color:#64748B;">Vuelve mañana para ver nuevas oportunidades.</div>
+            <div style="font-size:48px;margin-bottom:16px;">${done ? '🎉' : '📭'}</div>
+            <div style="font-size:16px;font-weight:800;color:#0F172A;margin-bottom:6px;">${done ? '¡Revisaste todas las ofertas!' : 'Aún no hay ofertas'}</div>
+            <div style="font-size:13px;color:#64748B;">${done ? 'Vuelve pronto para ver nuevas oportunidades.' : 'Las empresas publicarán vacantes muy pronto.'}</div>
           </div>`;
         return;
       }
 
-      const j = JOB_OFFERS[currentOffer];
-      const dots = JOB_OFFERS.map((_, i) =>
-        `<div class="swipe-dot ${i === currentOffer ? 'current' : ''}"></div>`
-      ).join('');
+      const j = state.offers[state.offersIdx];
+      const color = avatarColor(j.empresa_nombre || j.titulo);
+      const initial = initialsOf(j.empresa_nombre || 'Z');
+      const match = offerMatch(j);
+      const loc = [j.ubicacion, j.modalidad].filter(Boolean).join(' · ');
+      const tags = Array.isArray(j.tags) ? j.tags : [];
+      const dots = state.offers.map((_, i) => `<div class="swipe-dot ${i === state.offersIdx ? 'current' : ''}"></div>`).join('');
 
       wrapper.innerHTML = `
-        <div class="job-card" style="--accent:${j.accentColor}">
-          <style>.job-card::before{background:${j.logoColor};}</style>
+        <div class="job-card" style="--accent:${color}">
+          <style>.job-card::before{background:${color};}</style>
           <div class="job-top">
-            <div class="job-logo" style="background:${j.logoColor}">${j.logoInitial}</div>
+            <div class="job-logo" style="background:${color}">${escapeHTML(initial)}</div>
             <div>
-              <div class="job-company">${escapeHTML(j.company)} · ${escapeHTML(j.location)}</div>
-              <div class="job-title">${escapeHTML(j.title)}</div>
-              <div class="job-location">📍 ${escapeHTML(j.salary)}</div>
+              <div class="job-company">${escapeHTML(j.empresa_nombre || 'Empresa')}${loc ? ' · ' + escapeHTML(loc) : ''}</div>
+              <div class="job-title">${escapeHTML(j.titulo)}</div>
+              ${j.salario ? `<div class="job-location">💰 ${escapeHTML(j.salario)}</div>` : ''}
             </div>
           </div>
           <div class="job-match-pill">
-            <span class="job-match-num">${j.match}%</span>
+            <span class="job-match-num">${match}%</span>
             <span class="job-match-txt">match con tu perfil</span>
           </div>
-          <div class="job-tags">${j.tags.map(t => `<span class="job-tag">${escapeHTML(t)}</span>`).join('')}</div>
-          <p class="job-desc">${escapeHTML(j.desc)}</p>
+          ${tags.length ? `<div class="job-tags">${tags.map(t => `<span class="job-tag">${escapeHTML(t)}</span>`).join('')}</div>` : ''}
+          ${j.descripcion ? `<p class="job-desc">${escapeHTML(j.descripcion)}</p>` : ''}
           <div class="swipe-btns">
             <button class="swipe-btn no" onclick="swipeAction('no')" title="Descartar">✕</button>
             <button class="swipe-btn save" onclick="swipeAction('save')" title="Guardar">★</button>
@@ -1299,14 +1320,23 @@
           </div>
         </div>
         <div class="swipe-counter-bar">${dots}</div>
-        <div class="swipe-hint">${currentOffer + 1} de ${JOB_OFFERS.length} ofertas · Actualizado hoy</div>
+        <div class="swipe-hint">${state.offersIdx + 1} de ${state.offers.length} ofertas</div>
       `;
     }
 
-    function swipeAction(action) {
-      if (action === 'yes') appliedCount++;
-      if (action === 'save') savedCount++;
-      currentOffer++;
+    async function swipeAction(action) {
+      const j = state.offers[state.offersIdx];
+      if (!j) return;
+      if (action === 'yes' || action === 'save') {
+        const estado = action === 'yes' ? 'aplicada' : 'guardada';
+        if (action === 'yes') state.appliedCount++; else state.savedCount++;
+        state.offersIdx++;
+        renderOfertas();
+        try { await dbApplyOffer(j.id, estado); }
+        catch (e) { if (action === 'yes') state.appliedCount--; else state.savedCount--; renderOfertas(); alert('No se pudo registrar. Intenta de nuevo.'); }
+        return;
+      }
+      state.offersIdx++;
       renderOfertas();
     }
 
