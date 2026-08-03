@@ -475,26 +475,19 @@
             btn.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Enviando...`;
 
             // Guardar en Supabase (habilita el acceso al dashboard). Best-effort: no bloquea el registro.
-            const CONSENT_VERSION = '2026-08-03';
+            // Registro + bitácora de consentimiento en una sola función servidor
+            // (valida el consentimiento del lado del servidor y escribe la bitácora sin manipulación del cliente).
             try {
-                await sbClient.from('waitlist_estudiantes').insert({
-                    nombre, apellido, email: correo, universidad: uni, carrera,
-                    egreso_mes: mes, egreso_year: anio, preferencias: prefs || null
+                const { error } = await sbClient.rpc('submit_student_waitlist', {
+                    p_nombre: nombre, p_apellido: apellido, p_email: correo,
+                    p_universidad: uni, p_carrera: carrera,
+                    p_egreso_mes: mes, p_egreso_year: anio, p_preferencias: prefs || null,
+                    p_mayor_de_edad: edadOk, p_acepto_aviso: avisoOk, p_acepto_terminos: avisoOk,
+                    p_user_agent: navigator.userAgent
                 });
+                if (error) throw error;
             } catch (err) {
-                console.error('Supabase waitlist insert failed:', err);
-            }
-
-            // Bitácora de consentimiento (LFPDPPP)
-            try {
-                await sbClient.from('consent_log').insert({
-                    email: correo, rol: 'estudiante',
-                    acepto_aviso: avisoOk, acepto_terminos: avisoOk, mayor_de_edad: edadOk,
-                    aviso_version: CONSENT_VERSION, terminos_version: CONSENT_VERSION,
-                    fuente: 'waitlist-estudiantes', user_agent: navigator.userAgent
-                });
-            } catch (err) {
-                console.error('consent_log insert failed:', err);
+                console.error('Supabase waitlist rpc failed:', err);
             }
 
             // Enviar a Web3Forms
