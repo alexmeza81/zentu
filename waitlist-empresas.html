@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <title>ZentU para Empresas | Acceso Anticipado</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #F8F9FA;
+        }
+
+        .gradient-purple-blue {
+            background: linear-gradient(135deg, #7B68EE 0%, #4A9EFF 100%);
+        }
+
+        .gradient-text {
+            background: linear-gradient(135deg, #7B68EE 0%, #4A9EFF 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .shadow-card {
+            box-shadow:
+                0 0 0 1px rgba(0,0,0,.04),
+                0 2px 6px rgba(0,0,0,.04),
+                0 10px 20px rgba(0,0,0,.06);
+        }
+
+        .input-field {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 0.75rem;
+            font-size: 0.9375rem;
+            font-weight: 500;
+            color: #0F172A;
+            background: #fff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            outline: none;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .input-field:focus {
+            border-color: #7B68EE;
+            box-shadow: 0 0 0 4px rgba(123, 104, 238, 0.1);
+        }
+
+        .input-field::placeholder {
+            color: #94A3B8;
+            font-weight: 400;
+        }
+
+        .pref-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.375rem;
+            padding: 0.5rem 1rem;
+            border: 2px solid #E2E8F0;
+            border-radius: 9999px;
+            font-size: 0.8125rem;
+            font-weight: 700;
+            color: #64748B;
+            background: #fff;
+            cursor: pointer;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .pref-pill:hover {
+            border-color: #7B68EE;
+            color: #7B68EE;
+        }
+
+        .pref-pill.selected {
+            background: linear-gradient(135deg, #7B68EE 0%, #4A9EFF 100%);
+            border-color: transparent;
+            color: #fff;
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .fade-up {
+            animation: fadeUp 0.5s ease forwards;
+        }
+
+        @keyframes scaleIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+
+        .scale-in {
+            animation: scaleIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .hero-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #7B68EE;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50%       { opacity: 0.5; transform: scale(1.3); }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
+        <div class="flex justify-between items-center px-6 md:px-8 py-4 max-w-7xl mx-auto">
+            <a href="https://zentu.app" class="flex items-center gap-3">
+                <div class="w-10 h-10 gradient-purple-blue rounded-2xl flex items-center justify-center shadow-lg">
+                    <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                    </svg>
+                </div>
+                <span class="text-2xl font-black tracking-tight">ZentU</span>
+            </a>
+            <a href="https://zentu.app" class="text-sm font-semibold text-slate-500 hover:text-slate-900 transition flex items-center gap-1.5">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Volver
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main -->
+    <main class="min-h-screen py-12 md:py-20">
+        <div class="max-w-5xl mx-auto px-6 md:px-8">
+            <div class="grid md:grid-cols-2 gap-12 items-start">
+
+                <!-- Left: Branding -->
+                <div class="fade-up">
+
+                    <!-- Eyebrow -->
+                    <div class="inline-flex items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-100 rounded-full text-sm font-bold text-purple-700 mb-8">
+                        <span class="hero-dot"></span>
+                        Acceso anticipado para empresas
+                    </div>
+
+                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 leading-[1.1] mb-5 tracking-tight">
+                        El talento Gen Z<br/>ya está aquí.<br/>
+                        <span class="gradient-text">¿Tu empresa está lista?</span>
+                    </h1>
+
+                    <p class="text-lg text-slate-500 mb-8 leading-relaxed">
+                        Una nueva generación de talento.<br/>
+                        Una nueva forma de encontrarlo.
+                    </p>
+
+                    <!-- Empresa Fundadora badge -->
+                    <div class="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-200 rounded-2xl p-5 mb-8">
+                        <div class="flex items-center gap-4">
+                            <div class="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-400 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-lg">
+                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-black text-amber-900 text-sm">Empresa Fundadora</p>
+                                <p class="text-amber-700 text-xs mt-0.5 leading-relaxed">Las primeras empresas en registrarse accederán a la plataforma con condiciones exclusivas y tendrán voz directa en el desarrollo del producto.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Benefits -->
+                    <div class="space-y-4">
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-xl gradient-purple-blue flex items-center justify-center flex-shrink-0 shadow-md mt-0.5">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-900 text-sm">Acceso al mejor talento Gen Z</p>
+                                <p class="text-slate-500 text-sm">Descubre estudiantes y recién egresados de las mejores universidades del país.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-xl gradient-purple-blue flex items-center justify-center flex-shrink-0 shadow-md mt-0.5">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-900 text-sm">Perfiles, no CVs</p>
+                                <p class="text-slate-500 text-sm">Ve las habilidades reales de cada candidato, no solo su historial en papel.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="w-8 h-8 rounded-xl gradient-purple-blue flex items-center justify-center flex-shrink-0 shadow-md mt-0.5">
+                                <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                            <div>
+                                <p class="font-bold text-slate-900 text-sm">Contacto directo, sin intermediarios</p>
+                                <p class="text-slate-500 text-sm">Conecta directo con los candidatos que se alinean con tu empresa.</p>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right: Form -->
+                <div id="formSection" class="fade-up">
+                    <div class="bg-white rounded-3xl shadow-card p-8">
+
+                        <div class="mb-7">
+                            <h2 class="text-2xl font-black text-slate-900 mb-1">Registro para empresas</h2>
+                            <p class="text-sm text-slate-500">Te contactamos en cuanto abramos acceso.</p>
+                        </div>
+
+                        <form id="waitlistForm" onsubmit="handleSubmit(event)" class="space-y-5" novalidate>
+
+                            <!-- Web3Forms hidden fields -->
+                            <input type="hidden" name="access_key" value="31f08303-c591-41d2-a706-1b3f773e93e0">
+                            <input type="hidden" name="subject" value="Nuevo registro Waitlist ZentU — Empresa">
+                            <input type="hidden" name="from_name" value="ZentU Waitlist Empresas">
+                            <input type="hidden" id="perfilesInput" name="Perfiles que buscan" value="">
+
+                            <!-- Nombre + Apellido -->
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">Nombre</label>
+                                    <input type="text" id="nombre" name="Nombre" placeholder="Carlos" class="input-field" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">Apellido</label>
+                                    <input type="text" id="apellido" name="Apellido" placeholder="Ramírez" class="input-field" required>
+                                </div>
+                            </div>
+
+                            <!-- Correo -->
+                            <div>
+                                <label class="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">Correo corporativo</label>
+                                <input type="email" id="correo" name="email" placeholder="carlos@tuempresa.com" class="input-field" required>
+                            </div>
+
+                            <!-- Teléfono -->
+                            <div>
+                                <label class="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">Teléfono</label>
+                                <div class="flex gap-2">
+                                    <select id="phoneCountry" onchange="updatePhoneField()" class="input-field" style="width:128px;flex-shrink:0;cursor:pointer;padding-right:0.5rem;">
+                                        <option value="+52|10">🇲🇽 +52</option>
+                                        <option value="+57|10">🇨🇴 +57</option>
+                                        <option value="+54|10">🇦🇷 +54</option>
+                                        <option value="+56|9">🇨🇱 +56</option>
+                                        <option value="+51|9">🇵🇪 +51</option>
+                                        <option value="+58|10">🇻🇪 +58</option>
+                                        <option value="+593|9">🇪🇨 +593</option>
+                                        <option value="+591|8">🇧🇴 +591</option>
+                                        <option value="+595|9">🇵🇾 +595</option>
+                                        <option value="+598|8">🇺🇾 +598</option>
+                                    </select>
+                                    <div class="relative flex-1">
+                                        <input type="tel" id="phoneNumber" placeholder="5512345678" maxlength="10"
+                                            oninput="filterPhoneInput(this); updatePhoneCounter()"
+                                            class="input-field pr-16">
+                                        <span id="phoneCounter" class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-slate-400 pointer-events-none select-none">0 / 10</span>
+                                    </div>
+                                </div>
+                                <input type="hidden" id="telefonoInput" name="Telefono">
+                            </div>
+
+                            <!-- Empresa -->
+                            <div>
+                                <label class="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">Empresa</label>
+                                <input type="text" id="empresa" name="Empresa" placeholder="Nombre de tu empresa" class="input-field" required>
+                            </div>
+
+                            <!-- Cargo -->
+                            <div>
+                                <label class="block text-xs font-black text-slate-700 uppercase tracking-wider mb-1.5">Cargo</label>
+                                <input type="text" id="cargo" name="Cargo" placeholder="CEO, HR Manager, Reclutador..." class="input-field" required>
+                            </div>
+
+                            <!-- Perfiles que buscan -->
+                            <div>
+                                <label class="block text-xs font-black text-slate-700 uppercase tracking-wider mb-3">Perfiles que buscan <span class="text-slate-400 font-semibold normal-case tracking-normal">(elige los que apliquen)</span></label>
+                                <div class="flex flex-wrap gap-2" id="perfiles">
+                                    <span class="pref-pill" onclick="togglePref(this)">Practicantes</span>
+                                    <span class="pref-pill" onclick="togglePref(this)">Recién egresados</span>
+                                    <span class="pref-pill" onclick="togglePref(this)">Junior (1-3 años)</span>
+                                    <span class="pref-pill" onclick="togglePref(this)">Proyectos freelance</span>
+                                    <span class="pref-pill" onclick="togglePref(this)">Tiempo completo</span>
+                                    <span class="pref-pill" onclick="togglePref(this)">Medio tiempo</span>
+                                    <span class="pref-pill" onclick="togglePref(this)">Remoto</span>
+                                    <span class="pref-pill" onclick="togglePref(this)">Presencial / Híbrido</span>
+                                </div>
+                            </div>
+
+                            <!-- Submit -->
+                            <button type="submit" id="submitBtn" class="w-full gradient-purple-blue text-white py-4 rounded-xl font-black text-base hover:opacity-90 transition shadow-lg flex items-center justify-center gap-2 mt-2">
+                                Quiero ser Empresa Fundadora
+                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                                </svg>
+                            </button>
+
+                            <!-- Freemium note -->
+                            <div class="mt-4 rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-2.5">
+                                <div class="flex items-start gap-2.5">
+                                    <div class="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-black text-slate-700">Acceso gratuito desde el inicio</p>
+                                        <p class="text-xs text-slate-400 mt-0.5">Las primeras empresas acceden sin costo y co-crean la plataforma con nosotros.</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start gap-2.5">
+                                    <div class="w-5 h-5 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                                        <svg class="w-3 h-3 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+                                    </div>
+                                    <div>
+                                        <p class="text-xs font-black text-slate-700">Licencia premium próximamente</p>
+                                        <p class="text-xs text-slate-400 mt-0.5">IA avanzada, filtros inteligentes y búsqueda ilimitada de talento.</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </form>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Success State -->
+    <div id="successState" class="hidden fixed inset-0 bg-white z-50 flex items-center justify-center p-6">
+        <div class="text-center max-w-md scale-in">
+
+            <!-- Icon -->
+            <div class="w-24 h-24 gradient-purple-blue rounded-3xl flex items-center justify-center mx-auto mb-8 shadow-2xl">
+                <svg class="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                </svg>
+            </div>
+
+            <h2 class="text-4xl font-black text-slate-900 mb-4">¡Registro recibido!</h2>
+
+            <p class="text-lg text-slate-600 leading-relaxed mb-5">
+                <span id="successName" class="font-bold text-slate-900"></span>, tu empresa ya forma parte del movimiento ZentU. Te contactaremos personalmente en cuanto abramos acceso para empresas.
+            </p>
+
+            <!-- Empresa Fundadora badge -->
+            <div class="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 px-5 py-3 rounded-full mb-8">
+                <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                </svg>
+                <span class="text-sm font-black text-amber-700">Empresa Fundadora confirmada</span>
+            </div>
+
+            <!-- Compartir -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-8">
+                <p class="text-sm font-black text-slate-900 mb-1">¿Conoces a alguien que debería estar aquí?</p>
+                <p class="text-xs text-slate-500 mb-4">Comparte ZentU con otras empresas que quieran conectar con talento Gen Z.</p>
+                <div class="flex gap-3 justify-center">
+                    <a href="https://wa.me/?text=%C2%BFYa%20conoces%20ZentU%3F%20Es%20la%20nueva%20forma%20de%20conectar%20con%20talento%20Gen%20Z%20para%20tu%20empresa%3A%20https%3A%2F%2Fzentu.app" target="_blank"
+                        class="flex items-center gap-2 px-5 py-2.5 bg-green-500 hover:bg-green-600 text-white text-sm font-bold rounded-xl transition">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                            <path d="M12 0C5.373 0 0 5.373 0 12c0 2.124.558 4.118 1.532 5.845L.057 23.428a.5.5 0 00.609.61l5.652-1.462A11.945 11.945 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 21.818a9.808 9.808 0 01-5.003-1.374l-.36-.214-3.713.96.99-3.618-.235-.374A9.808 9.808 0 012.182 12C2.182 6.58 6.58 2.182 12 2.182S21.818 6.58 21.818 12 17.42 21.818 12 21.818z"/>
+                        </svg>
+                        WhatsApp
+                    </a>
+                    <button onclick="copyLink()" id="copyBtn"
+                        class="flex items-center gap-2 px-5 py-2.5 bg-white border-2 border-slate-200 hover:border-slate-300 text-slate-700 text-sm font-bold rounded-xl transition">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                        Copiar link
+                    </button>
+                </div>
+            </div>
+
+            <a href="https://zentu.app" class="inline-flex items-center gap-2 text-sm font-bold text-slate-500 hover:text-slate-900 transition">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+                Volver al inicio
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Supabase
+        const sb = supabase.createClient(
+            'https://jlivxulenqbgsybqodiv.supabase.co',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsaXZ4dWxlbnFiZ3N5YnFvZGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMjQ5ODEsImV4cCI6MjA4MzYwMDk4MX0.qG4Tx7yB9185vypoZa91y3PPCdphwqXRz8WQKsKBH5g'
+        );
+
+        function copyLink() {
+            navigator.clipboard.writeText('https://zentu.app').then(() => {
+                const btn = document.getElementById('copyBtn');
+                btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"/></svg> ¡Copiado!`;
+                btn.classList.add('border-green-400', 'text-green-600');
+                setTimeout(() => {
+                    btn.innerHTML = `<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg> Copiar link`;
+                    btn.classList.remove('border-green-400', 'text-green-600');
+                }, 2000);
+            });
+        }
+
+        function togglePref(el) {
+            el.classList.toggle('selected');
+        }
+
+        const PHONE_PLACEHOLDERS = {
+            '+52': '5512345678', '+57': '3001234567', '+54': '1123456789',
+            '+56': '912345678',  '+51': '912345678',  '+58': '4121234567',
+            '+593': '991234567', '+591': '71234567',  '+595': '981234567', '+598': '91234567'
+        };
+
+        function updatePhoneField() {
+            const [code, digits] = document.getElementById('phoneCountry').value.split('|');
+            const n = parseInt(digits);
+            const input = document.getElementById('phoneNumber');
+            input.maxLength = n;
+            input.value = '';
+            input.placeholder = PHONE_PLACEHOLDERS[code] || '';
+            document.getElementById('phoneCounter').textContent = `0 / ${n}`;
+        }
+
+        function filterPhoneInput(el) {
+            el.value = el.value.replace(/\D/g, '');
+        }
+
+        function updatePhoneCounter() {
+            const input = document.getElementById('phoneNumber');
+            const digits = document.getElementById('phoneCountry').value.split('|')[1];
+            document.getElementById('phoneCounter').textContent = `${input.value.length} / ${digits}`;
+        }
+
+        function markError(id) {
+            const el = document.getElementById(id);
+            el.style.borderColor = '#F87171';
+            el.addEventListener('change', () => el.style.borderColor = '', { once: true });
+            el.addEventListener('input',  () => el.style.borderColor = '', { once: true });
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+
+            const nombre   = document.getElementById('nombre').value.trim();
+            const apellido = document.getElementById('apellido').value.trim();
+            const correo   = document.getElementById('correo').value.trim();
+            const empresa  = document.getElementById('empresa').value.trim();
+            const cargo    = document.getElementById('cargo').value.trim();
+            const phoneVal = document.getElementById('phoneCountry').value.split('|');
+            const phoneCode = phoneVal[0];
+            const phoneLen  = parseInt(phoneVal[1]);
+            const phoneNum  = document.getElementById('phoneNumber').value.trim();
+
+            // Validación
+            let valid = true;
+            [
+                { id: 'nombre',   val: nombre },
+                { id: 'apellido', val: apellido },
+                { id: 'correo',   val: correo },
+                { id: 'empresa',  val: empresa },
+                { id: 'cargo',    val: cargo },
+            ].forEach(f => { if (!f.val) { markError(f.id); valid = false; } });
+            if (phoneNum.length !== phoneLen) { markError('phoneNumber'); valid = false; }
+
+            if (!valid) return;
+
+            // Recolectar perfiles seleccionados
+            const perfiles = [...document.querySelectorAll('.pref-pill.selected')]
+                .map(el => el.textContent.trim())
+                .join(', ');
+            document.getElementById('perfilesInput').value = perfiles || 'Ninguno seleccionado';
+            document.getElementById('telefonoInput').value = `${phoneCode} ${phoneNum}`;
+
+            // Estado de carga
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.innerHTML = `<svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Enviando...`;
+
+            // Enviar a Web3Forms + Supabase en paralelo
+            const formData = new FormData(document.getElementById('waitlistForm'));
+            const supabasePayload = {
+                nombre, apellido,
+                telefono: `${phoneCode} ${phoneNum}`,
+                email: correo,
+                empresa, cargo,
+                perfiles_buscados: [...document.querySelectorAll('.pref-pill.selected')].map(el => el.textContent.trim()).join(', ') || 'Ninguno'
+            };
+
+            // Supabase es la fuente de verdad — Web3Forms es solo notificación
+            const { error: sbError } = await sb.from('waitlist_empresas').insert(supabasePayload);
+
+            if (sbError) {
+                btn.disabled = false;
+                btn.textContent = 'Quiero ser Empresa Fundadora';
+                alert('Hubo un error al enviar. Intenta de nuevo.');
+                return;
+            }
+
+            // Mostrar éxito (registro guardado en BD)
+            document.getElementById('successName').textContent = nombre;
+            document.getElementById('successState').classList.remove('hidden');
+
+            // Web3Forms: notificación por correo, falla silenciosa
+            fetch('https://api.web3forms.com/submit', { method: 'POST', body: formData })
+                .catch(() => {});
+        }
+    </script>
+
+</body>
+</html>
