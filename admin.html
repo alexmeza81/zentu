@@ -72,6 +72,7 @@
       </div>
       <div class="max-w-7xl mx-auto px-6 flex items-center gap-1 border-t border-slate-100">
         <button id="tab-resumen" onclick="showTab('resumen')" class="tab-btn active">Resumen</button>
+        <button id="tab-metricas" onclick="showTab('metricas')" class="tab-btn">Métricas</button>
         <button id="tab-waitlist" onclick="showTab('waitlist')" class="tab-btn">Waitlist</button>
         <button id="tab-usuarios" onclick="showTab('usuarios')" class="tab-btn">Usuarios</button>
         <button id="tab-cumplimiento" onclick="showTab('cumplimiento')" class="tab-btn">Cumplimiento</button>
@@ -83,6 +84,20 @@
         <h1 class="text-3xl font-black tracking-tight mb-1">Resumen</h1>
         <p class="text-slate-500 font-medium mb-6">Estado general de la plataforma.</p>
         <div id="metrics" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+      </div>
+
+      <div id="sec-metricas" class="tab-sec hidden">
+        <h1 class="text-3xl font-black tracking-tight mb-1">Métricas</h1>
+        <p class="text-slate-500 font-medium mb-6">KPIs para tomar decisiones. Combina waitlist (señal previa al lanzamiento) y usuarios registrados.</p>
+        <div id="kpiHead" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 mb-8">
+          <div class="font-black text-slate-900 mb-4">Registros por semana</div>
+          <div id="growthChart"></div>
+        </div>
+        <div class="flex items-center gap-2 mb-4"><span class="w-2.5 h-2.5 rounded-full" style="background:#7B68EE"></span><h2 class="text-xl font-black">Estudiantes</h2></div>
+        <div id="studentBreak" class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8"></div>
+        <div class="flex items-center gap-2 mb-4"><span class="w-2.5 h-2.5 rounded-full" style="background:#4A9EFF"></span><h2 class="text-xl font-black">Empresas</h2></div>
+        <div id="companyBreak" class="grid grid-cols-1 md:grid-cols-2 gap-6"></div>
       </div>
 
       <div id="sec-waitlist" class="tab-sec hidden">
@@ -181,8 +196,8 @@
     const [est, emp, stu, comp, offers, apps, msgs] = await Promise.all([
       sb.from('waitlist_estudiantes').select('*').order('created_at',{ascending:false}),
       sb.from('waitlist_empresas').select('*').order('created_at',{ascending:false}),
-      sb.from('students').select('id,nombre,apellido,email,universidad,carrera,estado,suspendido,created_at').order('created_at',{ascending:false}),
-      sb.from('companies').select('id,nombre_empresa,nombre_contacto,apellido_contacto,email_corporativo,suspendido,created_at').order('created_at',{ascending:false}),
+      sb.from('students').select('id,nombre,apellido,email,universidad,carrera,ubicacion,estado,suspendido,created_at').order('created_at',{ascending:false}),
+      sb.from('companies').select('id,nombre_empresa,nombre_contacto,apellido_contacto,email_corporativo,industria,tamano,perfiles_buscados,suspendido,created_at').order('created_at',{ascending:false}),
       sb.from('job_offers').select('id',{count:'exact',head:true}),
       sb.from('job_applications').select('id',{count:'exact',head:true}),
       sb.from('messages').select('id',{count:'exact',head:true})
@@ -191,6 +206,76 @@
     cache.students=stu.data||[]; cache.companies=comp.data||[];
     renderMetrics({ wlEst:cache.wl_estudiantes.length, wlEmp:cache.wl_empresas.length, stu:cache.students.length, comp:cache.companies.length, offers:offers.count||0, apps:apps.count||0, msgs:msgs.count||0 });
     renderWaitlist(); renderUsers();
+    renderMetricsPanel({ offers:offers.count||0, apps:apps.count||0 });
+  }
+
+  // ── Métricas / KPIs ─────────────────────────────────────────
+  function normLabel(v){ v=(v==null?'':String(v)).trim(); return v || '(sin dato)'; }
+  function toArr(raw){ if(Array.isArray(raw)) return raw; if(typeof raw==='string' && raw.includes(',')) return raw.split(','); return [raw]; }
+  function topN(rows, getter, n){
+    const m={};
+    rows.forEach(r=>{ toArr(getter(r)).forEach(v=>{ const k=normLabel(v); if(k==='(sin dato)'||k==='Ninguno'||k==='Ninguna seleccionada'||k==='Ninguno seleccionado') return; m[k]=(m[k]||0)+1; }); });
+    return Object.entries(m).sort((a,b)=>b[1]-a[1]).slice(0, n||8);
+  }
+  function lastWeeks(rows, dateField, weeks){
+    weeks=weeks||8;
+    const now=new Date(); now.setHours(0,0,0,0);
+    const start=new Date(now); start.setDate(start.getDate() - now.getDay() - 7*(weeks-1));
+    const buckets=[];
+    for(let i=0;i<weeks;i++){ const s=new Date(start); s.setDate(start.getDate()+i*7); buckets.push({ start:s, label:s.toLocaleDateString('es-MX',{day:'numeric',month:'short'}), count:0 }); }
+    rows.forEach(r=>{ const d=new Date(r[dateField]); if(isNaN(d)) return; for(let i=buckets.length-1;i>=0;i--){ if(d>=buckets[i].start){ buckets[i].count++; break; } } });
+    return buckets;
+  }
+  function barList(entries, color){
+    if(!entries.length) return '<div class="text-sm text-slate-400 py-3">Sin datos aún.</div>';
+    const max=Math.max(1, ...entries.map(e=>e[1]));
+    return entries.map(([label,n])=>`<div class="mb-2.5">
+      <div class="flex justify-between text-sm mb-1"><span class="font-semibold text-slate-700 truncate pr-2">${escapeHTML(label)}</span><span class="font-bold text-slate-500 tabular-nums">${n}</span></div>
+      <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:${Math.round(n/max*100)}%;background:${color}"></div></div>
+    </div>`).join('');
+  }
+  function card(title, inner){ return `<div class="bg-white rounded-2xl border border-slate-200 p-5"><div class="font-black text-slate-900 mb-3">${title}</div>${inner}</div>`; }
+
+  function renderMetricsPanel(extra){
+    extra=extra||{};
+    const est=cache.wl_estudiantes, emp=cache.wl_empresas, stu=cache.students, comp=cache.companies;
+    const uniAll=[...est, ...stu];   // universidad y carrera existen en waitlist y en registrados
+    const activos=stu.filter(s=>s.estado==='en_busqueda' && !s.suspendido).length;
+    const convEst = est.length ? Math.round(stu.length/est.length*100) : 0;
+
+    // KPIs headline
+    const kpi=(n,l,c)=>`<div class="bg-white rounded-2xl border border-slate-200 p-5"><div class="text-3xl font-black tabular-nums" style="color:${c}">${n}</div><div class="text-sm font-semibold text-slate-500 mt-1">${l}</div></div>`;
+    document.getElementById('kpiHead').innerHTML =
+      kpi(est.length+emp.length,'Registros en waitlist','#7B68EE')+
+      kpi(stu.length+comp.length,'Usuarios registrados','#10B981')+
+      kpi(activos,'Estudiantes activos','#4A9EFF')+
+      kpi((extra.apps||0),'Aplicaciones a vacantes','#EC4899');
+
+    // Crecimiento por semana (dos series)
+    const wE=lastWeeks(est,'created_at',8), wC=lastWeeks(emp,'created_at',8);
+    const max=Math.max(1, ...wE.map(b=>b.count), ...wC.map(b=>b.count));
+    const col=(v,color)=>`<div class="flex-1 flex flex-col items-center justify-end h-full gap-0.5"><div class="text-[11px] font-bold text-slate-600 tabular-nums">${v.count||''}</div><div class="w-full rounded-t" style="height:${Math.round(v.count/max*100)}%;background:${color}"></div></div>`;
+    document.getElementById('growthChart').innerHTML = `
+      <div class="flex gap-4 text-xs font-semibold mb-3"><span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm" style="background:#7B68EE"></span>Estudiantes</span><span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-sm" style="background:#4A9EFF"></span>Empresas</span></div>
+      <div class="flex items-end gap-3" style="height:180px">
+        ${wE.map((b,i)=>`<div class="flex-1 flex items-end gap-1 h-full">${col(b,'#7B68EE')}${col(wC[i],'#4A9EFF')}</div>`).join('')}
+      </div>
+      <div class="flex gap-3 mt-1.5">${wE.map(b=>`<div class="flex-1 text-center text-[10px] text-slate-400">${b.label}</div>`).join('')}</div>`;
+
+    // Estudiantes
+    document.getElementById('studentBreak').innerHTML =
+      card('Top universidades', barList(topN(uniAll, r=>r.universidad, 8), '#7B68EE'))+
+      card('Top carreras', barList(topN(uniAll, r=>r.carrera, 8), '#6D5AE6'))+
+      card('Ubicaciones (registrados)', barList(topN(stu, r=>r.ubicacion, 8), '#4A9EFF'))+
+      card('Estado de estudiantes', barList(topN(stu, r=>r.estado, 6), '#10B981'));
+
+    // Empresas
+    const perfiles=[...emp.map(r=>({p:r.perfiles_buscados})), ...comp.map(r=>({p:r.perfiles_buscados}))];
+    document.getElementById('companyBreak').innerHTML =
+      card('Top industrias', barList(topN(comp, r=>r.industria, 8), '#F59E0B'))+
+      card('Tamaño de empresa', barList(topN(comp, r=>r.tamano, 6), '#EC4899'))+
+      card('Perfiles más buscados', barList(topN(perfiles, r=>r.p, 8), '#4A9EFF'))+
+      card('Cargos de contacto (waitlist)', barList(topN(emp, r=>r.cargo, 8), '#6366F1'));
   }
 
   function metricCard(n,label,color){ return `<div class="bg-white rounded-2xl border border-slate-200 p-5"><div class="text-3xl font-black" style="color:${color}">${n}</div><div class="text-sm font-semibold text-slate-500 mt-1">${label}</div></div>`; }
