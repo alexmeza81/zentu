@@ -40,6 +40,9 @@
         </div>
         <div class="flex items-center gap-4">
           <span id="companyEmail" class="hidden sm:block text-sm font-semibold text-slate-500"></span>
+          <button onclick="showTab('config')" title="Configuración" class="w-9 h-9 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 flex items-center justify-center transition">
+            <svg class="w-4.5 h-4.5" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+          </button>
           <button onclick="logout()" class="text-sm font-bold text-slate-600 hover:text-slate-900 border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition">Salir</button>
         </div>
       </div>
@@ -122,6 +125,65 @@
         </div>
         <div id="inbox"></div>
       </div><!-- /sec-mensajes -->
+
+      <div id="sec-config" class="tab-sec hidden">
+        <div class="mb-6">
+          <h1 class="text-3xl font-black tracking-tight">Configuración</h1>
+          <p class="text-slate-500 font-medium mt-1">Tu información y la de tu empresa. El nombre y logo son los que ven los candidatos.</p>
+        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl">
+          <!-- Tu información -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-6">
+            <div class="font-black text-slate-900 mb-4">Tu información</div>
+            <div class="flex items-center gap-4 mb-4">
+              <div id="cfFotoPrev" class="w-16 h-16 rounded-2xl grad flex items-center justify-center text-white font-black text-xl overflow-hidden flex-shrink-0">Z</div>
+              <div>
+                <button onclick="document.getElementById('cfFotoInput').click()" class="text-sm font-bold text-purple-700 border border-purple-200 px-3 py-1.5 rounded-lg hover:bg-purple-50">Cambiar foto</button>
+                <input type="file" id="cfFotoInput" accept="image/*" class="hidden" onchange="onAssetPick('foto', event)"/>
+                <p class="text-[11px] text-slate-400 mt-1">PNG o JPG, cuadrada de preferencia.</p>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Nombre</label><input id="cfNombre" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/></div>
+                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Apellido</label><input id="cfApellido" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/></div>
+              </div>
+              <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Cargo</label><input id="cfCargo" type="text" placeholder="Talent Partner, Recruiter…" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/></div>
+              <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Teléfono</label><input id="cfTelefono" type="tel" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/></div>
+              <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Correo</label><input id="cfCorreo" type="email" disabled class="mt-1 w-full border border-slate-200 bg-slate-50 text-slate-400 rounded-xl px-3 py-2.5 text-sm"/></div>
+            </div>
+          </div>
+          <!-- Tu empresa -->
+          <div class="bg-white rounded-2xl border border-slate-200 p-6">
+            <div class="font-black text-slate-900 mb-4">Tu empresa</div>
+            <div class="flex items-center gap-4 mb-4">
+              <div id="cfLogoPrev" class="w-16 h-16 rounded-2xl bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 font-black text-xl overflow-hidden flex-shrink-0">🏢</div>
+              <div>
+                <button onclick="document.getElementById('cfLogoInput').click()" class="text-sm font-bold text-purple-700 border border-purple-200 px-3 py-1.5 rounded-lg hover:bg-purple-50">Cambiar logo</button>
+                <input type="file" id="cfLogoInput" accept="image/*" class="hidden" onchange="onAssetPick('logo', event)"/>
+                <p class="text-[11px] text-slate-400 mt-1">Lo verán los candidatos en tus vacantes.</p>
+              </div>
+            </div>
+            <div class="space-y-3">
+              <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Nombre de la empresa</label><input id="cfEmpresa" type="text" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/></div>
+              <div class="grid grid-cols-2 gap-3">
+                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Industria</label>
+                  <select id="cfIndustria" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"><option value="">—</option><option>Tecnología</option><option>Fintech</option><option>Banca y Finanzas</option><option>Consultoría</option><option>Manufactura</option><option>Retail</option><option>Consumo (FMCG)</option><option>Salud</option><option>Marketing</option><option>Medios y Entretenimiento</option><option>Energía</option><option>Logística</option><option>Bienes raíces</option><option>Gobierno y ONG</option><option>Startups</option><option>Otra</option></select>
+                </div>
+                <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Tamaño</label>
+                  <select id="cfTamano" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"><option value="">—</option><option>1–10</option><option>11–50</option><option>51–200</option><option>201–500</option><option>500+</option></select>
+                </div>
+              </div>
+              <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Sitio web</label><input id="cfSitio" type="url" placeholder="https://…" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/></div>
+              <div><label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Descripción</label><textarea id="cfDescripcion" rows="3" maxlength="400" placeholder="¿A qué se dedica tu empresa?" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-purple-400"></textarea></div>
+            </div>
+          </div>
+        </div>
+        <div class="max-w-4xl mt-5 flex items-center gap-3">
+          <button onclick="saveConfig()" id="cfSaveBtn" class="grad text-white font-bold px-6 py-3 rounded-xl hover:opacity-90 transition">Guardar cambios</button>
+          <span id="cfSaved" class="hidden text-sm font-bold text-green-600">✓ Guardado</span>
+        </div>
+      </div><!-- /sec-config -->
     </main>
   </div>
 
@@ -277,6 +339,8 @@
     let ALL = [];
     let companyId = null;
     let companyName = '';
+    let currentUser = null;
+    let company = {};
     let likedIds = new Set();
     const testCache = {};
     let offers = [];
@@ -287,6 +351,7 @@
     async function init(){
       const { data:{ session } } = await sb.auth.getSession();
       if (!session){ location.replace('acceso.html'); return; }
+      currentUser = session.user;
       document.getElementById('companyEmail').textContent = session.user.email;
       try { const { data } = await sb.rpc('ensure_my_company'); companyId = data || null; } catch(e){ companyId = null; }
       if(companyId){ try { const { data:co } = await sb.from('companies').select('nombre_empresa').eq('id',companyId).maybeSingle(); companyName = (co&&co.nombre_empresa)||''; } catch(e){} }
@@ -602,6 +667,7 @@
       if(id==='pipeline' && typeof loadPipeline==='function') loadPipeline();
       if(id==='vacantes' && typeof loadOffers==='function') loadOffers();
       if(id==='mensajes' && typeof loadInbox==='function') loadInbox();
+      if(id==='config' && typeof loadConfig==='function') loadConfig();
     }
 
     async function loadCandidates(){
@@ -1062,6 +1128,68 @@
       const cur=sel.value;
       sel.innerHTML='<option value="">Todas las ofertas</option>'+offers.map(o=>`<option value="${o.id}">${escapeHTML(o.titulo)}</option>`).join('');
       if([...sel.options].some(op=>op.value===cur)) sel.value=cur;
+    }
+
+    // ── Configuración (perfil + empresa) ───────────────────────
+    async function loadConfig(){
+      if(!companyId) return;
+      const { data } = await sb.from('companies').select('*').eq('id',companyId).maybeSingle();
+      company = data || {};
+      const v=(id,val)=>{ const e=document.getElementById(id); if(e) e.value=val||''; };
+      v('cfNombre', company.nombre_contacto);
+      v('cfApellido', company.apellido_contacto);
+      v('cfCargo', company.cargo);
+      v('cfTelefono', company.telefono);
+      v('cfCorreo', company.email_corporativo || (currentUser && currentUser.email));
+      v('cfEmpresa', company.nombre_empresa);
+      v('cfIndustria', company.industria);
+      v('cfTamano', company.tamano);
+      v('cfSitio', company.sitio_web);
+      v('cfDescripcion', company.descripcion);
+      renderAssetPreview('foto', company.foto_url);
+      renderAssetPreview('logo', company.logo_url);
+    }
+
+    function renderAssetPreview(kind, url){
+      const el=document.getElementById(kind==='foto'?'cfFotoPrev':'cfLogoPrev');
+      if(!el) return;
+      if(url){ el.innerHTML=`<img src="${escapeHTML(url)}" class="w-full h-full object-cover"/>`; }
+      else if(kind==='foto'){ el.textContent=((company.nombre_contacto||'Z')[0]||'Z').toUpperCase(); }
+      else { el.textContent='🏢'; }
+    }
+
+    async function onAssetPick(kind, e){
+      const file=e.target.files && e.target.files[0];
+      if(!file || !currentUser) return;
+      const url=await uploadCompanyAsset(kind, file);
+      if(url){ company[kind==='foto'?'foto_url':'logo_url']=url; renderAssetPreview(kind, url); }
+    }
+    async function uploadCompanyAsset(kind, file){
+      const ext=(file.name.split('.').pop()||'png').toLowerCase();
+      const path=`${currentUser.id}/company-${kind}.${ext}`;
+      const { error }=await sb.storage.from('avatars').upload(path, file, { upsert:true });
+      if(error){ alert('No se pudo subir la imagen.'); return null; }
+      const { data }=sb.storage.from('avatars').getPublicUrl(path);
+      return data.publicUrl + '?t=' + Date.now();
+    }
+
+    async function saveConfig(){
+      if(!companyId) return;
+      const val=id=>{ const e=document.getElementById(id); return e ? e.value.trim() : null; };
+      const payload={
+        nombre_contacto: val('cfNombre')||null, apellido_contacto: val('cfApellido')||null,
+        cargo: val('cfCargo')||null, telefono: val('cfTelefono')||null,
+        nombre_empresa: val('cfEmpresa')||null, industria: val('cfIndustria')||null,
+        tamano: val('cfTamano')||null, sitio_web: val('cfSitio')||null, descripcion: val('cfDescripcion')||null,
+        foto_url: company.foto_url||null, logo_url: company.logo_url||null
+      };
+      const btn=document.getElementById('cfSaveBtn'); const old=btn.textContent; btn.disabled=true; btn.textContent='Guardando…';
+      const { error }=await sb.from('companies').update(payload).eq('id',companyId);
+      btn.disabled=false; btn.textContent=old;
+      if(error){ alert('No se pudo guardar. Intenta de nuevo.'); return; }
+      companyName = payload.nombre_empresa || companyName;
+      Object.assign(company, payload);
+      const s=document.getElementById('cfSaved'); s.classList.remove('hidden'); setTimeout(()=>s.classList.add('hidden'), 2500);
     }
 
     init();
