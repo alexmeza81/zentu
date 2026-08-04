@@ -5,5 +5,8 @@
       "has": [{ "type": "host", "value": "join.zentu.app" }],
       "destination": "/waitlist-estudiantes.html"
     }
+  ],
+  "redirects": [
+    { "source": "/admin", "destination": "/admin.html", "permanent": false }
   ]
 }
