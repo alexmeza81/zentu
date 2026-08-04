@@ -102,7 +102,7 @@ Deno.serve(async (req: Request) => {
     const { data: student } = await supabase.from("students").select("id, carrera, semestre, disponibilidad, ingles").eq("user_id", user.id).maybeSingle();
     if (!student) return json({ error: "Perfil de estudiante no encontrado" }, 404);
 
-    const key = Deno.env.get("DEEPSEEK_API_KEY");
+    const key = Deno.env.get("DEEPSEEK_API_KEY") || Deno.env.get("Deepseek");
     let clasificacion: any, modelo: string;
     if (key) {
       try { clasificacion = await classifyDeepSeek(answers, student, key); modelo = "deepseek-chat"; }
