@@ -130,6 +130,7 @@
   function escapeHTML(s){ if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
   const show=(id,on)=>document.getElementById(id).classList[on?'remove':'add']('hidden');
   let loginEmail='';
+  let arcoEmail='';
   let cache={ wl_estudiantes:[], wl_empresas:[], students:[], companies:[] };
 
   async function init(){
@@ -249,11 +250,10 @@
       : [['emp','Empresa',r=>r.nombre_empresa],['c','Contacto',r=>`${r.nombre_contacto||''} ${r.apellido_contacto||''}`],['email','Correo',r=>r.email_corporativo]];
     document.getElementById('usHead').innerHTML='<tr>'+cols.map(c=>`<th class="px-4 py-2.5 font-bold">${c[1]}</th>`).join('')+'<th class="px-4 py-2.5 font-bold text-right">Acciones</th></tr>';
     document.getElementById('usBody').innerHTML = rows.length? rows.map(r=>{
-      const email = kind==='students'?r.email:r.email_corporativo;
       const susp = r.suspendido;
       return `<tr class="border-b border-slate-50 ${susp?'opacity-60':''}">${cols.map(c=>`<td class="px-4 py-2.5">${escapeHTML(c[2](r)||'—')}</td>`).join('')}<td class="px-4 py-2.5 text-right whitespace-nowrap">
         <button onclick="toggleSuspend('${kind}','${r.id}',${!susp})" class="text-xs font-bold px-2.5 py-1 rounded-lg border ${susp?'text-amber-700 border-amber-200 hover:bg-amber-50':'text-slate-600 border-slate-200 hover:bg-slate-50'}">${susp?'Reactivar':'Suspender'}</button>
-        <button onclick="deleteUser('${escapeHTML(email)}')" class="ml-1 text-xs font-bold px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50">Eliminar</button>
+        <button onclick="deleteUserRow('${kind}','${r.id}')" class="ml-1 text-xs font-bold px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50">Eliminar</button>
       </td></tr>`;
     }).join('') : '<tr><td class="px-4 py-8 text-center text-slate-400" colspan="6">Sin registros.</td></tr>';
   }
@@ -263,6 +263,11 @@
     if(error){ alert('No se pudo actualizar.'); return; }
     const row=(kind==='students'?cache.students:cache.companies).find(r=>r.id===id); if(row) row.suspendido=val;
     renderUsers();
+  }
+  function deleteUserRow(kind,id){
+    const rec=(kind==='students'?cache.students:cache.companies).find(r=>r.id===id);
+    const email = rec ? (kind==='students'?rec.email:rec.email_corporativo) : null;
+    if(email) deleteUser(email);
   }
   async function deleteUser(email){
     if(!confirm(`¿Eliminar TODOS los datos de ${email}? Esta acción no se puede deshacer.`)) return;
@@ -286,21 +291,24 @@
     ]);
     const data={ estudiante:(stu.data||[])[0]||null, empresa:(comp.data||[])[0]||null, consentimientos:cons.data||[] };
     const found = data.estudiante||data.empresa;
+    arcoEmail = email;
+    window._arco = data;
     box.innerHTML = `
       <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm">
         <div>Estudiante: <b>${data.estudiante?'sí':'no'}</b> · Empresa: <b>${data.empresa?'sí':'no'}</b> · Registros de consentimiento: <b>${data.consentimientos.length}</b></div>
       </div>
       <div class="flex gap-2 mt-3">
-        <button onclick='arcoExport(${JSON.stringify(email)})' class="text-sm font-bold text-purple-700 border border-purple-200 px-3 py-2 rounded-xl hover:bg-purple-50">Exportar datos (JSON)</button>
-        <button onclick='deleteUser(${JSON.stringify(email)})' class="text-sm font-bold text-red-600 border border-red-200 px-3 py-2 rounded-xl hover:bg-red-50">Eliminar cuenta (derecho al olvido)</button>
+        <button onclick="arcoExport()" class="text-sm font-bold text-purple-700 border border-purple-200 px-3 py-2 rounded-xl hover:bg-purple-50">Exportar datos (JSON)</button>
+        <button onclick="arcoDelete()" class="text-sm font-bold text-red-600 border border-red-200 px-3 py-2 rounded-xl hover:bg-red-50">Eliminar cuenta (derecho al olvido)</button>
       </div>
       ${found?'':'<p class="text-xs text-slate-400 mt-2">No hay perfil con ese correo (puede haber consentimiento o waitlist).</p>'}`;
-    window._arco = data;
   }
-  function arcoExport(email){
+  function arcoExport(){
     const blob=new Blob([JSON.stringify(window._arco||{},null,2)],{type:'application/json'});
-    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`datos-${email}.json`; a.click();
+    const safe=(arcoEmail||'usuario').replace(/[^a-z0-9@._-]/gi,'_');
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='datos-'+safe+'.json'; a.click();
   }
+  function arcoDelete(){ if(arcoEmail) deleteUser(arcoEmail); }
 
   init();
 </script>
