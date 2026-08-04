@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ZentU · Admin</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg"/>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"
+  integrity="sha384-2zrRDgDHSYB/GN3nFW3fsZXoxEhKIr3N2h63Tc6DEOB9JJdFIu8xMJT2Cph/gBil"
+  crossorigin="anonymous"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  body{font-family:'Inter',sans-serif}
+  .grad{background:linear-gradient(135deg,#7B68EE,#4A9EFF)}
+  .grad-text{background:linear-gradient(135deg,#7B68EE,#4A9EFF);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .tab-btn{padding:12px 16px;font-size:14px;font-weight:700;color:#64748B;border-bottom:2px solid transparent;cursor:pointer;background:transparent;margin-bottom:-1px}
+  .tab-btn:hover{color:#0F172A}
+  .tab-btn.active{color:#6D28D9;border-bottom-color:#7B68EE}
+</style>
+</head>
+<body class="bg-slate-100 text-slate-900">
+
+  <div id="loading" class="min-h-screen flex items-center justify-center"><div class="text-slate-400 font-semibold">Cargando…</div></div>
+
+  <!-- Login -->
+  <div id="loginScreen" class="hidden min-h-screen flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl border border-slate-200 shadow-xl p-8 w-full max-w-sm">
+      <div class="flex items-center gap-2.5 mb-6">
+        <div class="w-9 h-9 grad rounded-xl flex items-center justify-center"><svg width="16" height="16" viewBox="0 0 24 24" fill="white"><polygon points="4,4 20,4 20,8 8,16 20,16 20,20 4,20 4,16 15,8 4,8"/></svg></div>
+        <span class="font-black text-lg tracking-tight">ZentU</span>
+        <span class="text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">Admin</span>
+      </div>
+      <div id="loginStep1">
+        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Correo de administrador</label>
+        <input id="loginEmail" type="email" placeholder="tu@correo.com" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/>
+        <button onclick="sendCode()" id="sendBtn" class="mt-4 w-full grad text-white font-bold py-3 rounded-xl hover:opacity-90 transition">Enviar código</button>
+      </div>
+      <div id="loginStep2" class="hidden">
+        <p class="text-sm text-slate-600 mb-3">Te enviamos un código de 6 dígitos a <b id="loginEmailShown"></b>.</p>
+        <input id="loginCode" type="text" inputmode="numeric" maxlength="6" placeholder="000000" class="w-full text-center tracking-[0.4em] font-black text-xl border border-slate-200 rounded-xl px-3 py-2.5 focus:outline-none focus:border-purple-400"/>
+        <button onclick="verifyCode()" id="verifyBtn" class="mt-4 w-full grad text-white font-bold py-3 rounded-xl hover:opacity-90 transition">Entrar</button>
+        <button onclick="resetLogin()" class="mt-2 w-full text-sm font-bold text-slate-500 hover:text-slate-800">Cambiar correo</button>
+      </div>
+      <p id="loginErr" class="hidden mt-3 text-sm font-semibold text-red-500"></p>
+    </div>
+  </div>
+
+  <!-- Denegado -->
+  <div id="deniedScreen" class="hidden min-h-screen flex items-center justify-center p-4">
+    <div class="text-center max-w-sm">
+      <div class="text-5xl mb-4">🔒</div>
+      <div class="text-xl font-black text-slate-800">Acceso restringido</div>
+      <p class="text-slate-500 mt-2">La cuenta <b id="deniedEmail"></b> no tiene permisos de administrador.</p>
+      <button onclick="logout()" class="mt-5 text-sm font-bold text-purple-700 border border-purple-200 px-4 py-2 rounded-xl hover:bg-purple-50">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <!-- App -->
+  <div id="app" class="hidden min-h-screen">
+    <nav class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200">
+      <div class="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 grad rounded-xl flex items-center justify-center"><svg width="15" height="15" viewBox="0 0 24 24" fill="white"><polygon points="4,4 20,4 20,8 8,16 20,16 20,20 4,20 4,16 15,8 4,8"/></svg></div>
+          <span class="text-xl font-black tracking-tight">ZentU</span>
+          <span class="text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2.5 py-1 rounded-full">Admin</span>
+        </div>
+        <div class="flex items-center gap-4">
+          <span id="adminEmail" class="hidden sm:block text-sm font-semibold text-slate-500"></span>
+          <button onclick="logout()" class="text-sm font-bold text-slate-600 hover:text-slate-900 border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition">Salir</button>
+        </div>
+      </div>
+      <div class="max-w-7xl mx-auto px-6 flex items-center gap-1 border-t border-slate-100">
+        <button id="tab-resumen" onclick="showTab('resumen')" class="tab-btn active">Resumen</button>
+        <button id="tab-waitlist" onclick="showTab('waitlist')" class="tab-btn">Waitlist</button>
+        <button id="tab-usuarios" onclick="showTab('usuarios')" class="tab-btn">Usuarios</button>
+        <button id="tab-cumplimiento" onclick="showTab('cumplimiento')" class="tab-btn">Cumplimiento</button>
+      </div>
+    </nav>
+
+    <main class="max-w-7xl mx-auto px-6 py-8">
+      <div id="sec-resumen" class="tab-sec">
+        <h1 class="text-3xl font-black tracking-tight mb-1">Resumen</h1>
+        <p class="text-slate-500 font-medium mb-6">Estado general de la plataforma.</p>
+        <div id="metrics" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+      </div>
+
+      <div id="sec-waitlist" class="tab-sec hidden">
+        <div class="flex items-end justify-between flex-wrap gap-3 mb-5">
+          <div><h1 class="text-3xl font-black tracking-tight">Waitlist</h1><p class="text-slate-500 font-medium mt-1">Registros previos al lanzamiento.</p></div>
+          <div class="flex items-center gap-2">
+            <select id="wlKind" onchange="renderWaitlist()" class="py-2 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600"><option value="estudiantes">Estudiantes</option><option value="empresas">Empresas</option></select>
+            <input id="wlSearch" oninput="renderWaitlist()" placeholder="Buscar…" class="py-2 px-3 border border-slate-200 rounded-xl text-sm w-48 focus:outline-none focus:border-purple-400"/>
+            <button onclick="exportWaitlistCSV()" class="text-sm font-bold text-purple-700 border border-purple-200 px-3 py-2 rounded-xl hover:bg-purple-50">Exportar CSV</button>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-x-auto"><table class="w-full text-sm"><thead id="wlHead" class="text-left text-slate-400 border-b border-slate-100"></thead><tbody id="wlBody"></tbody></table></div>
+      </div>
+
+      <div id="sec-usuarios" class="tab-sec hidden">
+        <div class="flex items-end justify-between flex-wrap gap-3 mb-5">
+          <div><h1 class="text-3xl font-black tracking-tight">Usuarios</h1><p class="text-slate-500 font-medium mt-1">Estudiantes y empresas registrados.</p></div>
+          <div class="flex items-center gap-2">
+            <select id="usKind" onchange="renderUsers()" class="py-2 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600"><option value="students">Estudiantes</option><option value="companies">Empresas</option></select>
+            <input id="usSearch" oninput="renderUsers()" placeholder="Buscar…" class="py-2 px-3 border border-slate-200 rounded-xl text-sm w-48 focus:outline-none focus:border-purple-400"/>
+          </div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-x-auto"><table class="w-full text-sm"><thead id="usHead" class="text-left text-slate-400 border-b border-slate-100"></thead><tbody id="usBody"></tbody></table></div>
+      </div>
+
+      <div id="sec-cumplimiento" class="tab-sec hidden">
+        <h1 class="text-3xl font-black tracking-tight mb-1">Cumplimiento (LFPDPPP)</h1>
+        <p class="text-slate-500 font-medium mb-5">Derechos ARCO: consulta, exporta o elimina los datos de una persona por correo.</p>
+        <div class="bg-white rounded-2xl border border-slate-200 p-5 max-w-2xl">
+          <div class="flex items-center gap-2">
+            <input id="arcoEmail" type="email" placeholder="correo@ejemplo.com" class="flex-1 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/>
+            <button onclick="arcoSearch()" class="grad text-white font-bold px-4 py-2.5 rounded-xl hover:opacity-90">Buscar</button>
+          </div>
+          <div id="arcoResult" class="mt-4"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script>
+  const sb = supabase.createClient(
+    'https://jlivxulenqbgsybqodiv.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsaXZ4dWxlbnFiZ3N5YnFvZGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMjQ5ODEsImV4cCI6MjA4MzYwMDk4MX0.qG4Tx7yB9185vypoZa91y3PPCdphwqXRz8WQKsKBH5g'
+  );
+  function escapeHTML(s){ if(s===null||s===undefined) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  const show=(id,on)=>document.getElementById(id).classList[on?'remove':'add']('hidden');
+  let loginEmail='';
+  let cache={ wl_estudiantes:[], wl_empresas:[], students:[], companies:[] };
+
+  async function init(){
+    const { data:{ session } } = await sb.auth.getSession();
+    if(!session){ show('loading',false); show('loginScreen',true); return; }
+    const { data:isAdm } = await sb.rpc('is_admin');
+    if(!isAdm){ document.getElementById('deniedEmail').textContent=session.user.email; show('loading',false); show('deniedScreen',true); return; }
+    document.getElementById('adminEmail').textContent = session.user.email;
+    show('loading',false); show('app',true);
+    loadAll();
+  }
+  async function logout(){ await sb.auth.signOut(); location.reload(); }
+
+  // ── Login OTP ──
+  function loginError(msg){ const e=document.getElementById('loginErr'); e.textContent=msg; e.classList.remove('hidden'); }
+  function resetLogin(){ show('loginStep2',false); show('loginStep1',true); document.getElementById('loginErr').classList.add('hidden'); }
+  async function sendCode(){
+    loginEmail=document.getElementById('loginEmail').value.trim();
+    if(!loginEmail){ loginError('Escribe tu correo.'); return; }
+    const btn=document.getElementById('sendBtn'); btn.disabled=true; btn.textContent='Enviando…';
+    const { error }=await sb.auth.signInWithOtp({ email:loginEmail, options:{ shouldCreateUser:false } });
+    btn.disabled=false; btn.textContent='Enviar código';
+    if(error){ loginError('No se pudo enviar el código. Verifica el correo.'); return; }
+    document.getElementById('loginEmailShown').textContent=loginEmail;
+    document.getElementById('loginErr').classList.add('hidden');
+    show('loginStep1',false); show('loginStep2',true);
+    document.getElementById('loginCode').focus();
+  }
+  async function verifyCode(){
+    const token=document.getElementById('loginCode').value.trim();
+    if(token.length<6){ loginError('Código incompleto.'); return; }
+    const btn=document.getElementById('verifyBtn'); btn.disabled=true; btn.textContent='Entrando…';
+    const { error }=await sb.auth.verifyOtp({ email:loginEmail, token, type:'email' });
+    btn.disabled=false; btn.textContent='Entrar';
+    if(error){ loginError('Código inválido o expirado.'); return; }
+    show('loginScreen',false); show('loading',true); init();
+  }
+
+  // ── Navegación ──
+  function showTab(id){
+    document.querySelectorAll('.tab-sec').forEach(s=>s.classList.add('hidden'));
+    document.getElementById('sec-'+id).classList.remove('hidden');
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    document.getElementById('tab-'+id).classList.add('active');
+  }
+
+  async function loadAll(){
+    const [est, emp, stu, comp, offers, apps, msgs] = await Promise.all([
+      sb.from('waitlist_estudiantes').select('*').order('created_at',{ascending:false}),
+      sb.from('waitlist_empresas').select('*').order('created_at',{ascending:false}),
+      sb.from('students').select('id,nombre,apellido,email,universidad,carrera,estado,suspendido,created_at').order('created_at',{ascending:false}),
+      sb.from('companies').select('id,nombre_empresa,nombre_contacto,apellido_contacto,email_corporativo,suspendido,created_at').order('created_at',{ascending:false}),
+      sb.from('job_offers').select('id',{count:'exact',head:true}),
+      sb.from('job_applications').select('id',{count:'exact',head:true}),
+      sb.from('messages').select('id',{count:'exact',head:true})
+    ]);
+    cache.wl_estudiantes=est.data||[]; cache.wl_empresas=emp.data||[];
+    cache.students=stu.data||[]; cache.companies=comp.data||[];
+    renderMetrics({ wlEst:cache.wl_estudiantes.length, wlEmp:cache.wl_empresas.length, stu:cache.students.length, comp:cache.companies.length, offers:offers.count||0, apps:apps.count||0, msgs:msgs.count||0 });
+    renderWaitlist(); renderUsers();
+  }
+
+  function metricCard(n,label,color){ return `<div class="bg-white rounded-2xl border border-slate-200 p-5"><div class="text-3xl font-black" style="color:${color}">${n}</div><div class="text-sm font-semibold text-slate-500 mt-1">${label}</div></div>`; }
+  function renderMetrics(m){
+    document.getElementById('metrics').innerHTML =
+      metricCard(m.wlEst,'Waitlist estudiantes','#7B68EE')+
+      metricCard(m.wlEmp,'Waitlist empresas','#4A9EFF')+
+      metricCard(m.stu,'Estudiantes registrados','#10B981')+
+      metricCard(m.comp,'Empresas registradas','#F59E0B')+
+      metricCard(m.offers,'Vacantes','#EC4899')+
+      metricCard(m.apps,'Aplicaciones','#6366F1')+
+      metricCard(m.msgs,'Mensajes','#0EA5E9')+
+      metricCard(m.stu+m.comp,'Usuarios totales','#0F172A');
+  }
+
+  // ── Waitlist ──
+  function renderWaitlist(){
+    const kind=document.getElementById('wlKind').value;
+    const q=document.getElementById('wlSearch').value.toLowerCase();
+    const rows=(kind==='estudiantes'?cache.wl_estudiantes:cache.wl_empresas)
+      .filter(r=>!q || JSON.stringify(r).toLowerCase().includes(q));
+    const cols = kind==='estudiantes'
+      ? [['nombre','Nombre',r=>`${r.nombre||''} ${r.apellido||''}`],['email','Correo',r=>r.email],['universidad','Universidad',r=>r.universidad],['carrera','Carrera',r=>r.carrera]]
+      : [['empresa','Empresa',r=>r.empresa],['contacto','Contacto',r=>`${r.nombre||''} ${r.apellido||''}`],['email','Correo',r=>r.email],['cargo','Cargo',r=>r.cargo]];
+    document.getElementById('wlHead').innerHTML='<tr>'+cols.map(c=>`<th class="px-4 py-2.5 font-bold">${c[1]}</th>`).join('')+'<th class="px-4 py-2.5 font-bold">Acceso</th></tr>';
+    document.getElementById('wlBody').innerHTML = rows.length? rows.map(r=>`<tr class="border-b border-slate-50">${cols.map(c=>`<td class="px-4 py-2.5">${escapeHTML(c[2](r)||'—')}</td>`).join('')}<td class="px-4 py-2.5"><button onclick="toggleAcceso('${kind}','${r.id}',${!r.acceso_otorgado})" class="text-xs font-bold px-2.5 py-1 rounded-full ${r.acceso_otorgado?'text-green-700 bg-green-50 border border-green-200':'text-slate-500 bg-slate-100 border border-slate-200'}">${r.acceso_otorgado?'✓ Otorgado':'Otorgar'}</button></td></tr>`).join('') : '<tr><td class="px-4 py-8 text-center text-slate-400" colspan="6">Sin registros.</td></tr>';
+  }
+  async function toggleAcceso(kind,id,val){
+    const table = kind==='estudiantes'?'waitlist_estudiantes':'waitlist_empresas';
+    const { error }=await sb.from(table).update({ acceso_otorgado:val }).eq('id',id);
+    if(error){ alert('No se pudo actualizar.'); return; }
+    const arr = kind==='estudiantes'?cache.wl_estudiantes:cache.wl_empresas;
+    const row=arr.find(r=>r.id===id); if(row) row.acceso_otorgado=val;
+    renderWaitlist();
+  }
+  function exportWaitlistCSV(){
+    const kind=document.getElementById('wlKind').value;
+    const rows=kind==='estudiantes'?cache.wl_estudiantes:cache.wl_empresas;
+    downloadCSV(`waitlist-${kind}.csv`, rows);
+  }
+  function downloadCSV(filename, rows){
+    if(!rows.length){ alert('Nada para exportar.'); return; }
+    const cols=Object.keys(rows[0]);
+    const esc=v=>'"'+String(v===null||v===undefined?'':v).replace(/"/g,'""')+'"';
+    const csv=[cols.join(',')].concat(rows.map(r=>cols.map(c=>esc(r[c])).join(','))).join('\n');
+    const blob=new Blob(['﻿'+csv],{type:'text/csv;charset=utf-8'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=filename; a.click();
+  }
+
+  // ── Usuarios ──
+  function renderUsers(){
+    const kind=document.getElementById('usKind').value;
+    const q=document.getElementById('usSearch').value.toLowerCase();
+    const rows=(kind==='students'?cache.students:cache.companies).filter(r=>!q||JSON.stringify(r).toLowerCase().includes(q));
+    const cols = kind==='students'
+      ? [['n','Nombre',r=>`${r.nombre||''} ${r.apellido||''}`],['email','Correo',r=>r.email],['uni','Universidad',r=>r.universidad],['carrera','Carrera',r=>r.carrera],['estado','Estado',r=>r.estado]]
+      : [['emp','Empresa',r=>r.nombre_empresa],['c','Contacto',r=>`${r.nombre_contacto||''} ${r.apellido_contacto||''}`],['email','Correo',r=>r.email_corporativo]];
+    document.getElementById('usHead').innerHTML='<tr>'+cols.map(c=>`<th class="px-4 py-2.5 font-bold">${c[1]}</th>`).join('')+'<th class="px-4 py-2.5 font-bold text-right">Acciones</th></tr>';
+    document.getElementById('usBody').innerHTML = rows.length? rows.map(r=>{
+      const email = kind==='students'?r.email:r.email_corporativo;
+      const susp = r.suspendido;
+      return `<tr class="border-b border-slate-50 ${susp?'opacity-60':''}">${cols.map(c=>`<td class="px-4 py-2.5">${escapeHTML(c[2](r)||'—')}</td>`).join('')}<td class="px-4 py-2.5 text-right whitespace-nowrap">
+        <button onclick="toggleSuspend('${kind}','${r.id}',${!susp})" class="text-xs font-bold px-2.5 py-1 rounded-lg border ${susp?'text-amber-700 border-amber-200 hover:bg-amber-50':'text-slate-600 border-slate-200 hover:bg-slate-50'}">${susp?'Reactivar':'Suspender'}</button>
+        <button onclick="deleteUser('${escapeHTML(email)}')" class="ml-1 text-xs font-bold px-2.5 py-1 rounded-lg border border-red-200 text-red-600 hover:bg-red-50">Eliminar</button>
+      </td></tr>`;
+    }).join('') : '<tr><td class="px-4 py-8 text-center text-slate-400" colspan="6">Sin registros.</td></tr>';
+  }
+  async function toggleSuspend(kind,id,val){
+    const table = kind==='students'?'students':'companies';
+    const { error }=await sb.from(table).update({ suspendido:val }).eq('id',id);
+    if(error){ alert('No se pudo actualizar.'); return; }
+    const row=(kind==='students'?cache.students:cache.companies).find(r=>r.id===id); if(row) row.suspendido=val;
+    renderUsers();
+  }
+  async function deleteUser(email){
+    if(!confirm(`¿Eliminar TODOS los datos de ${email}? Esta acción no se puede deshacer.`)) return;
+    const { data, error }=await sb.rpc('admin_delete_user',{ p_email:email });
+    if(error){ alert('No se pudo eliminar.'); return; }
+    alert('Listo: '+(data||'eliminado'));
+    loadAll();
+  }
+
+  // ── Cumplimiento / ARCO ──
+  async function arcoSearch(){
+    const email=document.getElementById('arcoEmail').value.trim().toLowerCase();
+    const box=document.getElementById('arcoResult');
+    if(!email){ box.innerHTML=''; return; }
+    box.innerHTML='<div class="text-sm text-slate-400">Buscando…</div>';
+    const [stu,comp,apps,cons] = await Promise.all([
+      sb.from('students').select('*').ilike('email',email),
+      sb.from('companies').select('*').ilike('email_corporativo',email),
+      sb.from('job_applications').select('id,offer_id,estado,created_at,student_id'),
+      sb.from('consent_log').select('*').ilike('email',email)
+    ]);
+    const data={ estudiante:(stu.data||[])[0]||null, empresa:(comp.data||[])[0]||null, consentimientos:cons.data||[] };
+    const found = data.estudiante||data.empresa;
+    box.innerHTML = `
+      <div class="rounded-xl bg-slate-50 border border-slate-200 p-4 text-sm">
+        <div>Estudiante: <b>${data.estudiante?'sí':'no'}</b> · Empresa: <b>${data.empresa?'sí':'no'}</b> · Registros de consentimiento: <b>${data.consentimientos.length}</b></div>
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button onclick='arcoExport(${JSON.stringify(email)})' class="text-sm font-bold text-purple-700 border border-purple-200 px-3 py-2 rounded-xl hover:bg-purple-50">Exportar datos (JSON)</button>
+        <button onclick='deleteUser(${JSON.stringify(email)})' class="text-sm font-bold text-red-600 border border-red-200 px-3 py-2 rounded-xl hover:bg-red-50">Eliminar cuenta (derecho al olvido)</button>
+      </div>
+      ${found?'':'<p class="text-xs text-slate-400 mt-2">No hay perfil con ese correo (puede haber consentimiento o waitlist).</p>'}`;
+    window._arco = data;
+  }
+  function arcoExport(email){
+    const blob=new Blob([JSON.stringify(window._arco||{},null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`datos-${email}.json`; a.click();
+  }
+
+  init();
+</script>
+</body>
+</html>

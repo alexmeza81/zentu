@@ -1,0 +1,5 @@
+-- Panel de administración (aplicado vía MCP el 2026-08-04)
+-- admins (allowlist) + is_admin() + políticas de lectura/actualización admin + admin_delete_user()
+-- Ver migraciones: admin_foundation, admin_management_columns_policies, admin_delete_user_rpc.
+-- Columnas nuevas: waitlist_*.acceso_otorgado, students/companies.suspendido.
+-- Pool de reclutadores ahora excluye suspendidos.
