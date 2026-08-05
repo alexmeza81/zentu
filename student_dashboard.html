@@ -164,6 +164,23 @@
   .test-opt { text-align: left; padding: 14px 16px; border: 1px solid #E2E8F0; background: #fff; border-radius: 14px; font-size: 13.5px; color: #334155; font-weight: 600; cursor: pointer; font-family: inherit; line-height: 1.4; transition: all 0.15s; }
   .test-opt:hover { border-color: #7B68EE; background: #F5F7FF; }
   .test-opt:active { transform: scale(0.99); }
+  .test-opt.sel { border-color: #7B68EE; background: #F5F7FF; box-shadow: 0 0 0 2px rgba(123,104,238,0.15); }
+  .scale-row { display: flex; gap: 10px; }
+  .scale-btn { flex: 1; aspect-ratio: 1; border: 1px solid #E2E8F0; background: #fff; border-radius: 14px; font-size: 18px; font-weight: 900; color: #64748B; cursor: pointer; font-family: inherit; transition: all 0.15s; }
+  .scale-btn:hover { border-color: #7B68EE; color: #6D5AE6; }
+  .scale-btn.sel { background: linear-gradient(135deg,#7B68EE,#4A9EFF); border-color: transparent; color: #fff; }
+  .scale-legend { display: flex; justify-content: space-between; font-size: 11px; color: #94A3B8; margin-top: 8px; font-weight: 600; }
+  .test-spinner { width: 44px; height: 44px; border: 4px solid #EEF2FF; border-top-color: #7B68EE; border-radius: 999px; margin: 0 auto; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .result-hero { margin: 16px 20px 8px; padding: 22px 20px; border-radius: 20px; background: linear-gradient(135deg,#7B68EE,#4A9EFF); color: #fff; text-align: center; }
+  .result-arq { font-size: 20px; font-weight: 900; line-height: 1.25; }
+  .result-badge { display: inline-block; margin-top: 8px; font-size: 12px; font-weight: 800; background: rgba(255,255,255,0.2); padding: 4px 12px; border-radius: 999px; }
+  .result-tags { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 12px; }
+  .result-tags .chip { font-size: 11px; font-weight: 700; background: rgba(255,255,255,0.18); color: #fff; padding: 4px 10px; border-radius: 999px; }
+  .fb-message { font-size: 14px; color: #334155; line-height: 1.65; white-space: pre-line; }
+  .fb-card { background: #fff; border: 1px solid #E2E8F0; border-radius: 16px; padding: 14px 16px; margin-bottom: 12px; }
+  .fb-title { font-size: 13px; font-weight: 800; margin-bottom: 5px; }
+  .fb-body { font-size: 13px; color: #475569; line-height: 1.55; }
   .skill-row { padding: 12px 20px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid #F8FAFC; }
   .skill-row:last-child { border-bottom: none; }
   .skill-emoji { font-size: 18px; width: 32px; text-align: center; }
@@ -513,7 +530,7 @@
       }
       state.student = student;
 
-      const { data: tr } = await sb.from('test_results').select('habilidades')
+      const { data: tr } = await sb.from('test_results').select('habilidades, clasificacion, arquetipo')
         .eq('student_id', student.id).order('completado_at', { ascending:false }).limit(1).maybeSingle();
       state.testResults = tr;
 
@@ -548,6 +565,7 @@
         { key:'semestre', label:'Semestre', type:'select', required:true, options:['Semestre 1','Semestre 2','Semestre 3','Semestre 4','Semestre 5','Semestre 6','Semestre 7','Semestre 8','Semestre 9','Semestre 10','Egresado/a'] },
         { key:'egreso_mes', label:'Mes de egreso', type:'select', required:true, options:['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'] },
         { key:'egreso_year', label:'Año de egreso', type:'select', required:true, options:['2025','2026','2027','2028','2029'] },
+        { key:'ingles', label:'Nivel de inglés', type:'select', required:true, options:['Básico','Intermedio','Avanzado','Bilingüe'] },
       ]},
       { id:'habilidades', label:'Habilidades', icon:'🧠', fields:[
         { key:'hard_skills', label:'Herramientas / hard skills', type:'skills', required:true },
@@ -851,6 +869,11 @@
       if (st.disponibilidad) buscoPills.push('Disponible: ' + st.disponibilidad);
       industrias.forEach(i => buscoPills.push(i));
       const hab = testResults?.habilidades || {};
+      const clasif = testResults && testResults.clasificacion;
+      const dims = (clasif && clasif.dimensiones) || null;
+      const testSkills = dims
+        ? DIMS.map(d => ({ name: d.label, emoji: d.emoji, pct: Math.max(0, Math.min(100, (dims[d.key] || 0) * 10)) }))
+        : SKILLS_CONFIG.map(s => ({ name: s.label, emoji: s.emoji, pct: hab[s.key] || 0 }));
       const matches = computeMatches(st);
       const enBusqueda = state.student?.estado === 'en_busqueda';
       const foto = st.foto_url ? escapeHTML(st.foto_url) : '';
@@ -858,16 +881,12 @@
       const email = escapeHTML(state.user.email);
       const telefono = st.telefono ? escapeHTML(st.telefono) : '';
       const linkedin = st.linkedin_url ? escapeHTML(st.linkedin_url) : '';
-      const hasTest = Object.keys(hab).length > 0;
+      const hasTest = dims ? true : Object.keys(hab).length > 0;
       const { pct: rcPct } = computeProgress(state.student, testResults);
       const egresado = st.semestre === 'Egresado/a';
       const egresoTxt = egreso !== '—' ? `${egresado ? 'Egresó' : 'Egresa'} ${egreso}` : (egresado ? 'Egresado/a' : (st.semestre ? escapeHTML(st.semestre) : '—'));
 
-      const topSkills = SKILLS_CONFIG
-        .map(s => ({ name: s.label, key: s.key, pct: hab[s.key] || 0 }))
-        .filter(s => s.pct > 0)
-        .sort((a, b) => b.pct - a.pct)
-        .slice(0, 3);
+      const topSkills = testSkills.filter(s => s.pct > 0).sort((a, b) => b.pct - a.pct).slice(0, 3);
 
       const hardSkills = Array.isArray(st.hard_skills) ? st.hard_skills.slice(0, 8).map(escapeHTML) : [];
 
@@ -919,7 +938,7 @@
 
         ${topSkills.length ? `
         <div style="background:#F8FAFC;border-radius:12px;padding:12px 14px;">
-          <div class="rc-match-label" style="margin-bottom:8px;">TOP HABILIDADES (TEST IA)</div>
+          <div class="rc-match-label" style="margin-bottom:8px;">${clasif && clasif.arquetipo ? 'PERFIL ' + escapeHTML((clasif.arquetipo || '').toUpperCase()) + ' · TOP DIMENSIONES' : 'TOP HABILIDADES (TEST IA)'}</div>
           ${topSkills.map(s => `
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
               <span style="font-size:12px;color:#475569;font-weight:600;flex:1;">${s.name}</span>
@@ -932,12 +951,12 @@
         <button class="rc-ghost-btn" id="rc-test-toggle" onclick="toggleFullTest()">Ver resultados del Test IA →</button>
         <div id="rc-full-test" style="display:none;background:#F8FAFC;border-radius:12px;padding:12px 14px;margin-top:8px;">
           <div class="rc-match-label" style="margin-bottom:8px;">RESULTADOS COMPLETOS (TEST IA)</div>
-          ${SKILLS_CONFIG.map(s => { const p = hab[s.key] || 0; return `
+          ${testSkills.map(s => `
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-              <span style="font-size:12px;color:#475569;font-weight:600;flex:1;">${s.emoji} ${s.label}</span>
-              <div style="width:60px;height:4px;background:#E2E8F0;border-radius:999px;overflow:hidden;"><div style="width:${p}%;height:100%;background:linear-gradient(90deg,#7B68EE,#4A9EFF);border-radius:999px;"></div></div>
-              <span style="font-size:11px;font-weight:800;color:#7B68EE;width:28px;text-align:right;">${p}%</span>
-            </div>`; }).join('')}
+              <span style="font-size:12px;color:#475569;font-weight:600;flex:1;">${s.emoji} ${s.name}</span>
+              <div style="width:60px;height:4px;background:#E2E8F0;border-radius:999px;overflow:hidden;"><div style="width:${s.pct}%;height:100%;background:linear-gradient(90deg,#7B68EE,#4A9EFF);border-radius:999px;"></div></div>
+              <span style="font-size:11px;font-weight:800;color:#7B68EE;width:28px;text-align:right;">${s.pct}%</span>
+            </div>`).join('')}
         </div>` : ''}
 
         ${hardSkills.length ? `
@@ -981,105 +1000,148 @@
       { key:'resiliencia', label:'Resiliencia', emoji:'💪' },
     ];
 
-    // Banco de preguntas situacionales — cada una mide una competencia (opción → valor 0-100)
-    const QUESTION_BANK = [
-      { comp:'pensamiento_analitico', q:'Te entregan un reporte con muchos datos y una fecha límite. ¿Qué haces primero?', opts:[{t:'Identifico las preguntas clave y qué datos las responden',v:100},{t:'Reviso todo el reporte de inicio a fin',v:60},{t:'Pregunto a alguien qué es lo importante',v:45},{t:'Empiezo por lo que me parezca más fácil',v:25}] },
-      { comp:'comunicacion_efectiva', q:'Debes explicar una idea técnica a alguien sin experiencia. ¿Cómo lo haces?', opts:[{t:'Uso analogías simples y evito tecnicismos',v:100},{t:'Le doy todos los detalles para que no falte nada',v:55},{t:'Le paso documentación para que lo lea',v:40},{t:'Asumo que entenderá sobre la marcha',v:25}] },
-      { comp:'adaptabilidad', q:'A media semana cambian por completo las prioridades del proyecto. ¿Cómo reaccionas?', opts:[{t:'Me reorganizo rápido y ajusto mi plan',v:100},{t:'Lo acepto pero me toma tiempo reenfocarme',v:60},{t:'Termino primero lo que ya había empezado',v:45},{t:'Me frustra y baja mi ritmo',v:25}] },
-      { comp:'resolucion_problemas', q:'Algo falla y no sabes por qué. ¿Qué haces?', opts:[{t:'Aíslo el problema paso a paso hasta la causa',v:100},{t:'Pruebo varias soluciones hasta que una funcione',v:60},{t:'Busco si alguien ya lo resolvió antes',v:55},{t:'Espero a que alguien me ayude',v:25}] },
-      { comp:'trabajo_en_equipo', q:'Un compañero no está entregando su parte. ¿Qué haces?', opts:[{t:'Hablo con él para entender y ofrecer ayuda',v:100},{t:'Cubro su parte para que el equipo avance',v:65},{t:'Lo reporto directamente al líder',v:45},{t:'Sigo con lo mío y espero',v:25}] },
-      { comp:'orientacion_resultados', q:'Con varias tareas en curso, ¿cómo defines que tuviste éxito?', opts:[{t:'Por el impacto y los objetivos cumplidos',v:100},{t:'Por terminar todo lo asignado',v:65},{t:'Por mantenerme ocupado todo el día',v:40},{t:'Por no recibir quejas',v:30}] },
-      { comp:'liderazgo', q:'En un proyecto en equipo sin líder asignado, ¿qué haces?', opts:[{t:'Propongo un plan y coordino a todos',v:100},{t:'Sugiero ideas pero espero que otro coordine',v:55},{t:'Hago mi parte lo mejor posible',v:50},{t:'Espero instrucciones',v:25}] },
-      { comp:'iniciativa', q:'Notas algo que se podría mejorar, aunque nadie te lo pidió. ¿Qué haces?', opts:[{t:'Propongo la mejora y me ofrezco a implementarla',v:100},{t:'Lo comento por si a alguien le interesa',v:60},{t:'Lo anoto pero no digo nada',v:40},{t:'Pienso que no es mi responsabilidad',v:25}] },
-      { comp:'inteligencia_emocional', q:'Un compañero está molesto y te contesta de mala forma. ¿Cómo reaccionas?', opts:[{t:'Mantengo la calma y busco entender qué le pasa',v:100},{t:'Le doy su espacio y lo hablo después',v:70},{t:'Lo evito el resto del día',v:35},{t:'Le respondo igual, no me dejo',v:30}] },
-      { comp:'gestion_tiempo', q:'Tienes 3 entregas el mismo día. ¿Cómo te organizas?', opts:[{t:'Priorizo por urgencia e impacto y bloqueo tiempos',v:100},{t:'Empiezo por la más rápida para ir avanzando',v:60},{t:'Trabajo en las 3 al mismo tiempo',v:40},{t:'Empiezo por la que más me gusta',v:30}] },
-      { comp:'resiliencia', q:'Recibes una crítica fuerte a tu trabajo. ¿Cómo lo tomas?', opts:[{t:'La uso como aprendizaje y mejoro',v:100},{t:'Me afecta al inicio pero lo supero',v:70},{t:'Me desanimo por un buen rato',v:35},{t:'Siento que no sirvo para esto',v:20}] },
-      { comp:'pensamiento_analitico', q:'Debes elegir entre dos opciones con datos incompletos. ¿Qué haces?', opts:[{t:'Analizo pros y contras con lo que tengo y decido',v:100},{t:'Busco más datos antes de decidir',v:65},{t:'Elijo la que sienta más segura',v:45},{t:'Dejo que alguien más decida',v:25}] },
-      { comp:'comunicacion_efectiva', q:'En una reunión no estás de acuerdo con una idea. ¿Qué haces?', opts:[{t:'Expongo mi punto con respeto y argumentos',v:100},{t:'Lo comento después en privado',v:60},{t:'Me guardo la opinión para evitar conflicto',v:40},{t:'Lo digo de forma tajante',v:35}] },
-      { comp:'adaptabilidad', q:'Te asignan una herramienta nueva que no conoces. ¿Qué haces?', opts:[{t:'La aprendo por mi cuenta rápidamente',v:100},{t:'Pido una capacitación antes de usarla',v:65},{t:'La uso lo mínimo posible',v:40},{t:'Prefiero seguir con la que ya sé',v:30}] },
-      { comp:'resolucion_problemas', q:'Un plan no está funcionando a la mitad del camino. ¿Qué haces?', opts:[{t:'Reviso qué falla y ajusto el enfoque',v:100},{t:'Reinicio todo desde cero',v:50},{t:'Sigo por si mejora más adelante',v:40},{t:'Lo abandono y busco otra tarea',v:25}] },
-      { comp:'trabajo_en_equipo', q:'El equipo toma una decisión distinta a la tuya. ¿Qué haces?', opts:[{t:'La apoyo y aporto para que funcione',v:100},{t:'La sigo aunque no esté del todo convencido',v:65},{t:'Hago mi parte sin involucrarme',v:40},{t:'Insisto en que la mía era mejor',v:35}] },
-      { comp:'liderazgo', q:'Tu equipo está desmotivado. ¿Qué haces?', opts:[{t:'Reconozco su esfuerzo y reenfoco la meta',v:100},{t:'Trato de dar el ejemplo trabajando duro',v:70},{t:'Espero a que se les pase',v:35},{t:'Me desmotivo también',v:25}] },
-      { comp:'inteligencia_emocional', q:'Cometes un error que afecta al equipo. ¿Qué haces?', opts:[{t:'Lo reconozco, me disculpo y lo corrijo',v:100},{t:'Lo corrijo en silencio sin decir nada',v:55},{t:'Busco justificar por qué pasó',v:40},{t:'Espero que nadie lo note',v:25}] },
+    // ── TEST DE TALENTO (8 preguntas → clasificación IA vía DeepSeek) ──
+    const TEST_TECH = [
+      { key:'technical_analysis', label:'Análisis de datos',      desc:'Excel, SQL, PowerBI, estadística' },
+      { key:'technical_tools',    label:'Herramientas digitales', desc:'Suite Google, Slack, Trello, CRM' },
+      { key:'technical_writing',  label:'Redacción y ortografía', desc:'Informes, correos formales, resúmenes' },
+      { key:'technical_project',  label:'Gestión de proyectos',   desc:'Cumplir plazos, organizar al equipo' },
     ];
+    const TEST_SCEN = [
+      { key:'scenario1', q:'Ante un problema nuevo sin manual, ¿tú...?', opts:[['A','Buscas datos históricos para encontrar un patrón'],['B','Piensas "fuera de la caja" y pruebas algo innovador'],['C','Reúnes al equipo, asignas roles y atacan juntos'],['D','Lo resuelves tú mismo con lo que tienes, rápido']] },
+      { key:'scenario2', q:'En un trabajo grupal, tu rol natural es...',  opts:[['A','El que investiga y verifica que los datos sean ciertos'],['B','El que genera ideas y propone el enfoque creativo'],['C','El que organiza el cronograma y motiva a los demás'],['D','El que ejecuta y entrega en tiempo y forma']] },
+      { key:'scenario3', q:'Cuando recibes crítica negativa, tú...',      opts:[['A','La analizas en frío para ver si es lógica'],['B','Te molesta un poco, pero la usas para reinventar tu trabajo'],['C','La tomas como un desafío para demostrar tu valía'],['D','La aceptas, corriges y sigues sin darle vueltas']] },
+    ];
+    const TEST_LEARN = { key:'learning', q:'En los últimos 6 meses, ¿cómo aprendiste algo nuevo?', opts:[['a','Un curso estructurado con certificado (Coursera, Platzi, Udemy)'],['b','Tutoriales sueltos en YouTube/TikTok para algo puntual'],['c','Preguntando a compañeros o profesores y practicando'],['d','No he tenido tiempo por la carga universitaria']] };
+    const DIMS = [
+      { key:'analitica', label:'Analítica',  emoji:'💡' },
+      { key:'creativa',  label:'Creativa',   emoji:'🎨' },
+      { key:'liderazgo', label:'Liderazgo',  emoji:'🚀' },
+      { key:'ejecutora', label:'Ejecutora',  emoji:'⚡' },
+      { key:'tecnica',   label:'Técnica',    emoji:'🛠️' },
+    ];
+    const TEST_STEPS = (() => {
+      const s = [];
+      TEST_TECH.forEach(t => s.push({ type:'scale', key:t.key, label:t.label, desc:t.desc }));
+      TEST_SCEN.forEach(x => s.push({ type:'choice', key:x.key, q:x.q, opts:x.opts }));
+      s.push({ type:'choice', key:TEST_LEARN.key, q:TEST_LEARN.q, opts:TEST_LEARN.opts });
+      return s;
+    })();
 
-    let testState = { active:false, idx:0, answers:[] };
-    function startTest(){ testState = { active:true, idx:0, answers:[] }; renderTest(state); }
-    function cancelTest(){ testState.active = false; renderTest(state); }
-    function testPrev(){ if (testState.idx > 0){ testState.idx--; renderTest(state); } }
-    function testBack(){ testState.idx > 0 ? testPrev() : cancelTest(); }
-    function selectTestAnswer(v){
-      testState.answers[testState.idx] = v;
-      if (testState.idx < QUESTION_BANK.length - 1){ testState.idx++; renderTest(state); }
-      else submitTest();
-    }
-    function computeTestScores(){
-      const acc = {}, cnt = {};
-      QUESTION_BANK.forEach((q, i) => { const v = testState.answers[i]; if (v == null) return; acc[q.comp] = (acc[q.comp] || 0) + v; cnt[q.comp] = (cnt[q.comp] || 0) + 1; });
-      const hab = {};
-      SKILLS_CONFIG.forEach(s => { hab[s.key] = cnt[s.key] ? Math.round(acc[s.key] / cnt[s.key]) : 50; });
-      return hab;
-    }
+    let testState = { active:false, loading:false, idx:0, answers:{} };
+    function startTest(){ testState = { active:true, loading:false, idx:0, answers:{} }; renderTest(state); }
+    function cancelTest(){ testState.active=false; renderTest(state); }
+    function testBack(){ if(testState.idx>0){ testState.idx--; renderTest(state); } else cancelTest(); }
+    function answerScale(key, v){ testState.answers[key]=v; advanceTest(); }
+    function answerChoice(key, letter){ testState.answers[key]=letter; advanceTest(); }
+    function advanceTest(){ if(testState.idx < TEST_STEPS.length-1){ testState.idx++; renderTest(state); } else submitTest(); }
+
     async function submitTest(){
-      const hab = computeTestScores();
-      try { await dbSaveTest(hab); } catch (e) { console.error('No se pudo guardar el test:', e); }
-      state.testResults = { habilidades: hab };
-      testState.active = false;
-      renderTest(state);
-      renderPerfil(state);
+      testState.loading=true; renderTest(state);
+      try {
+        const { data, error } = await sb.functions.invoke('clasificar-test', { body: testState.answers });
+        if(error || !data || data.error) throw (error || new Error(data && data.error || 'Error'));
+        state.testResults = { clasificacion: data.clasificacion, arquetipo: data.arquetipo, modelo: data.modelo };
+      } catch(e){
+        console.error('Test IA falló:', e);
+        testState.loading=false; testState.active=true; renderTest(state);
+        alert('No se pudo procesar tu test. Revisa tu conexión e inténtalo de nuevo.');
+        return;
+      }
+      testState.loading=false; testState.active=false;
+      renderTest(state); renderPerfil(state);
     }
 
     function renderTest(state){
       const el = document.getElementById('sec-test');
-      const hab = state.testResults?.habilidades || {};
-      const hasResults = Object.keys(hab).length > 0;
+      const c = state.testResults && state.testResults.clasificacion;
+      const hasResult = !!(c && c.dimensiones);
 
-      if (testState.active){
-        const q = QUESTION_BANK[testState.idx];
-        const n = QUESTION_BANK.length;
-        const prog = Math.round((testState.idx / n) * 100);
-        el.innerHTML = `
-          <div class="test-quiz">
-            <div class="test-q-top">
-              <button class="test-q-back" onclick="testBack()" aria-label="Atrás">${testState.idx > 0 ? '‹' : '✕'}</button>
-              <div class="test-q-count">Pregunta ${testState.idx + 1} de ${n}</div>
-            </div>
-            <div class="test-q-track"><div class="test-q-fill" style="width:${prog}%"></div></div>
-            <div class="test-q-text">${escapeHTML(q.q)}</div>
-            <div class="test-q-opts">
-              ${q.opts.map(o => `<button class="test-opt" onclick="selectTestAnswer(${o.v})">${escapeHTML(o.t)}</button>`).join('')}
-            </div>
-          </div>`;
-        const sc = document.querySelector('.scroll-content'); if (sc) sc.scrollTop = 0;
+      if(testState.loading){
+        el.innerHTML = `<div class="test-quiz" style="text-align:center;padding:56px 24px;">
+          <div class="test-spinner"></div>
+          <div style="font-size:16px;font-weight:800;color:#0F172A;margin-top:18px;">Analizando tu perfil…</div>
+          <div style="font-size:13px;color:#64748B;margin-top:6px;line-height:1.5;">Nuestra IA está construyendo tu resultado y tu feedback personalizado.</div>
+        </div>`;
         return;
       }
 
-      const skillsHTML = SKILLS_CONFIG.map(s => { const pct = hab[s.key] || 0; return `
-        <div class="skill-row">
-          <span class="skill-emoji">${s.emoji}</span>
-          <span class="skill-name">${s.label}</span>
-          <div class="skill-bar-wrap"><div class="skill-bar-fill" style="width:${pct}%"></div></div>
-          <span class="skill-pct">${pct > 0 ? pct + '%' : '—'}</span>
-        </div>`; }).join('');
+      if(testState.active){
+        const step = TEST_STEPS[testState.idx];
+        const n = TEST_STEPS.length;
+        const prog = Math.round((testState.idx / n) * 100);
+        let body='';
+        if(step.type==='scale'){
+          const cur = testState.answers[step.key];
+          body = `<div class="test-q-text">¿Qué tan bueno/a eres en <span style="color:#6D5AE6;">${escapeHTML(step.label)}</span>?</div>
+            <div style="font-size:13px;color:#64748B;margin:-8px 0 16px;">${escapeHTML(step.desc)}</div>
+            <div class="scale-row">${[1,2,3,4,5].map(v=>`<button class="scale-btn ${cur===v?'sel':''}" onclick="answerScale('${step.key}',${v})">${v}</button>`).join('')}</div>
+            <div class="scale-legend"><span>Principiante</span><span>Experto/a</span></div>`;
+        } else {
+          const cur = testState.answers[step.key];
+          body = `<div class="test-q-text">${escapeHTML(step.q)}</div>
+            <div class="test-q-opts">${step.opts.map(o=>`<button class="test-opt ${cur===o[0]?'sel':''}" onclick="answerChoice('${step.key}','${o[0]}')"><b style="color:#6D5AE6;margin-right:8px;">${o[0]}</b>${escapeHTML(o[1])}</button>`).join('')}</div>`;
+        }
+        el.innerHTML = `<div class="test-quiz">
+          <div class="test-q-top">
+            <button class="test-q-back" onclick="testBack()" aria-label="Atrás">${testState.idx>0?'‹':'✕'}</button>
+            <div class="test-q-count">Pregunta ${testState.idx+1} de ${n}</div>
+          </div>
+          <div class="test-q-track"><div class="test-q-fill" style="width:${prog}%"></div></div>
+          ${body}
+        </div>`;
+        const sc=document.querySelector('.scroll-content'); if(sc) sc.scrollTop=0;
+        return;
+      }
+
+      if(hasResult){ el.innerHTML = renderTestResult(c); return; }
 
       el.innerHTML = `
         <div class="test-banner">
           <div class="test-banner-icon">🧠</div>
           <div>
-            <div class="test-banner-title">Test de Habilidades IA</div>
-            <div class="test-banner-sub">${hasResults ? 'Vuelve a tomarlo cuando quieras' : `${QUESTION_BANK.length} preguntas · ~4 min`}</div>
+            <div class="test-banner-title">Test de Talento IA</div>
+            <div class="test-banner-sub">8 preguntas · ~3 min</div>
           </div>
-          <button class="test-banner-btn" onclick="startTest()">${hasResults ? 'Retomar →' : 'Empezar →'}</button>
+          <button class="test-banner-btn" onclick="startTest()">Empezar →</button>
         </div>
-        ${hasResults ? `
-          <div class="section-title">Tus ${SKILLS_CONFIG.length} competencias</div>
-          <div class="card" style="margin:0 20px 24px;">${skillsHTML}</div>` : `
-          <div class="section-title">¿Qué mide?</div>
-          <div class="card" style="margin:0 20px 24px;padding:18px 20px;">
-            <div style="font-size:13px;color:#475569;line-height:1.6;">Responde <strong>${QUESTION_BANK.length} situaciones</strong> reales de trabajo. Medimos <strong>${SKILLS_CONFIG.length} competencias</strong> que buscan los reclutadores y las mostramos en tu perfil y en tu tarjeta pública.</div>
-          </div>`}
-      `;
+        <div class="section-title">¿Qué obtienes?</div>
+        <div class="card" style="margin:0 20px 24px;padding:18px 20px;">
+          <div style="font-size:13px;color:#475569;line-height:1.7;">Responde <strong>8 preguntas</strong> y nuestra IA construye tu <strong>perfil de talento</strong>: tus 5 dimensiones, un <strong>feedback personalizado</strong> con tus fortalezas y cómo mejorar, y los roles que mejor encajan contigo. Es lo que ven los reclutadores.</div>
+        </div>`;
     }
+
+    function renderTestResult(c){
+      const fb = c.feedback_estudiante || {};
+      const dims = c.dimensiones || {};
+      const dimBars = DIMS.map(d=>{ const v=Math.max(0,Math.min(10, dims[d.key]||0)); return `
+        <div class="skill-row">
+          <span class="skill-emoji">${d.emoji}</span>
+          <span class="skill-name">${d.label}</span>
+          <div class="skill-bar-wrap"><div class="skill-bar-fill" style="width:${v*10}%"></div></div>
+          <span class="skill-pct">${v}/10</span>
+        </div>`; }).join('');
+      const tags = (Array.isArray(c.tags)?c.tags:[]).map(t=>`<span class="chip">${escapeHTML(t)}</span>`).join('');
+      const fbCard = (title, txt, color) => txt ? `<div class="fb-card"><div class="fb-title" style="color:${color}">${title}</div><div class="fb-body">${escapeHTML(txt)}</div></div>` : '';
+      return `
+        <div class="result-hero">
+          <div class="result-arq">${escapeHTML(c.cintillo || ('Perfil '+(c.arquetipo||'')))}</div>
+          ${c.arquetipo?`<div class="result-badge">Perfil ${escapeHTML(c.arquetipo)}</div>`:''}
+          ${tags?`<div class="result-tags">${tags}</div>`:''}
+        </div>
+        ${fb.mensaje_completo ? `<div class="card" style="margin:14px 20px 20px;padding:18px 20px;"><div class="fb-message">${escapeHTML(fb.mensaje_completo)}</div></div>`:''}
+        <div class="section-title">Tu feedback</div>
+        <div style="padding:0 20px;">
+          ${fbCard('💪 Tus fortalezas', fb.fortalezas, '#10B981')}
+          ${fbCard('🎯 Áreas de oportunidad', fb.areas_mejora, '#F59E0B')}
+          ${fbCard('🚀 Qué hacer ahora', fb.recomendaciones, '#7B68EE')}
+        </div>
+        <div class="section-title">Tus 5 dimensiones</div>
+        <div class="card" style="margin:0 20px 20px;">${dimBars}</div>
+        ${c.recomendacion?`<div class="card" style="margin:0 20px 20px;padding:16px 20px;"><div style="font-size:12px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Roles que encajan contigo</div><div style="font-size:13.5px;color:#334155;line-height:1.5;">${escapeHTML(c.recomendacion)}</div></div>`:''}
+        <div style="padding:0 20px 24px;"><button class="test-banner-btn" style="width:100%;justify-content:center;" onclick="startTest()">Volver a tomar el test →</button></div>`;
+    }
+
 
     // ── RENDER: BANDEJA DE ENTRADA ──────────────────────────
     const COMPANY_COLORS = [
