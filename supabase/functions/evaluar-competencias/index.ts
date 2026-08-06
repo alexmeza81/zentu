@@ -1,10 +1,10 @@
-// Supabase Edge Function: evaluar-competencias  (Evaluación de Talento v3)
-// - El estudiante responde 18 preguntas tap (16 puntuables + 2 de control).
-// - El cliente envía SOLO el índice canónico de la opción elegida; la CLAVE de
-//   puntuación vive únicamente aquí (nunca en el navegador).
-// - La matemática puntúa (8 ejes 0-100, determinista). DeepSeek SOLO interpreta
-//   (texto del perfil + feedback); no calcula ni modifica los puntajes.
-// - La API key de DeepSeek vive como secreto del servidor.
+// Supabase Edge Function: evaluar-competencias  (Evaluación de Talento v4 · elección forzada)
+// - 18 preguntas de ELECCIÓN FORZADA: en cada una, 4 opciones TODAS válidas, cada una
+//   mapeada a un eje distinto. No hay "respuesta correcta" -> no se puede inflar.
+// - El cliente envía SOLO el índice canónico de la opción elegida. El mapeo opción→eje
+//   (la CLAVE) vive únicamente aquí, nunca en el navegador.
+// - Puntaje = afinidad (picks/exposiciones*100) por eje -> perfil de fortalezas relativo.
+// - DeepSeek SOLO interpreta (narrativa); no calcula puntajes. Fallback por reglas.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
 
 const CORS = {
@@ -14,9 +14,8 @@ const CORS = {
 };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
-const INSTRUMENT_VERSION = "v1";
+const INSTRUMENT_VERSION = "fc-v1";
 
-// ── Ejes ──────────────────────────────────────────────────────────────────
 const AXES = ["pensamiento_critico","comunicacion_asertiva","trabajo_equipo","resiliencia","adaptabilidad","autogestion","liderazgo","competencia_digital"] as const;
 type Axis = typeof AXES[number];
 const AXIS_LABEL: Record<Axis,string> = {
@@ -30,20 +29,31 @@ const AXIS_SHORT: Record<Axis,string> = {
   autogestion:"autogestión", liderazgo:"liderazgo", competencia_digital:"competencia digital",
 };
 
-// ── CLAVE PRIVADA del instrumento (índice canónico → puntos) ────────────────
-const ITEMS: Record<string,{axis:Axis;points:[number,number,number,number]}> = {
-  PC1:{axis:"pensamiento_critico",points:[100,60,40,20]}, PC2:{axis:"pensamiento_critico",points:[100,65,40,20]},
-  CA1:{axis:"comunicacion_asertiva",points:[100,60,35,30]}, CA2:{axis:"comunicacion_asertiva",points:[100,55,40,25]},
-  TE1:{axis:"trabajo_equipo",points:[100,65,45,20]}, TE2:{axis:"trabajo_equipo",points:[100,65,40,30]},
-  RE1:{axis:"resiliencia",points:[100,70,40,15]}, RE2:{axis:"resiliencia",points:[100,55,35,15]},
-  AD1:{axis:"adaptabilidad",points:[100,65,40,20]}, AD2:{axis:"adaptabilidad",points:[100,65,40,20]},
-  AU1:{axis:"autogestion",points:[100,60,40,30]}, AU2:{axis:"autogestion",points:[100,65,35,20]},
-  LI1:{axis:"liderazgo",points:[100,55,50,25]}, LI2:{axis:"liderazgo",points:[100,60,40,25]},
-  CD1:{axis:"competencia_digital",points:[100,55,45,25]}, CD2:{axis:"competencia_digital",points:[100,60,40,20]},
+// ── CLAVE PRIVADA: opción→eje en ORDEN CANÓNICO (índice 0..3) ────────────────
+const ITEM_AXES: Record<string, Axis[]> = {
+  I1:["adaptabilidad","comunicacion_asertiva","trabajo_equipo","autogestion"],
+  I2:["pensamiento_critico","liderazgo","competencia_digital","autogestion"],
+  I3:["pensamiento_critico","trabajo_equipo","liderazgo","comunicacion_asertiva"],
+  I4:["resiliencia","adaptabilidad","pensamiento_critico","trabajo_equipo"],
+  I5:["competencia_digital","comunicacion_asertiva","adaptabilidad","autogestion"],
+  I6:["resiliencia","liderazgo","trabajo_equipo","pensamiento_critico"],
+  I7:["pensamiento_critico","autogestion","trabajo_equipo","resiliencia"],
+  I8:["adaptabilidad","comunicacion_asertiva","liderazgo","competencia_digital"],
+  I9:["autogestion","competencia_digital","resiliencia","adaptabilidad"],
+  I10:["pensamiento_critico","liderazgo","trabajo_equipo","comunicacion_asertiva"],
+  I11:["resiliencia","adaptabilidad","competencia_digital","comunicacion_asertiva"],
+  I12:["autogestion","liderazgo","competencia_digital","trabajo_equipo"],
+  I13:["pensamiento_critico","liderazgo","trabajo_equipo","adaptabilidad"],
+  I14:["resiliencia","autogestion","adaptabilidad","comunicacion_asertiva"],
+  I15:["comunicacion_asertiva","pensamiento_critico","competencia_digital","resiliencia"],
+  I16:["autogestion","liderazgo","resiliencia","competencia_digital"],
 };
-const ATT_CODE = "CTRL-ATT", ATT_EXPECTED = 2;             // debe elegir la 3a opción
-const CONS_CODE = "CTRL-CONS", CONS_PAIR = "RE2";           // parafrasea RE2
-const CONS_POINTS: [number,number,number,number] = [100,55,35,15];
+const SCORED = Object.keys(ITEM_AXES);
+const ATT_CODE = "CTRL-ATT", ATT_EXPECTED = 2;
+const CONS_CODE = "CTRL-CONS", CONS_PAIR = "I13";
+const CONS_AXES: Axis[] = ["pensamiento_critico","liderazgo","trabajo_equipo","adaptabilidad"];
+const EXPO: Record<Axis,number> = Object.fromEntries(AXES.map(a=>[a,0])) as Record<Axis,number>;
+for (const c of SCORED) for (const ax of ITEM_AXES[c]) EXPO[ax]++;
 
 const ROLES: Record<Axis,string[]> = {
   pensamiento_critico:["Analista de Datos Jr.","Analista de Negocios Jr."],
@@ -62,73 +72,55 @@ const CINTILLO: Record<Axis,string> = {
   liderazgo:"Iniciativa que moviliza", competencia_digital:"Perfil digital y de datos",
 };
 
-// ── Validación de entrada ───────────────────────────────────────────────────
 function validate(ans: any) {
   if (!ans || typeof ans !== "object") throw new Error("respuestas ausentes");
-  const codes = [...Object.keys(ITEMS), ATT_CODE, CONS_CODE];
-  for (const c of codes) {
+  for (const c of [...SCORED, ATT_CODE, CONS_CODE]) {
     const v = ans[c];
     if (!Number.isInteger(v) || v < 0 || v > 3) throw new Error(`Respuesta inválida para ${c} (se espera índice 0-3)`);
   }
 }
 
-// ── Scorer determinista (función pura) ──────────────────────────────────────
 function score(ans: Record<string,number>, timings?: Record<string,number>) {
-  const acc: Record<string,number[]> = {};
-  for (const a of AXES) acc[a] = [];
-  let maxCount = 0;
-  for (const [code, def] of Object.entries(ITEMS)) {
-    const pts = def.points[ans[code]];
-    acc[def.axis].push(pts);
-    if (pts === 100) maxCount++;
-  }
+  const picks = Object.fromEntries(AXES.map(a=>[a,0])) as Record<Axis,number>;
+  for (const c of SCORED) picks[ITEM_AXES[c][ans[c]]]++;
   const ejes = {} as Record<Axis,number>;
-  for (const a of AXES) ejes[a] = Math.round(acc[a].reduce((s,x)=>s+x,0) / acc[a].length);
+  for (const a of AXES) ejes[a] = EXPO[a] ? Math.round(picks[a] / EXPO[a] * 100) : 0;
   const ranked = [...AXES].sort((x,y)=> ejes[y]-ejes[x]);
-  const indice_global = Math.round(AXES.reduce((s,a)=>s+ejes[a],0) / AXES.length);
   const fortalezas = [ranked[0], ranked[1]];
   const desarrollo = ranked[ranked.length-1];
-
-  // ── Validez (con precedencia) ──
   const attFail = ans[ATT_CODE] !== ATT_EXPECTED;
-  const desirability = maxCount / Object.keys(ITEMS).length >= 0.9;
-  const consDelta = Math.abs(CONS_POINTS[ans[CONS_CODE]] - ITEMS[CONS_PAIR].points[ans[CONS_PAIR]]);
-  const inconsistent = consDelta > 40;
+  const inconsistent = CONS_AXES[ans[CONS_CODE]] !== ITEM_AXES[CONS_PAIR][ans[CONS_PAIR]];
   let apresurado = false;
   if (timings && Object.keys(timings).length) {
     const ts = Object.values(timings).filter((n)=>Number.isFinite(n)).sort((a,b)=>a-b);
-    if (ts.length) { const mid = Math.floor(ts.length/2); const median = ts.length%2 ? ts[mid] : (ts[mid-1]+ts[mid])/2; apresurado = median < 1500; }
+    if (ts.length) { const m = Math.floor(ts.length/2); const med = ts.length%2 ? ts[m] : (ts[m-1]+ts[m])/2; apresurado = med < 1500; }
   }
-  const validez = attFail ? "atencion_fallida" : desirability ? "deseabilidad_alta" : inconsistent ? "inconsistente" : apresurado ? "apresurado" : "valido";
-
-  return { ejes, indice_global, fortalezas, desarrollo, validez, arquetipo: AXIS_LABEL[fortalezas[0]] };
+  const validez = attFail ? "atencion_fallida" : inconsistent ? "inconsistente" : apresurado ? "apresurado" : "valido";
+  return { ejes, fortalezas, desarrollo, validez, arquetipo: AXIS_LABEL[fortalezas[0]] };
 }
 
-// ── Fallback (sin DeepSeek): narrativa por plantilla ────────────────────────
 function fallbackNarrative(s: ReturnType<typeof score>, p: any) {
   const top1 = s.fortalezas[0] as Axis, top2 = s.fortalezas[1] as Axis, low = s.desarrollo as Axis;
   const roles = ROLES[top1];
-  const nivel = (Number(p.semestre) >= 7) ? "listo para prácticas o rol junior" : "en desarrollo";
-  const fortalezas = `Destacas en ${AXIS_SHORT[top1]} y ${AXIS_SHORT[top2]}. Tus decisiones reflejan un criterio sólido y consistente para dar el salto al mundo profesional.`;
-  const areas_mejora = `Tu mayor área de oportunidad está en ${AXIS_SHORT[low]}: trabajarla equilibrará tu perfil y te abrirá más puertas.`;
-  const recomendaciones = `Te sugerimos sumarte a un proyecto donde practiques ${AXIS_SHORT[low]}, tomar un curso corto enfocado en esa área y mantener el hábito de aprender de forma constante.`;
-  const mensaje_completo = `¡Felicidades por completar tu test de talento! ${fortalezas} ${areas_mejora} ${recomendaciones} Vas por muy buen camino: cada paso suma a tu perfil, y las empresas valoran justo esa mezcla de talento y ganas de crecer. Confía en tu proceso y sigue construyendo — tu próxima gran oportunidad está más cerca de lo que crees. 🚀`;
+  const fortalezas = `Tu perfil se inclina con fuerza hacia ${AXIS_SHORT[top1]} y ${AXIS_SHORT[top2]}: es tu forma natural de aportar y donde más brillas.`;
+  const areas_mejora = `Tu estilo se apoya menos en ${AXIS_SHORT[low]}. No es una debilidad, sino un terreno para explorar y sumar a tu perfil.`;
+  const recomendaciones = `Te sugerimos buscar un proyecto donde uses tu ${AXIS_SHORT[top1]}, y probar retos pequeños que te acerquen a ${AXIS_SHORT[low]} para redondear tu perfil.`;
+  const mensaje_completo = `¡Felicidades por completar tu test de talento! ${fortalezas} ${areas_mejora} ${recomendaciones} Recuerda que no hay un perfil mejor que otro: las empresas buscan distintas fortalezas, y conocer la tuya te ayuda a elegir dónde vas a destacar. Confía en tu estilo y sigue construyendo — tu próxima gran oportunidad está más cerca de lo que crees. 🚀`;
   return {
     cintillo: CINTILLO[top1].slice(0,50),
-    descripcion_breve: `Perfil con fortaleza en ${AXIS_SHORT[top1]} y ${AXIS_SHORT[top2]}; ${nivel}.`.slice(0,220),
-    tags: Array.from(new Set([AXIS_SHORT[top1], AXIS_SHORT[top2], (p.carrera||"universitario"), "perfil junior", "proactividad"])).slice(0,7),
-    resumen: `Perfil con fortaleza en ${AXIS_SHORT[top1]}, ${nivel}.`.slice(0,150),
-    recomendacion: `Roles sugeridos: ${roles.join(", ")}.`.slice(0,200),
+    descripcion_breve: `Perfil que se inclina hacia ${AXIS_SHORT[top1]} y ${AXIS_SHORT[top2]}.`.slice(0,220),
+    tags: Array.from(new Set([AXIS_SHORT[top1], AXIS_SHORT[top2], (p.carrera||"universitario"), "perfil junior"])).slice(0,7),
+    resumen: `Se inclina hacia ${AXIS_SHORT[top1]} y ${AXIS_SHORT[top2]}.`.slice(0,150),
+    recomendacion: `Roles afines: ${roles.join(", ")}.`.slice(0,200),
     feedback_estudiante: { fortalezas, areas_mejora, recomendaciones, mensaje_completo },
   };
 }
 
-// ── DeepSeek: SOLO interpreta los puntajes (no los calcula) ─────────────────
 async function interpretDeepSeek(s: ReturnType<typeof score>, p: any, key: string) {
-  const schema = `{"cintillo":"string atractivo máx 50 caracteres","descripcion_breve":"string máx 220 caracteres que describe el perfil en tono claro y positivo (se muestra junto a la gráfica)","tags":["5 a 8 palabras clave"],"resumen":"string máx 150 caracteres para el reclutador","recomendacion":"string con 2-3 roles junior sugeridos, máx 200 caracteres","feedback_estudiante":{"fortalezas":"2-3 fortalezas específicas, 30-50 palabras","areas_mejora":"1-2 áreas de oportunidad, 30-50 palabras","recomendaciones":"acciones concretas (cursos/proyectos/hábitos), 40-60 palabras","mensaje_completo":"150-200 palabras, 3-4 párrafos cortos, tono de mentor/coach cercano y alentador"}}`;
-  const sys = `Eres un mentor y evaluador de talento para una plataforma de reclutamiento de estudiantes universitarios en México. Los puntajes de las 8 competencias YA ESTÁN CALCULADOS y son definitivos: NO los recalcules ni los menciones como números. Tu tarea es SOLO interpretarlos y redactar la narrativa. Reconoce las fortalezas del estudiante, señala 1-2 áreas de oportunidad y da recomendaciones concretas, con tono positivo, cercano y alentador. Devuelve ÚNICAMENTE un objeto JSON válido en español con EXACTAMENTE este esquema: ${schema}`;
-  const ejesTxt = AXES.map((a)=>`- ${AXIS_LABEL[a]}: ${s.ejes[a]}/100`).join("\n");
-  const usr = `PERFIL DEL ESTUDIANTE:\n- Carrera: ${p.carrera||"N/D"}\n- Semestre: ${p.semestre||"N/D"}\n- Inglés: ${p.ingles||"N/D"}\n- Disponibilidad: ${p.disponibilidad||"N/D"}\n\nPUNTAJES POR COMPETENCIA (0-100, ya calculados):\n${ejesTxt}\n\nFortalezas principales: ${s.fortalezas.map((a)=>AXIS_LABEL[a as Axis]).join(", ")}\nÁrea de desarrollo: ${AXIS_LABEL[s.desarrollo as Axis]}\nÍndice global: ${s.indice_global}/100`;
+  const schema = `{"cintillo":"string atractivo máx 50 caracteres","descripcion_breve":"string máx 220 caracteres que describe el estilo/perfil de fortalezas (se muestra junto a la gráfica)","tags":["5 a 8 palabras clave"],"resumen":"string máx 150 caracteres para el reclutador","recomendacion":"string con 2-3 roles junior afines, máx 200 caracteres","feedback_estudiante":{"fortalezas":"2-3 fortalezas específicas, 30-50 palabras","areas_mejora":"1-2 estilos a explorar (NO debilidades), 30-50 palabras","recomendaciones":"acciones concretas (proyectos/hábitos), 40-60 palabras","mensaje_completo":"150-200 palabras, 3-4 párrafos cortos, tono de mentor cercano y alentador"}}`;
+  const sys = `Eres un mentor y evaluador de talento para una plataforma de reclutamiento de estudiantes universitarios en México. El test es de ELECCIÓN FORZADA: el resultado es un PERFIL DE FORTALEZAS RELATIVO (afinidad), NO una medida de qué tan bueno es en algo. Un puntaje bajo en una competencia significa que es MENOS su estilo dominante, NUNCA una debilidad o carencia. Los puntajes YA ESTÁN CALCULADOS: NO los recalcules ni los cites como números. Tu tarea es SOLO interpretarlos y redactar la narrativa en positivo. Enmarca los ejes bajos como "estilos a explorar", nunca como defectos. Devuelve ÚNICAMENTE un objeto JSON válido en español con EXACTAMENTE este esquema: ${schema}`;
+  const ejesTxt = [...AXES].sort((a,b)=>s.ejes[b]-s.ejes[a]).map((a)=>`- ${AXIS_LABEL[a]}: ${s.ejes[a]}`).join("\n");
+  const usr = `PERFIL DEL ESTUDIANTE:\n- Carrera: ${p.carrera||"N/D"}\n- Semestre: ${p.semestre||"N/D"}\n- Inglés: ${p.ingles||"N/D"}\n- Disponibilidad: ${p.disponibilidad||"N/D"}\n\nAFINIDAD POR COMPETENCIA (0-100, relativo, ya calculado):\n${ejesTxt}\n\nEstilos dominantes: ${s.fortalezas.map((a)=>AXIS_LABEL[a as Axis]).join(", ")}\nEstilo a explorar: ${AXIS_LABEL[s.desarrollo as Axis]}`;
   const res = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
     headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
@@ -151,7 +143,7 @@ Deno.serve(async (req: Request) => {
     if (!user) return json({ error: "No autenticado" }, 401);
 
     const body = await req.json();
-    const answers = body?.respuestas ?? body;   // acepta {respuestas,timings} o el objeto directo
+    const answers = body?.respuestas ?? body;
     const timings = body?.timings;
     validate(answers);
 
@@ -168,8 +160,8 @@ Deno.serve(async (req: Request) => {
     } else { narrative = fallbackNarrative(s, student); modelo = "reglas"; }
 
     const clasificacion = {
-      ejes: s.ejes, indice_global: s.indice_global, fortalezas: s.fortalezas, desarrollo: s.desarrollo,
-      validez: s.validez, arquetipo: s.arquetipo, ...narrative,
+      ejes: s.ejes, fortalezas: s.fortalezas, desarrollo: s.desarrollo,
+      validez: s.validez, arquetipo: s.arquetipo, modelo_eval: "eleccion_forzada", ...narrative,
     };
     const respuestas = { instrumento_version: INSTRUMENT_VERSION, answers, timings: timings ?? null };
     await supabase.from("test_results").insert({ student_id: student.id, respuestas, clasificacion, arquetipo: s.arquetipo, modelo });
