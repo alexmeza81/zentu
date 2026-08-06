@@ -870,9 +870,9 @@
       industrias.forEach(i => buscoPills.push(i));
       const hab = testResults?.habilidades || {};
       const clasif = testResults && testResults.clasificacion;
-      const dims = (clasif && clasif.dimensiones) || null;
-      const testSkills = dims
-        ? DIMS.map(d => ({ name: d.label, emoji: d.emoji, pct: Math.max(0, Math.min(100, (dims[d.key] || 0) * 10)) }))
+      const ejesRC = (clasif && clasif.ejes) || null;
+      const testSkills = ejesRC
+        ? AXES.map(a => ({ name: a.label, emoji: '', pct: Math.max(0, Math.min(100, ejesRC[a.key] || 0)) }))
         : SKILLS_CONFIG.map(s => ({ name: s.label, emoji: s.emoji, pct: hab[s.key] || 0 }));
       const matches = computeMatches(st);
       const enBusqueda = state.student?.estado === 'en_busqueda';
@@ -881,7 +881,7 @@
       const email = escapeHTML(state.user.email);
       const telefono = st.telefono ? escapeHTML(st.telefono) : '';
       const linkedin = st.linkedin_url ? escapeHTML(st.linkedin_url) : '';
-      const hasTest = dims ? true : Object.keys(hab).length > 0;
+      const hasTest = ejesRC ? true : Object.keys(hab).length > 0;
       const { pct: rcPct } = computeProgress(state.student, testResults);
       const egresado = st.semestre === 'Egresado/a';
       const egresoTxt = egreso !== '—' ? `${egresado ? 'Egresó' : 'Egresa'} ${egreso}` : (egresado ? 'Egresado/a' : (st.semestre ? escapeHTML(st.semestre) : '—'));
@@ -938,7 +938,7 @@
 
         ${topSkills.length ? `
         <div style="background:#F8FAFC;border-radius:12px;padding:12px 14px;">
-          <div class="rc-match-label" style="margin-bottom:8px;">${clasif && clasif.arquetipo ? 'PERFIL ' + escapeHTML((clasif.arquetipo || '').toUpperCase()) + ' · TOP DIMENSIONES' : 'TOP HABILIDADES (TEST IA)'}</div>
+          <div class="rc-match-label" style="margin-bottom:8px;">${clasif && clasif.arquetipo ? 'PERFIL ' + escapeHTML((clasif.arquetipo || '').toUpperCase()) + ' · TOP FORTALEZAS' : 'TOP HABILIDADES (TEST IA)'}</div>
           ${topSkills.map(s => `
             <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
               <span style="font-size:12px;color:#475569;font-weight:600;flex:1;">${s.name}</span>
@@ -1001,45 +1001,61 @@
     ];
 
     // ── TEST DE TALENTO (8 preguntas → clasificación IA vía DeepSeek) ──
-    const TEST_TECH = [
-      { key:'technical_analysis', label:'Análisis de datos',      desc:'Excel, SQL, PowerBI, estadística' },
-      { key:'technical_tools',    label:'Herramientas digitales', desc:'Suite Google, Slack, Trello, CRM' },
-      { key:'technical_writing',  label:'Redacción y ortografía', desc:'Informes, correos formales, resúmenes' },
-      { key:'technical_project',  label:'Gestión de proyectos',   desc:'Cumplir plazos, organizar al equipo' },
+    // ── TEST DE TALENTO v4 · elección forzada (envía índices canónicos a evaluar-competencias) ──
+    const AXES = [
+      { key:'pensamiento_critico', label:'Pensamiento crítico', short:'P. crítico' },
+      { key:'comunicacion_asertiva', label:'Comunicación asertiva', short:'Comunicación' },
+      { key:'trabajo_equipo', label:'Trabajo en equipo', short:'Equipo' },
+      { key:'resiliencia', label:'Resiliencia', short:'Resiliencia' },
+      { key:'adaptabilidad', label:'Adaptabilidad', short:'Adaptab.' },
+      { key:'autogestion', label:'Autogestión', short:'Autogestión' },
+      { key:'liderazgo', label:'Liderazgo', short:'Liderazgo' },
+      { key:'competencia_digital', label:'Competencia digital', short:'Digital' },
     ];
-    const TEST_SCEN = [
-      { key:'scenario1', q:'Ante un problema nuevo sin manual, ¿tú...?', opts:[['A','Buscas datos históricos para encontrar un patrón'],['B','Piensas "fuera de la caja" y pruebas algo innovador'],['C','Reúnes al equipo, asignas roles y atacan juntos'],['D','Lo resuelves tú mismo con lo que tienes, rápido']] },
-      { key:'scenario2', q:'En un trabajo grupal, tu rol natural es...',  opts:[['A','El que investiga y verifica que los datos sean ciertos'],['B','El que genera ideas y propone el enfoque creativo'],['C','El que organiza el cronograma y motiva a los demás'],['D','El que ejecuta y entrega en tiempo y forma']] },
-      { key:'scenario3', q:'Cuando recibes crítica negativa, tú...',      opts:[['A','La analizas en frío para ver si es lógica'],['B','Te molesta un poco, pero la usas para reinventar tu trabajo'],['C','La tomas como un desafío para demostrar tu valía'],['D','La aceptas, corriges y sigues sin darle vueltas']] },
+    const AX_LABEL = Object.fromEntries(AXES.map(a => [a.key, a.label]));
+    // Solo TEXTOS en orden canónico (el mapeo opción→eje vive en el servidor).
+    const FC_ITEMS = [
+      { code:'I1', q:'Empiezas en un nuevo equipo. ¿Qué es lo más tú en tu primera semana?', opts:['Observo cómo trabajan y me adapto a su ritmo y herramientas','Me presento, pregunto y construyo relación con cada quien','Me ofrezco a ayudar en lo que el equipo necesite','Organizo mis tareas y pendientes para arrancar ordenado'] },
+      { code:'I2', q:'Arranca un proyecto nuevo. ¿Cuál es tu instinto?', opts:['Entender bien el problema y qué se busca resolver','Proponer un plan y repartir el trabajo','Buscar la herramienta o el dato que lo haga más fácil','Asegurar que salga a tiempo pase lo que pase'] },
+      { code:'I3', q:'En una lluvia de ideas, tú sueles ser quien…', opts:['Cuestiona y afina las ideas para que tengan sentido','Anima a todos a participar y conecta las ideas','Toma la iniciativa y propone por dónde empezar','Explica las ideas con claridad para que se entiendan'] },
+      { code:'I4', q:'Aparece un problema inesperado a media semana. ¿Qué te define?', opts:['Mantengo la calma y sigo aunque se complique','Me reorganizo y cambio el plan rápido','Analizo la causa antes de actuar','Busco quién me puede apoyar'] },
+      { code:'I5', q:'Tu forma natural de aprender algo nuevo es…', opts:['Buscar tutoriales/herramientas y probar por mi cuenta','Preguntar a alguien con experiencia','Lanzarme y aprender sobre la marcha','Planear qué necesito aprender y en qué orden'] },
+      { code:'I6', q:'Cuando el equipo está bajo presión, tú aportas…', opts:['Calma y aguante para no rendirse','Dirección: alguien tiene que decidir','Unión: que nadie se quede solo','Cabeza fría para priorizar lo importante'] },
+      { code:'I7', q:'Te sientes más orgulloso/a de ti cuando…', opts:['Resolví algo complicado con lógica','Cumplí todo lo que me comprometí','Ayudé a que el equipo lograra la meta','Me sobrepuse a algo difícil'] },
+      { code:'I8', q:'Un amigo te describiría como el/la que…', opts:['Siempre encuentra la forma de adaptarse','Dice las cosas de frente pero con tacto','Toma la batuta cuando hace falta','Le saca provecho a la tecnología'] },
+      { code:'CTRL-ATT', noShuffle:true, q:'Para confirmar que vas con atención, elige la tercera opción.', opts:['Primera opción','Segunda opción','Tercera opción','Cuarta opción'] },
+      { code:'I9', q:'Ante una tarea aburrida pero necesaria, tú…', opts:['La hago igual, la disciplina ante todo','Busco una forma más eficiente o de automatizarla','La aguanto sin quejarme hasta terminar','La adapto para hacerla más llevadera'] },
+      { code:'I10', q:'Lo que más disfrutas de trabajar en equipo es…', opts:['Debatir ideas para llegar a la mejor','Coordinar y que todo fluya','Convivir y crear buen ambiente','Explicar y alinear a todos'] },
+      { code:'I11', q:'Si algo te sale mal, lo primero que haces es…', opts:['Respirar y no desanimarme','Ajustar y probar de otra forma','Buscar la herramienta o el dato que me ayude a resolver','Pedir retroalimentación para mejorar'] },
+      { code:'I12', q:'Tu manera de destacar en un trabajo es…', opts:['Entregando siempre a tiempo y completo','Aportando ideas y tomando iniciativa','Usando herramientas que suman valor','Colaborando y sumando al equipo'] },
+      { code:'I13', q:'Cuando hay que tomar una decisión difícil, tú…', opts:['Analizas datos y consecuencias','Decides y asumes la responsabilidad','Escuchas al equipo antes de decidir','Te adaptas según cómo evolucione'] },
+      { code:'I14', q:'Lo que te hace seguir cuando algo se pone cuesta arriba es…', opts:['Mi resistencia, no me rindo fácil','Recordar mi meta y organizarme','Confiar en que puedo aprender lo que falte','Apoyarme en los demás'] },
+      { code:'I15', q:'En una presentación importante, tu fuerte es…', opts:['Explicar claro y conectar con la gente','Tener los datos y el análisis sólidos','Apoyarte en buenas visuales/herramientas','Mantener la calma aunque salga algo mal'] },
+      { code:'I16', q:'La gente suele acudir a ti para…', opts:['Que organices y pongas orden','Que tomes el liderazgo','Que no te rindas y saques las cosas adelante','Que ayudes con una herramienta o un dato'] },
+      { code:'CTRL-CONS', q:'Ante una decisión importante y difícil, ¿qué se parece más a ti?', opts:['Reviso la información y las consecuencias con lógica','Tomo la decisión y me hago responsable','Consulto al equipo antes de decidir','Voy ajustando según cómo se desarrolle'] },
     ];
-    const TEST_LEARN = { key:'learning', q:'En los últimos 6 meses, ¿cómo aprendiste algo nuevo?', opts:[['a','Un curso estructurado con certificado (Coursera, Platzi, Udemy)'],['b','Tutoriales sueltos en YouTube/TikTok para algo puntual'],['c','Preguntando a compañeros o profesores y practicando'],['d','No he tenido tiempo por la carga universitaria']] };
-    const DIMS = [
-      { key:'analitica', label:'Analítica',  emoji:'💡' },
-      { key:'creativa',  label:'Creativa',   emoji:'🎨' },
-      { key:'liderazgo', label:'Liderazgo',  emoji:'🚀' },
-      { key:'ejecutora', label:'Ejecutora',  emoji:'⚡' },
-      { key:'tecnica',   label:'Técnica',    emoji:'🛠️' },
-    ];
-    const TEST_STEPS = (() => {
-      const s = [];
-      TEST_TECH.forEach(t => s.push({ type:'scale', key:t.key, label:t.label, desc:t.desc }));
-      TEST_SCEN.forEach(x => s.push({ type:'choice', key:x.key, q:x.q, opts:x.opts }));
-      s.push({ type:'choice', key:TEST_LEARN.key, q:TEST_LEARN.q, opts:TEST_LEARN.opts });
-      return s;
-    })();
 
-    let testState = { active:false, loading:false, idx:0, answers:{} };
-    function startTest(){ testState = { active:true, loading:false, idx:0, answers:{} }; renderTest(state); }
+    let testState = { active:false, loading:false, idx:0, answers:{}, timings:{}, order:{}, shownAt:0 };
+    function startTest(){ testState = { active:true, loading:false, idx:0, answers:{}, timings:{}, order:{}, shownAt:Date.now() }; renderTest(state); }
     function cancelTest(){ testState.active=false; renderTest(state); }
-    function testBack(){ if(testState.idx>0){ testState.idx--; renderTest(state); } else cancelTest(); }
-    function answerScale(key, v){ testState.answers[key]=v; advanceTest(); }
-    function answerChoice(key, letter){ testState.answers[key]=letter; advanceTest(); }
-    function advanceTest(){ if(testState.idx < TEST_STEPS.length-1){ testState.idx++; renderTest(state); } else submitTest(); }
+    function testBack(){ if(testState.idx>0){ testState.idx--; testState.shownAt=Date.now(); renderTest(state); } else cancelTest(); }
+    function fcOrder(i){
+      if(testState.order[i]) return testState.order[i];
+      const it=FC_ITEMS[i]; let idx=it.opts.map((_,k)=>k);
+      if(!it.noShuffle){ for(let k=idx.length-1;k>0;k--){ const j=Math.floor(Math.random()*(k+1)); [idx[k],idx[j]]=[idx[j],idx[k]]; } }
+      testState.order[i]=idx; return idx;
+    }
+    function pickOpt(i, canon){
+      const code=FC_ITEMS[i].code;
+      testState.answers[code]=canon;
+      testState.timings[code]=Math.max(0, Date.now()-testState.shownAt);
+      if(testState.idx < FC_ITEMS.length-1){ testState.idx++; testState.shownAt=Date.now(); renderTest(state); } else submitTest();
+    }
 
     async function submitTest(){
       testState.loading=true; renderTest(state);
       try {
-        const { data, error } = await sb.functions.invoke('clasificar-test', { body: testState.answers });
+        const { data, error } = await sb.functions.invoke('evaluar-competencias', { body: { respuestas: testState.answers, timings: testState.timings } });
         if(error || !data || data.error) throw (error || new Error(data && data.error || 'Error'));
         state.testResults = { clasificacion: data.clasificacion, arquetipo: data.arquetipo, modelo: data.modelo };
       } catch(e){
@@ -1052,42 +1068,47 @@
       renderTest(state); renderPerfil(state);
     }
 
+    function radarSVG(ejes, size){
+      size = size || 300; const cx=size/2, cy=size/2+6, R=size*0.34, n=AXES.length;
+      const ang=i=>(-90+i*(360/n))*Math.PI/180, pt=(i,r)=>[cx+Math.cos(ang(i))*r, cy+Math.sin(ang(i))*r];
+      let g='';
+      [0.25,0.5,0.75,1].forEach(f=>{ g+=`<polygon points="${AXES.map((_,i)=>pt(i,R*f).map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#E5E9F5" stroke-width="1"/>`; });
+      AXES.forEach((_,i)=>{ const [x,y]=pt(i,R); g+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E5E9F5" stroke-width="1"/>`; });
+      g+=`<polygon points="${AXES.map((a,i)=>pt(i,R*(ejes[a.key]||0)/100).map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="url(#zrad)" fill-opacity="0.55" stroke="#7B68EE" stroke-width="2" stroke-linejoin="round"/>`;
+      AXES.forEach((a,i)=>{ const [x,y]=pt(i,R*(ejes[a.key]||0)/100); g+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="3" fill="#7B68EE"/>`; });
+      AXES.forEach((a,i)=>{ let [x,y]=pt(i,R+16); const co=Math.cos(ang(i)); const anchor=Math.abs(co)<0.3?'middle':(co>0?'start':'end'); g+=`<text x="${x.toFixed(1)}" y="${(y+4).toFixed(1)}" text-anchor="${anchor}" font-size="10.5" font-weight="700" fill="#475569">${a.short}</text>`; });
+      return `<svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:320px;display:block;margin:0 auto"><defs><linearGradient id="zrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7B68EE"/><stop offset="1" stop-color="#4A9EFF"/></linearGradient></defs>${g}</svg>`;
+    }
+
     function renderTest(state){
       const el = document.getElementById('sec-test');
       const c = state.testResults && state.testResults.clasificacion;
-      const hasResult = !!(c && c.dimensiones);
+      const hasResult = !!(c && c.ejes);
 
       if(testState.loading){
         el.innerHTML = `<div class="test-quiz" style="text-align:center;padding:56px 24px;">
           <div class="test-spinner"></div>
           <div style="font-size:16px;font-weight:800;color:#0F172A;margin-top:18px;">Analizando tu perfil…</div>
-          <div style="font-size:13px;color:#64748B;margin-top:6px;line-height:1.5;">Nuestra IA está construyendo tu resultado y tu feedback personalizado.</div>
+          <div style="font-size:13px;color:#64748B;margin-top:6px;line-height:1.5;">Nuestra IA está interpretando tus resultados y tu feedback personalizado.</div>
         </div>`;
         return;
       }
 
       if(testState.active){
-        const step = TEST_STEPS[testState.idx];
-        const n = TEST_STEPS.length;
+        const step = FC_ITEMS[testState.idx];
+        const n = FC_ITEMS.length;
         const prog = Math.round((testState.idx / n) * 100);
-        let body='';
-        if(step.type==='scale'){
-          const cur = testState.answers[step.key];
-          body = `<div class="test-q-text">¿Qué tan bueno/a eres en <span style="color:#6D5AE6;">${escapeHTML(step.label)}</span>?</div>
-            <div style="font-size:13px;color:#64748B;margin:-8px 0 16px;">${escapeHTML(step.desc)}</div>
-            <div class="scale-row">${[1,2,3,4,5].map(v=>`<button class="scale-btn ${cur===v?'sel':''}" onclick="answerScale('${step.key}',${v})">${v}</button>`).join('')}</div>
-            <div class="scale-legend"><span>Principiante</span><span>Experto/a</span></div>`;
-        } else {
-          const cur = testState.answers[step.key];
-          body = `<div class="test-q-text">${escapeHTML(step.q)}</div>
-            <div class="test-q-opts">${step.opts.map(o=>`<button class="test-opt ${cur===o[0]?'sel':''}" onclick="answerChoice('${step.key}','${o[0]}')"><b style="color:#6D5AE6;margin-right:8px;">${o[0]}</b>${escapeHTML(o[1])}</button>`).join('')}</div>`;
-        }
+        const order = fcOrder(testState.idx);
+        const sel = testState.answers[step.code];
+        const body = `<div class="test-q-text">${escapeHTML(step.q)}</div>
+          <div class="test-q-opts">${order.map(canon=>`<button class="test-opt ${sel===canon?'sel':''}" onclick="pickOpt(${testState.idx},${canon})">${escapeHTML(step.opts[canon])}</button>`).join('')}</div>`;
         el.innerHTML = `<div class="test-quiz">
           <div class="test-q-top">
             <button class="test-q-back" onclick="testBack()" aria-label="Atrás">${testState.idx>0?'‹':'✕'}</button>
             <div class="test-q-count">Pregunta ${testState.idx+1} de ${n}</div>
           </div>
           <div class="test-q-track"><div class="test-q-fill" style="width:${prog}%"></div></div>
+          <div style="font-size:12px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:10px;">Elige lo que más se parece a ti</div>
           ${body}
         </div>`;
         const sc=document.querySelector('.scroll-content'); if(sc) sc.scrollTop=0;
@@ -1098,50 +1119,47 @@
 
       el.innerHTML = `
         <div class="test-banner">
-          <div class="test-banner-icon">🧠</div>
+          <div class="test-banner-icon">🧭</div>
           <div>
             <div class="test-banner-title">Test de Talento IA</div>
-            <div class="test-banner-sub">8 preguntas · ~3 min</div>
+            <div class="test-banner-sub">18 preguntas · ~8 min</div>
           </div>
           <button class="test-banner-btn" onclick="startTest()">Empezar →</button>
         </div>
         <div class="section-title">¿Qué obtienes?</div>
         <div class="card" style="margin:0 20px 24px;padding:18px 20px;">
-          <div style="font-size:13px;color:#475569;line-height:1.7;">Responde <strong>8 preguntas</strong> y nuestra IA construye tu <strong>perfil de talento</strong>: tus 5 dimensiones, un <strong>feedback personalizado</strong> con tus fortalezas y cómo mejorar, y los roles que mejor encajan contigo. Es lo que ven los reclutadores.</div>
+          <div style="font-size:13px;color:#475569;line-height:1.7;">En cada pregunta eliges <strong>la opción que más se parece a ti</strong> — no hay respuestas correctas. Con eso construimos tu <strong>perfil de fortalezas</strong> en 8 competencias (gráfica de radar), un <strong>feedback personalizado</strong> y los roles que más encajan contigo. Es lo que ven los reclutadores.</div>
         </div>`;
     }
 
     function renderTestResult(c){
       const fb = c.feedback_estudiante || {};
-      const dims = c.dimensiones || {};
-      const dimBars = DIMS.map(d=>{ const v=Math.max(0,Math.min(10, dims[d.key]||0)); return `
-        <div class="skill-row">
-          <span class="skill-emoji">${d.emoji}</span>
-          <span class="skill-name">${d.label}</span>
-          <div class="skill-bar-wrap"><div class="skill-bar-fill" style="width:${v*10}%"></div></div>
-          <span class="skill-pct">${v}/10</span>
-        </div>`; }).join('');
+      const ejes = c.ejes || {};
       const tags = (Array.isArray(c.tags)?c.tags:[]).map(t=>`<span class="chip">${escapeHTML(t)}</span>`).join('');
       const fbCard = (title, txt, color) => txt ? `<div class="fb-card"><div class="fb-title" style="color:${color}">${title}</div><div class="fb-body">${escapeHTML(txt)}</div></div>` : '';
+      const ranked = AXES.slice().sort((a,b)=>(ejes[b.key]||0)-(ejes[a.key]||0));
+      const scoreList = ranked.map(a=>`<div class="skill-row"><span class="skill-name">${a.label}</span><div class="skill-bar-wrap"><div class="skill-bar-fill" style="width:${Math.max(0,Math.min(100,ejes[a.key]||0))}%"></div></div><span class="skill-pct">${ejes[a.key]||0}</span></div>`).join('');
       return `
         <div class="result-hero">
           <div class="result-arq">${escapeHTML(c.cintillo || ('Perfil '+(c.arquetipo||'')))}</div>
-          ${c.arquetipo?`<div class="result-badge">Perfil ${escapeHTML(c.arquetipo)}</div>`:''}
+          ${c.arquetipo?`<div class="result-badge">Estilo dominante · ${escapeHTML(c.arquetipo)}</div>`:''}
           ${tags?`<div class="result-tags">${tags}</div>`:''}
         </div>
-        ${fb.mensaje_completo ? `<div class="card" style="margin:14px 20px 20px;padding:18px 20px;"><div class="fb-message">${escapeHTML(fb.mensaje_completo)}</div></div>`:''}
+        <div class="section-title">Tu perfil de fortalezas</div>
+        <div class="card" style="margin:0 20px 16px;padding:18px 12px;">${radarSVG(ejes,300)}</div>
+        ${c.descripcion_breve?`<div class="card" style="margin:0 20px 20px;padding:16px 20px;"><div style="font-size:13.5px;color:#334155;line-height:1.6;">${escapeHTML(c.descripcion_breve)}</div></div>`:''}
+        ${fb.mensaje_completo ? `<div class="card" style="margin:0 20px 20px;padding:18px 20px;"><div class="fb-message">${escapeHTML(fb.mensaje_completo)}</div></div>`:''}
         <div class="section-title">Tu feedback</div>
         <div style="padding:0 20px;">
           ${fbCard('💪 Tus fortalezas', fb.fortalezas, '#10B981')}
-          ${fbCard('🎯 Áreas de oportunidad', fb.areas_mejora, '#F59E0B')}
+          ${fbCard('🌱 Estilo a explorar', fb.areas_mejora, '#F59E0B')}
           ${fbCard('🚀 Qué hacer ahora', fb.recomendaciones, '#7B68EE')}
         </div>
-        <div class="section-title">Tus 5 dimensiones</div>
-        <div class="card" style="margin:0 20px 20px;">${dimBars}</div>
+        <div class="section-title">Tus 8 competencias</div>
+        <div class="card" style="margin:0 20px 20px;">${scoreList}</div>
         ${c.recomendacion?`<div class="card" style="margin:0 20px 20px;padding:16px 20px;"><div style="font-size:12px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Roles que encajan contigo</div><div style="font-size:13.5px;color:#334155;line-height:1.5;">${escapeHTML(c.recomendacion)}</div></div>`:''}
         <div style="padding:0 20px 24px;"><button class="test-banner-btn" style="width:100%;justify-content:center;" onclick="startTest()">Volver a tomar el test →</button></div>`;
     }
-
 
     // ── RENDER: BANDEJA DE ENTRADA ──────────────────────────
     const COMPANY_COLORS = [

@@ -343,6 +343,29 @@
       {key:'ejecutora',label:'Ejecutora',emoji:'⚡'},
       {key:'tecnica',label:'Técnica',emoji:'🛠️'},
     ];
+    // Ejes del test v4 (elección forzada) — perfil de fortalezas
+    const AXES=[
+      {key:'pensamiento_critico',label:'Pensamiento crítico',short:'P. crítico'},
+      {key:'comunicacion_asertiva',label:'Comunicación asertiva',short:'Comunicación'},
+      {key:'trabajo_equipo',label:'Trabajo en equipo',short:'Equipo'},
+      {key:'resiliencia',label:'Resiliencia',short:'Resiliencia'},
+      {key:'adaptabilidad',label:'Adaptabilidad',short:'Adaptab.'},
+      {key:'autogestion',label:'Autogestión',short:'Autogestión'},
+      {key:'liderazgo',label:'Liderazgo',short:'Liderazgo'},
+      {key:'competencia_digital',label:'Competencia digital',short:'Digital'},
+    ];
+    const VALIDEZ_LABEL={valido:'Respuestas válidas',atencion_fallida:'Falló control de atención',inconsistente:'Respuestas inconsistentes',deseabilidad_alta:'Posible perfil inflado',apresurado:'Respondió muy rápido'};
+    function radarSVG(ejes,size){
+      size=size||260; const cx=size/2, cy=size/2+4, R=size*0.33, n=AXES.length;
+      const ang=i=>(-90+i*(360/n))*Math.PI/180, pt=(i,r)=>[cx+Math.cos(ang(i))*r, cy+Math.sin(ang(i))*r];
+      let g='';
+      [0.25,0.5,0.75,1].forEach(f=>{ g+=`<polygon points="${AXES.map((_,i)=>pt(i,R*f).map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="#E5E9F5" stroke-width="1"/>`; });
+      AXES.forEach((_,i)=>{ const [x,y]=pt(i,R); g+=`<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#E5E9F5" stroke-width="1"/>`; });
+      g+=`<polygon points="${AXES.map((a,i)=>pt(i,R*(ejes[a.key]||0)/100).map(v=>v.toFixed(1)).join(',')).join(' ')}" fill="url(#zrad)" fill-opacity="0.5" stroke="#7B68EE" stroke-width="2" stroke-linejoin="round"/>`;
+      AXES.forEach((a,i)=>{ const [x,y]=pt(i,R*(ejes[a.key]||0)/100); g+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="#7B68EE"/>`; });
+      AXES.forEach((a,i)=>{ let [x,y]=pt(i,R+14); const co=Math.cos(ang(i)); const anchor=Math.abs(co)<0.3?'middle':(co>0?'start':'end'); g+=`<text x="${x.toFixed(1)}" y="${(y+3).toFixed(1)}" text-anchor="${anchor}" font-size="9" font-weight="700" fill="#64748B">${a.short}</text>`; });
+      return `<svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:280px;display:block;margin:0 auto"><defs><linearGradient id="zrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7B68EE"/><stop offset="1" stop-color="#4A9EFF"/></linearGradient></defs>${g}</svg>`;
+    }
 
     let ALL = [];
     let companyId = null;
@@ -779,6 +802,8 @@
       const hab = (tc.hab!==undefined ? tc.hab : tc) || {};
       const clasif = tc.clasif || null;
       const dims = (clasif && clasif.dimensiones) || null;
+      const ejes = (clasif && clasif.ejes) || null;
+      const validez = (clasif && clasif.validez) || null;
       const arq = (clasif && clasif.arquetipo) || tc.arq || null;
       const matches=computeMatches(st).slice(0,4);
       const carreraLine=escapeHTML([st.carrera, st.ubicacion].filter(Boolean).join(' · '));
@@ -789,7 +814,25 @@
       // Bloque del test: usa clasificación IA nueva si existe; si no, cae al formato viejo (habilidades)
       const tags = (clasif && Array.isArray(clasif.tags)) ? clasif.tags.slice(0,8) : [];
       const dimRows = dims ? DIMS.map(d=>({label:d.label,emoji:d.emoji,pct:Math.max(0,Math.min(100,(dims[d.key]||0)*10)),val:dims[d.key]||0})) : [];
-      const testBlock = dims ? `
+      const ejeRows = ejes ? AXES.slice().sort((a,b)=>(ejes[b.key]||0)-(ejes[a.key]||0)) : [];
+      const testBlock = ejes ? `
+          <div class="bg-slate-50 rounded-xl p-3.5">
+            <div class="flex items-center justify-between mb-2">
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Perfil de talento · Test IA</div>
+              ${arq?`<span class="text-[10px] font-black text-white grad px-2 py-0.5 rounded-full">${escapeHTML(String(arq).toUpperCase())}</span>`:''}
+            </div>
+            ${clasif.cintillo?`<div class="text-sm font-bold text-slate-700 mb-1">${escapeHTML(clasif.cintillo)}</div>`:''}
+            ${clasif.resumen?`<div class="text-xs text-slate-500 leading-relaxed mb-2">${escapeHTML(clasif.resumen)}</div>`:''}
+            ${validez?`<div class="mb-2"><span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${validez==='valido'?'bg-green-100 text-green-700':'bg-amber-100 text-amber-700'}">${validez==='valido'?'✓':'⚠'} ${escapeHTML(VALIDEZ_LABEL[validez]||validez)}</span></div>`:''}
+            ${radarSVG(ejes,260)}
+            <div class="grid grid-cols-2 gap-x-3 gap-y-1 mt-3">
+              ${ejeRows.map(a=>`<div class="flex items-center justify-between text-[11px]"><span class="text-slate-600 font-medium truncate">${escapeHTML(a.label)}</span><span class="font-bold text-purple-700 ml-1">${ejes[a.key]||0}</span></div>`).join('')}
+            </div>
+            <div class="text-[10px] text-slate-400 mt-2 leading-snug">Afinidad relativa (perfil de fortalezas), no medida absoluta de qué tan bueno es.</div>
+            ${tags.length?`<div class="flex flex-wrap gap-1.5 mt-3">${tags.map(t=>`<span class="text-[11px] font-semibold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">${escapeHTML(t)}</span>`).join('')}</div>`:''}
+            ${clasif.recomendacion?`<div class="mt-3 pt-3 border-t border-slate-200"><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Roles sugeridos</div><div class="text-xs text-slate-600 leading-relaxed">${escapeHTML(clasif.recomendacion)}</div></div>`:''}
+          </div>`
+        : dims ? `
           <div class="bg-slate-50 rounded-xl p-3.5">
             <div class="flex items-center justify-between mb-2">
               <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Perfil de talento · Test IA</div>
