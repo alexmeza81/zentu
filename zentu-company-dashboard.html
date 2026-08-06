@@ -379,15 +379,16 @@
     }
 
     // ── Like / Unlike (shortlist privado → pipeline) ───────────
+    // Corazón simétrico y centrado (Feather heart) — reemplaza el path asimétrico anterior
     function heartSVG(filled){
       return filled
-        ? `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="#7B68EE"><path d="M12 21s-7.5-4.9-10-9.5C.5 8 2 4.5 5.5 4.5c2 0 3.3 1.1 4.5 2.6 1.2-1.5 2.5-2.6 4.5-2.6C18 4.5 19.5 8 22 11.5 19.5 16.1 12 21 12 21z"/></svg>`
-        : `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7.5-4.9-10-9.5C.5 8 2 4.5 5.5 4.5c2 0 3.3 1.1 4.5 2.6 1.2-1.5 2.5-2.6 4.5-2.6C18 4.5 19.5 8 22 11.5 19.5 16.1 12 21 12 21z"/></svg>`;
+        ? `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="#7B68EE" stroke="#7B68EE" stroke-width="1.5" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`
+        : `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
     }
     function modalHeartSVG(filled){
       return filled
-        ? `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="white"><path d="M12 21s-7.5-4.9-10-9.5C.5 8 2 4.5 5.5 4.5c2 0 3.3 1.1 4.5 2.6 1.2-1.5 2.5-2.6 4.5-2.6C18 4.5 19.5 8 22 11.5 19.5 16.1 12 21 12 21z"/></svg>`
-        : `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s-7.5-4.9-10-9.5C.5 8 2 4.5 5.5 4.5c2 0 3.3 1.1 4.5 2.6 1.2-1.5 2.5-2.6 4.5-2.6C18 4.5 19.5 8 22 11.5 19.5 16.1 12 21 12 21z"/></svg>`;
+        ? `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="white" stroke="white" stroke-width="1.5" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`
+        : `<svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>`;
     }
     async function toggleLike(id){
       if(!companyId){ alert('Tu cuenta aún no está vinculada a una empresa registrada, por eso el pipeline está deshabilitado.'); return; }
