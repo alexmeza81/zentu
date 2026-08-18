@@ -1080,6 +1080,16 @@
       return `<svg viewBox="0 0 ${size} ${size}" width="100%" style="max-width:320px;display:block;margin:0 auto"><defs><linearGradient id="zrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#7B68EE"/><stop offset="1" stop-color="#4A9EFF"/></linearGradient></defs>${g}</svg>`;
     }
 
+    // Opción C: top-3 tarjetas + barras (normalizado al máximo). Perfil de fortalezas.
+    function strengthsC(ejes){
+      const rk = AXES.slice().sort((a,b)=>(ejes[b.key]||0)-(ejes[a.key]||0));
+      const mx = Math.max(1, ...AXES.map(a=>ejes[a.key]||0));
+      const nz = v => Math.round((v||0)/mx*100);
+      const card = (a,i)=>`<div style="position:relative;background:#fff;border:1px solid #E8EBF5;border-radius:14px;padding:14px 6px 12px;text-align:center;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,#7B68EE,#4A9EFF);"></div><div style="font-size:10px;font-weight:800;color:#C4B5FD;">#${i+1}</div><div style="font-size:12px;font-weight:800;line-height:1.2;margin-top:4px;color:#0F172A;">${escapeHTML(a.label)}</div><div style="font-size:20px;font-weight:900;color:#7B68EE;margin-top:4px;">${ejes[a.key]||0}</div></div>`;
+      const mini = a=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;"><span style="font-size:12.5px;color:#475569;font-weight:600;flex:1;">${escapeHTML(a.label)}</span><div style="width:76px;height:6px;background:#E9ECF6;border-radius:999px;overflow:hidden;"><div style="width:${nz(ejes[a.key])}%;height:100%;background:linear-gradient(90deg,#7B68EE,#4A9EFF);border-radius:999px;"></div></div><span style="font-size:11px;font-weight:800;color:#94A3B8;width:24px;text-align:right;">${ejes[a.key]||0}</span></div>`;
+      return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;">${rk.slice(0,3).map(card).join('')}</div><div style="font-size:11px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Los demás estilos</div>${rk.slice(3).map(mini).join('')}`;
+    }
+
     function renderTest(state){
       const el = document.getElementById('sec-test');
       const c = state.testResults && state.testResults.clasificacion;
@@ -1137,8 +1147,6 @@
       const ejes = c.ejes || {};
       const tags = (Array.isArray(c.tags)?c.tags:[]).map(t=>`<span class="chip">${escapeHTML(t)}</span>`).join('');
       const fbCard = (title, txt, color) => txt ? `<div class="fb-card"><div class="fb-title" style="color:${color}">${title}</div><div class="fb-body">${escapeHTML(txt)}</div></div>` : '';
-      const ranked = AXES.slice().sort((a,b)=>(ejes[b.key]||0)-(ejes[a.key]||0));
-      const scoreList = ranked.map(a=>`<div class="skill-row"><span class="skill-name">${a.label}</span><div class="skill-bar-wrap"><div class="skill-bar-fill" style="width:${Math.max(0,Math.min(100,ejes[a.key]||0))}%"></div></div><span class="skill-pct">${ejes[a.key]||0}</span></div>`).join('');
       return `
         <div class="result-hero">
           <div class="result-arq">${escapeHTML(c.cintillo || ('Perfil '+(c.arquetipo||'')))}</div>
@@ -1146,7 +1154,7 @@
           ${tags?`<div class="result-tags">${tags}</div>`:''}
         </div>
         <div class="section-title">Tu perfil de fortalezas</div>
-        <div class="card" style="margin:0 20px 16px;padding:18px 12px;">${radarSVG(ejes,300)}</div>
+        <div class="card" style="margin:0 20px 20px;padding:18px 18px;">${strengthsC(ejes)}</div>
         ${c.descripcion_breve?`<div class="card" style="margin:0 20px 20px;padding:16px 20px;"><div style="font-size:13.5px;color:#334155;line-height:1.6;">${escapeHTML(c.descripcion_breve)}</div></div>`:''}
         ${fb.mensaje_completo ? `<div class="card" style="margin:0 20px 20px;padding:18px 20px;"><div class="fb-message">${escapeHTML(fb.mensaje_completo)}</div></div>`:''}
         <div class="section-title">Tu feedback</div>
@@ -1155,8 +1163,6 @@
           ${fbCard('🌱 Estilo a explorar', fb.areas_mejora, '#F59E0B')}
           ${fbCard('🚀 Qué hacer ahora', fb.recomendaciones, '#7B68EE')}
         </div>
-        <div class="section-title">Tus 8 competencias</div>
-        <div class="card" style="margin:0 20px 20px;">${scoreList}</div>
         ${c.recomendacion?`<div class="card" style="margin:0 20px 20px;padding:16px 20px;"><div style="font-size:12px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;">Roles que encajan contigo</div><div style="font-size:13.5px;color:#334155;line-height:1.5;">${escapeHTML(c.recomendacion)}</div></div>`:''}
         <div style="padding:0 20px 24px;"><button class="test-banner-btn" style="width:100%;justify-content:center;" onclick="startTest()">Volver a tomar el test →</button></div>`;
     }

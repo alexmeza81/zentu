@@ -74,11 +74,13 @@ Los textos de las 16 preguntas y sus opciones están en el prototipo `_prototipo
 - Scorer con **11/11 tests** (afinidad, exposiciones=8, precedencia de validez, idempotencia, rangos).
 - NO toca `clasificar-test` (v1 sigue sirviendo a producción hasta el cutover).
 
-## Vista de resultado (radar) — sin cambio de concepto vs v3
+## Vista de resultado — Opción C (top-3 + barras)
 
-- **Radar SVG** de 8 ejes (propio, sin librerías), etiquetado como **perfil de fortalezas**.
-- **Estudiante:** radar + cintillo + descripcion_breve + feedback del mentor + fortalezas / estilo a explorar. (No ve validez.)
-- **Reclutador:** mismo radar + afinidad por eje + resumen + roles + **badge de validez**. No ve `feedback_estudiante`. Nota: los puntajes son afinidad relativa, no "qué tan bueno".
+El radar de 8 ejes se veía amontonado en móvil; se reemplazó por la **Opción C**: las **3 fortalezas dominantes como tarjetas** (#1/#2/#3 con puntaje) + **el resto como barras compactas**, ordenadas de mayor a menor. Escala **normalizada al máximo del candidato** (su eje más alto llena la barra) para dar contraste. Helper `strengthsC(ejes)` (inline, sin librerías) compartido por ambas vistas.
+
+- **Estudiante:** top-3 tarjetas + barras + cintillo + descripcion_breve + feedback del mentor + fortalezas / estilo a explorar. (No ve validez.)
+- **Reclutador:** mismo bloque C + resumen + roles + **badge de validez**. No ve `feedback_estudiante`. Nota visible: los puntajes son afinidad relativa, no "qué tan bueno".
+- `radarSVG` queda definido pero sin uso (disponible por si se quiere reintroducir como detalle).
 
 ## Pendiente (requiere aprobación para tocar producción)
 
