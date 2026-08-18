@@ -760,6 +760,7 @@
       const carreraLine = ubicacion ? `${carrera} · ${ubicacion}` : carrera;
       const { pct: heroPct } = computeProgress(st, testResults);
       const tema = st.tema || 'aurora';
+      const isReclutable = st.estado !== 'no_reclutable';
 
       const pillColors = [
         'background:#EEF2FF;color:#4F46E5',
@@ -790,9 +791,19 @@
           </div>
           <div style="display:flex;flex-wrap:wrap;gap:8px;position:relative;z-index:1;">
             <div class="hero-badge" style="margin-top:12px;">⭐ Insignia de Fundador</div>
-            ${heroPct >= 100 ? `<div class="hero-badge" style="margin-top:12px;">✅ Reclutable</div>` : ''}
+            ${heroPct >= 100 ? `<div class="hero-badge" style="margin-top:12px;">${isReclutable ? '✅ Reclutable' : '🙈 No reclutable'}</div>` : ''}
           </div>
         </div>
+
+        ${heroPct >= 100 ? `
+        <div class="card" style="margin:16px 20px 0;padding:15px 18px;">
+          <div class="info-key" style="margin-bottom:10px;">Disponibilidad para reclutadores</div>
+          <div style="display:flex;gap:8px;">
+            <button onclick="setEstado('en_busqueda')" style="flex:1;padding:11px 8px;border-radius:12px;border:1.5px solid ${isReclutable?'#7B68EE':'#E2E8F0'};background:${isReclutable?'#F5F7FF':'#fff'};font-family:inherit;font-size:13px;font-weight:800;color:${isReclutable?'#6D5AE6':'#64748B'};cursor:pointer;transition:all .15s;">🔍 Reclutable</button>
+            <button onclick="setEstado('no_reclutable')" style="flex:1;padding:11px 8px;border-radius:12px;border:1.5px solid ${!isReclutable?'#7B68EE':'#E2E8F0'};background:${!isReclutable?'#F5F7FF':'#fff'};font-family:inherit;font-size:13px;font-weight:800;color:${!isReclutable?'#6D5AE6':'#64748B'};cursor:pointer;transition:all .15s;">🙈 No reclutable</button>
+          </div>
+          <div style="font-size:11.5px;color:#94A3B8;margin-top:9px;line-height:1.5;">${isReclutable ? 'Los reclutadores pueden verte y contactarte. Cámbialo cuando quieras.' : 'Estás oculto para los reclutadores. Puedes volver a activarte cuando quieras.'}</div>
+        </div>` : ''}
 
         ${headline ? `
         <div class="card" style="margin:16px 20px 0; padding:15px 18px;">
@@ -907,9 +918,11 @@
             </div>
           </div>
           <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0;">
-            ${enBusqueda
-              ? `<span class="rc-status">🔍 Activo</span>`
-              : `<span class="rc-status" style="color:#B45309;background:#FFFBEB;border-color:#FDE68A;">⏳ En progreso</span>`}
+            ${state.student?.estado === 'no_reclutable'
+              ? `<span class="rc-status" style="color:#64748B;background:#F1F5F9;border-color:#E2E8F0;">🙈 No reclutable</span>`
+              : enBusqueda
+                ? `<span class="rc-status">🔍 Activo</span>`
+                : `<span class="rc-status" style="color:#B45309;background:#FFFBEB;border-color:#FDE68A;">⏳ En progreso</span>`}
             <span class="rc-founder" title="Insignia de Fundador">⭐ Fundador</span>
           </div>
         </div>
@@ -1621,10 +1634,22 @@
     }
     async function maybeUnlockRecruiting() {
       const { pct } = computeProgress(state.student, state.testResults);
-      const target = pct >= 100 ? 'en_busqueda' : 'incompleto';
-      if (state.student.estado !== target) {
+      let target = null;
+      if (pct < 100) {
+        if (state.student.estado !== 'incompleto') target = 'incompleto';
+      } else if (!state.student.estado || state.student.estado === 'incompleto') {
+        target = 'en_busqueda'; // recién completado: reclutable por defecto
+      }
+      // Si ya eligió 'en_busqueda' o 'no_reclutable', se respeta (no se pisa).
+      if (target && state.student.estado !== target) {
         await dbUpsertStudent(state.user, { estado: target });
       }
+    }
+    async function setEstado(estado) {
+      if (!state.student || state.student.estado === estado) return;
+      try { await dbUpsertStudent(state.user, { estado }); }
+      catch (e) { console.error('No se pudo cambiar estado:', e); alert('No se pudo actualizar tu estado. Inténtalo de nuevo.'); return; }
+      renderPerfil(state);
     }
   </script>
 </body>
