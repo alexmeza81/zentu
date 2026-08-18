@@ -936,28 +936,15 @@
           `).join('')}
         </div>
 
-        ${topSkills.length ? `
+        ${ejesRC ? `
+        <div style="background:#F8FAFC;border-radius:12px;padding:14px;">
+          <div class="rc-match-label" style="margin-bottom:10px;">${clasif && clasif.arquetipo ? 'PERFIL ' + escapeHTML((clasif.arquetipo || '').toUpperCase()) : 'PERFIL DE FORTALEZAS'} · TEST IA</div>
+          ${strengthsC(ejesRC)}
+        </div>` : (topSkills.length ? `
         <div style="background:#F8FAFC;border-radius:12px;padding:12px 14px;">
-          <div class="rc-match-label" style="margin-bottom:8px;">${clasif && clasif.arquetipo ? 'PERFIL ' + escapeHTML((clasif.arquetipo || '').toUpperCase()) + ' · TOP FORTALEZAS' : 'TOP HABILIDADES (TEST IA)'}</div>
-          ${topSkills.map(s => `
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-              <span style="font-size:12px;color:#475569;font-weight:600;flex:1;">${s.name}</span>
-              <div style="width:60px;height:4px;background:#E2E8F0;border-radius:999px;overflow:hidden;"><div style="width:${s.pct}%;height:100%;background:linear-gradient(90deg,#7B68EE,#4A9EFF);border-radius:999px;"></div></div>
-              <span style="font-size:11px;font-weight:800;color:#7B68EE;width:28px;text-align:right;">${s.pct}%</span>
-            </div>
-          `).join('')}
-        </div>` : ''}
-        ${hasTest ? `
-        <button class="rc-ghost-btn" id="rc-test-toggle" onclick="toggleFullTest()">Ver resultados del Test IA →</button>
-        <div id="rc-full-test" style="display:none;background:#F8FAFC;border-radius:12px;padding:12px 14px;margin-top:8px;">
-          <div class="rc-match-label" style="margin-bottom:8px;">RESULTADOS COMPLETOS (TEST IA)</div>
-          ${testSkills.map(s => `
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-              <span style="font-size:12px;color:#475569;font-weight:600;flex:1;">${s.emoji} ${s.name}</span>
-              <div style="width:60px;height:4px;background:#E2E8F0;border-radius:999px;overflow:hidden;"><div style="width:${s.pct}%;height:100%;background:linear-gradient(90deg,#7B68EE,#4A9EFF);border-radius:999px;"></div></div>
-              <span style="font-size:11px;font-weight:800;color:#7B68EE;width:28px;text-align:right;">${s.pct}%</span>
-            </div>`).join('')}
-        </div>` : ''}
+          <div class="rc-match-label" style="margin-bottom:8px;">TOP HABILIDADES (TEST IA)</div>
+          ${topSkills.map(s => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span style="font-size:12px;color:#475569;font-weight:600;flex:1;">${s.name}</span><div style="width:60px;height:4px;background:#E2E8F0;border-radius:999px;overflow:hidden;"><div style="width:${s.pct}%;height:100%;background:linear-gradient(90deg,#7B68EE,#4A9EFF);border-radius:999px;"></div></div><span style="font-size:11px;font-weight:800;color:#7B68EE;width:28px;text-align:right;">${s.pct}%</span></div>`).join('')}
+        </div>` : '')}
 
         ${hardSkills.length ? `
         <div style="background:#F8FAFC;border-radius:12px;padding:12px 14px;margin-top:10px;">
