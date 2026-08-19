@@ -11,13 +11,14 @@
 -- ============================================================================
 
 -- Candidatos (students): visibles solo para el correo del fundador.
+-- (auth.jwt() envuelto en subselect = se evalúa una vez, no por fila.)
 drop policy if exists "reclutable pool read" on public.students;
 create policy "reclutable pool read" on public.students
   for select to authenticated
   using (
     estado = 'en_busqueda'
     and coalesce(suspendido, false) = false
-    and (auth.jwt() ->> 'email') = 'alexmeza.m81@gmail.com'
+    and (select auth.jwt() ->> 'email') = 'alexmeza.m81@gmail.com'
   );
 
 -- Resultados del test de los candidatos: igual, solo el fundador.
@@ -25,7 +26,7 @@ drop policy if exists "reclutable test read" on public.test_results;
 create policy "reclutable test read" on public.test_results
   for select to authenticated
   using (
-    (auth.jwt() ->> 'email') = 'alexmeza.m81@gmail.com'
+    (select auth.jwt() ->> 'email') = 'alexmeza.m81@gmail.com'
     and student_id in (select id from public.students where estado = 'en_busqueda')
   );
 
