@@ -61,6 +61,28 @@ async function assertPublicHost(host: string) {
   if (!a.length && !aaaa.length) throw new Error("No se pudo resolver el host (bloqueado por seguridad)");
   if (a.some(isPrivateIPv4) || aaaa.some(isPrivateIPv6)) throw new Error("Host resuelve a IP privada");
 }
+// Lee el cuerpo por streaming con TOPE de bytes (evita agotar memoria con páginas enormes).
+async function readCapped(res: Response, maxBytes: number): Promise<string> {
+  const cl = Number(res.headers.get("content-length") || 0);
+  if (cl && cl > maxBytes) throw new Error("Contenido demasiado grande");
+  const reader = res.body?.getReader();
+  if (!reader) return (await res.text()).slice(0, maxBytes);
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) {
+      total += value.length;
+      if (total > maxBytes) { try { await reader.cancel(); } catch { /* noop */ } throw new Error("Contenido demasiado grande"); }
+      chunks.push(value);
+    }
+  }
+  const buf = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) { buf.set(c, off); off += c.length; }
+  return new TextDecoder("utf-8", { fatal: false }).decode(buf);
+}
 async function safeFetch(rawUrl: string): Promise<Response> {
   let url = rawUrl;
   for (let i = 0; i < 4; i++) {
@@ -202,7 +224,7 @@ Deno.serve(async (req: Request) => {
         const res = await safeFetch(url);
         if (!res.ok) throw new Error("La página respondió " + res.status);
         const ct = (res.headers.get("content-type") || "").toLowerCase();
-        const raw = (await res.text()).slice(0, 250000);
+        const raw = (await readCapped(res, 2_000_000)).slice(0, 250000);
         if (ct.includes("html") || raw.includes("<")) {
           jsonld = extractJsonLd(raw);
           pageText = stripHtml(raw).slice(0, 8000);
