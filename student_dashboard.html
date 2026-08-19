@@ -1448,7 +1448,7 @@
       const f = state.offerFilters || {};
       const mods = ['Remoto', 'Híbrido', 'Presencial'];
       const areas = offerAreas();
-      const chip = (k, label, val) => `<button class="of-chip ${f[k] === val ? 'on' : ''}" onclick="setOfferFilter('${k}','${escapeHTML(val)}')">${escapeHTML(label)}</button>`;
+      const chip = (k, label, val) => `<button class="of-chip ${f[k] === val ? 'on' : ''}" onclick="${escapeHTML('setOfferFilter(' + JSON.stringify(k) + ',' + JSON.stringify(val) + ')')}">${escapeHTML(label)}</button>`;
       const showFilters = (state.deckAll || []).length > 0;
       const filters = showFilters ? `<div class="of-filters">${mods.map(m => chip('modalidad', m, m)).join('')}${areas.map(a => chip('area', a, a)).join('')}</div>` : '';
       return `${filters}<div class="swipe-wrapper" id="swipe-wrapper"></div>`;
