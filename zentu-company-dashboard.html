@@ -297,21 +297,21 @@
             <select id="ofModalidad" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"><option value="">—</option><option>Remoto</option><option>Híbrido</option><option>Presencial</option></select>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div>
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Ubicación</label>
-            <input id="ofUbicacion" type="text" maxlength="80" placeholder="CDMX" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/>
-          </div>
-          <div>
-            <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Salario mensual</label>
-            <div class="mt-1 flex gap-2">
-              <select id="ofMoneda" class="border border-slate-200 rounded-xl px-2 py-2.5 text-sm font-semibold text-slate-600 focus:outline-none focus:border-purple-400">
-                <option value="MXN">MXN</option>
-                <option value="USD">USD</option>
-                <option value="EUR">EUR</option>
-              </select>
-              <input id="ofSalarioNum" type="number" min="0" step="500" inputmode="numeric" placeholder="18000" class="flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/>
-            </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Ubicación</label>
+          <input id="ofUbicacion" type="text" maxlength="80" placeholder="CDMX" class="mt-1 w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/>
+        </div>
+        <div>
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Salario mensual <span class="text-slate-400 normal-case font-medium">(rango, opcional)</span></label>
+          <div class="mt-1 flex gap-2 items-center">
+            <select id="ofMoneda" class="border border-slate-200 rounded-xl px-2 py-2.5 text-sm font-semibold text-slate-600 focus:outline-none focus:border-purple-400">
+              <option value="MXN">MXN</option>
+              <option value="USD">USD</option>
+              <option value="EUR">EUR</option>
+            </select>
+            <input id="ofSalMin" type="number" min="0" step="500" inputmode="numeric" placeholder="Desde" class="flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/>
+            <span class="text-slate-400 font-bold">–</span>
+            <input id="ofSalMax" type="number" min="0" step="500" inputmode="numeric" placeholder="Hasta" class="flex-1 min-w-0 border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:border-purple-400"/>
           </div>
         </div>
         <div>
@@ -1367,21 +1367,27 @@
       }).join('');
     }
 
-    // Salario: monto numérico + moneda (MXN por defecto), mensual. En BD se guarda como texto "$18,000 MXN/mes".
+    // Salario: rango mensual (desde–hasta) + moneda (MXN por defecto). En BD se guarda como texto "$18,000 – 22,000 MXN/mes".
     function parseSalario(s){
-      if(!s) return { amount:'', moneda:'MXN' };
+      if(!s) return { min:'', max:'', moneda:'MXN' };
       const up=String(s).toUpperCase();
       let moneda='MXN';
       if(/USD|US\$|D[OÓ]LAR/.test(up)) moneda='USD';
       else if(/EUR|€|EURO/.test(up)) moneda='EUR';
-      const m=up.replace(/[,\s]/g,'').match(/\d+/);
-      return { amount: m?String(parseInt(m[0],10)):'', moneda };
+      const nums=(up.replace(/[,\s]/g,'').match(/\d+/g)||[]).map(n=>parseInt(n,10));
+      return { min: nums[0]!=null?String(nums[0]):'', max: nums[1]!=null?String(nums[1]):'', moneda };
     }
-    function fmtSalario(amount, moneda){
-      const n=parseInt(String(amount).replace(/\D/g,''),10);
-      if(!n) return null;
-      return `$${n.toLocaleString('es-MX')} ${moneda||'MXN'}/mes`;
+    function fmtSalario(min, max, moneda){
+      const mn=parseInt(String(min).replace(/\D/g,''),10);
+      const mx=parseInt(String(max).replace(/\D/g,''),10);
+      const cur=moneda||'MXN';
+      const f=n=>`$${n.toLocaleString('es-MX')}`;
+      if(mn && mx) return `${f(Math.min(mn,mx))} – ${f(Math.max(mn,mx))} ${cur}/mes`;
+      if(mn) return `Desde ${f(mn)} ${cur}/mes`;
+      if(mx) return `Hasta ${f(mx)} ${cur}/mes`;
+      return null;
     }
+    function setSalarioFields(str){ const ps=parseSalario(str); document.getElementById('ofSalMin').value=ps.min; document.getElementById('ofSalMax').value=ps.max; document.getElementById('ofMoneda').value=ps.moneda; }
     function openOfferForm(id){
       const o = id ? offers.find(x=>x.id===id) : null;
       document.getElementById('offerFormTitle').textContent = o?'Editar vacante':'Nueva vacante';
@@ -1390,7 +1396,7 @@
       document.getElementById('ofArea').value = o?o.area||'':'';
       document.getElementById('ofModalidad').value = o?o.modalidad||'':'';
       document.getElementById('ofUbicacion').value = o?o.ubicacion||'':'';
-      { const ps=parseSalario(o?o.salario:''); document.getElementById('ofSalarioNum').value=ps.amount; document.getElementById('ofMoneda').value=ps.moneda; }
+      setSalarioFields(o?o.salario:'');
       document.getElementById('ofTags').value = o&&Array.isArray(o.tags)?o.tags.join(', '):'';
       document.getElementById('ofDescripcion').value = o?o.descripcion||'':'';
       document.getElementById('ofImport').value = '';
@@ -1418,7 +1424,7 @@
         const o=res.offer||{};
         const setv=(id,val)=>{ if(val){ const e=document.getElementById(id); if(e) e.value=val; } };
         setv('ofTitulo',o.titulo); setv('ofArea',o.area); setv('ofUbicacion',o.ubicacion); setv('ofDescripcion',o.descripcion);
-        if(o.salario){ const ps=parseSalario(o.salario); document.getElementById('ofSalarioNum').value=ps.amount; document.getElementById('ofMoneda').value=ps.moneda; }
+        if(o.salario){ setSalarioFields(o.salario); }
         if(Array.isArray(o.tags)&&o.tags.length){ const t=document.getElementById('ofTags'); if(t) t.value=o.tags.join(', '); }
         if(o.modalidad){ const m=document.getElementById('ofModalidad'); if(m && [...m.options].some(op=>op.value===o.modalidad||op.text===o.modalidad)) m.value=o.modalidad; }
         msg.className='text-xs font-semibold text-emerald-600';
@@ -1440,7 +1446,7 @@
         area:document.getElementById('ofArea').value.trim()||null,
         modalidad:document.getElementById('ofModalidad').value||null,
         ubicacion:document.getElementById('ofUbicacion').value.trim()||null,
-        salario:fmtSalario(document.getElementById('ofSalarioNum').value, document.getElementById('ofMoneda').value),
+        salario:fmtSalario(document.getElementById('ofSalMin').value, document.getElementById('ofSalMax').value, document.getElementById('ofMoneda').value),
         descripcion:document.getElementById('ofDescripcion').value.trim()||null,
         tags
       };
