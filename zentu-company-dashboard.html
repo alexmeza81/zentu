@@ -76,7 +76,7 @@
           <input id="poolThreshold" type="range" min="0" max="95" step="5" value="60" oninput="onThresholdChange()" class="w-28 accent-purple-600"/>
           <span id="poolThresholdVal" class="text-sm font-black grad-text w-10 text-right">60%</span>
         </div>
-        <button id="aiMatchBtn" onclick="runAiMatch()" class="text-sm font-bold text-purple-700 bg-purple-50 border border-purple-200 px-4 py-2.5 rounded-xl hover:bg-purple-100 transition whitespace-nowrap" style="display:none">✨ Match con IA</button>
+        <button id="aiMatchBtn" onclick="runAiMatch()" class="text-sm font-bold text-purple-700 bg-purple-50 border border-purple-200 px-4 py-2.5 rounded-xl hover:bg-purple-100 transition whitespace-nowrap" style="display:none">✨ Mejorar match con IA</button>
         <button id="bulkAddBtn" onclick="openBulkAdd()" class="text-sm font-bold text-white grad px-4 py-2.5 rounded-xl hover:opacity-90 transition whitespace-nowrap" style="display:none">➕ Añadir al pipeline en masa</button>
       </div>
 
@@ -860,7 +860,7 @@
         aiMatches={};
         (res.matches||[]).forEach(m=>{ aiMatches[m.student_id]={ pct:m.pct, razon:m.razon }; });
         renderGrid();
-        alert(`✨ Match con IA listo: ${res.count} candidato${res.count===1?'':'s'} evaluado${res.count===1?'':'s'} para "${offer.titulo}".`);
+        alert(`✨ Match mejorado con IA: ${res.count} candidato${res.count===1?'':'s'} evaluado${res.count===1?'':'s'} para "${offer.titulo}".`);
       } catch(e){
         const em=(((e&&e.message)||String(e))||'').trim();
         alert(/premium|autenticad|acceso/i.test(em) ? em : 'No se pudo calcular el match con IA. Intenta de nuevo.');
@@ -954,7 +954,7 @@
 
       _disp('poolGate','none'); _disp('poolFilters','flex'); _disp('poolThresholdWrap','flex'); _disp('bulkAddBtn','inline-block'); _disp('poolResults','block');
       _disp('aiMatchBtn', isAdminUser ? 'inline-block' : 'none');
-      const aiBtn=document.getElementById('aiMatchBtn'); if(aiBtn && isAdminUser) aiBtn.textContent = aiActive() ? '✨ Recalcular con IA' : '✨ Match con IA';
+      const aiBtn=document.getElementById('aiMatchBtn'); if(aiBtn && isAdminUser) aiBtn.textContent = aiActive() ? '✨ Recalcular match con IA' : '✨ Mejorar match con IA';
       const q=_norm(document.getElementById('fSearch').value);
       const fc=document.getElementById('fCarrera').value, fi=document.getElementById('fIndustria').value, fd=document.getElementById('fDisp').value;
       const hidePipe=document.getElementById('fHidePipe') && document.getElementById('fHidePipe').checked;
