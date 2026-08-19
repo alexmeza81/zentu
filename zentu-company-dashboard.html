@@ -56,14 +56,34 @@
 
     <main class="max-w-7xl mx-auto px-6 py-8">
       <div id="sec-candidatos" class="tab-sec">
-      <div class="flex items-end justify-between flex-wrap gap-3 mb-6">
+      <div class="flex items-end justify-between flex-wrap gap-3 mb-5">
         <div>
-          <h1 class="text-3xl font-black tracking-tight">Candidatos disponibles</h1>
-          <p class="text-slate-500 font-medium mt-1"><span id="count" class="font-bold text-slate-700">0</span> estudiantes reclutables · listos para tu equipo</p>
+          <h1 class="text-3xl font-black tracking-tight">Candidatos por vacante</h1>
+          <p class="text-slate-500 font-medium mt-1">Elige una vacante y ve a los estudiantes que mejor encajan, ordenados por match. <span id="count" class="font-bold text-slate-700">0</span> reclutables en total.</p>
         </div>
       </div>
 
-      <div class="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex flex-wrap gap-3 items-center">
+      <!-- Barra de vacante: hay que elegir una oferta antes de ver candidatos -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-4 mb-5 flex flex-wrap items-center gap-x-4 gap-y-3">
+        <div class="flex items-center gap-2 flex-1 min-w-[240px]">
+          <span class="text-sm font-bold text-slate-700 whitespace-nowrap">🎯 Ver candidatos para:</span>
+          <select id="poolOfferSelect" onchange="onPoolOfferChange()" class="flex-1 min-w-[160px] py-2.5 px-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:border-purple-400 focus:outline-none">
+            <option value="">Selecciona una vacante…</option>
+          </select>
+        </div>
+        <div id="poolThresholdWrap" class="items-center gap-2" style="display:none">
+          <span class="text-sm font-semibold text-slate-600 whitespace-nowrap">Match mínimo</span>
+          <input id="poolThreshold" type="range" min="0" max="95" step="5" value="60" oninput="onThresholdChange()" class="w-28 accent-purple-600"/>
+          <span id="poolThresholdVal" class="text-sm font-black grad-text w-10 text-right">60%</span>
+        </div>
+        <button id="bulkAddBtn" onclick="openBulkAdd()" class="text-sm font-bold text-white grad px-4 py-2.5 rounded-xl hover:opacity-90 transition whitespace-nowrap" style="display:none">➕ Añadir al pipeline en masa</button>
+      </div>
+
+      <!-- Gate: se muestra cuando no hay oferta seleccionada o no hay ofertas -->
+      <div id="poolGate" class="bg-white rounded-2xl border border-slate-200 p-12 text-center" style="display:block"></div>
+
+      <!-- Filtros secundarios (solo con vacante elegida) -->
+      <div id="poolFilters" class="bg-white rounded-2xl border border-slate-200 p-4 mb-4 flex-wrap gap-3 items-center" style="display:none">
         <div class="relative flex-1 min-w-[220px]">
           <svg class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
           <input id="fSearch" oninput="renderGrid()" type="text" placeholder="Buscar por nombre, carrera o universidad…" class="w-full pl-11 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-purple-400 focus:outline-none"/>
@@ -77,11 +97,12 @@
         <button onclick="clearFilters()" class="text-sm font-bold text-purple-700 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition">Limpiar</button>
       </div>
 
+      <div id="poolResults" class="text-sm font-semibold text-slate-500 mb-4" style="display:none"></div>
       <div id="grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
       <div id="empty" class="hidden text-center py-24">
         <div class="text-5xl mb-4">🔍</div>
-        <div class="text-lg font-bold text-slate-700">Sin candidatos que coincidan</div>
-        <div class="text-slate-500 mt-1">Ajusta los filtros o vuelve más tarde.</div>
+        <div class="text-lg font-bold text-slate-700">Ningún candidato supera ese match</div>
+        <div class="text-slate-500 mt-1">Baja el match mínimo o ajusta los filtros.</div>
       </div>
       </div><!-- /sec-candidatos -->
 
@@ -219,6 +240,28 @@
           </div>
           <p class="text-sm text-slate-500">Guarda mensajes reutilizables para contactar candidatos más rápido en cada etapa.</p>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bulkModal" class="hidden fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target.id==='bulkModal')closeBulkAdd()">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-black">Añadir al pipeline en masa</h3>
+        <button onclick="closeBulkAdd()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center">✕</button>
+      </div>
+      <p class="text-sm text-slate-600 mb-4">Añade de una vez a todos los candidatos que superen el match que definas para <strong id="bulkOfferName" class="text-slate-900"></strong>.</p>
+      <div class="bg-slate-50 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-bold text-slate-700">Match mínimo</span>
+          <span id="bulkThresholdVal" class="text-lg font-black grad-text">60%</span>
+        </div>
+        <input id="bulkThreshold" type="range" min="0" max="95" step="5" value="60" oninput="onBulkThresholdChange()" class="w-full accent-purple-600"/>
+        <div id="bulkPreview" class="text-sm font-semibold text-slate-600 mt-3">—</div>
+      </div>
+      <div class="flex gap-2 mt-5">
+        <button onclick="closeBulkAdd()" class="flex-1 text-sm font-bold text-slate-600 border border-slate-200 px-4 py-2.5 rounded-xl hover:bg-slate-50">Cancelar</button>
+        <button id="bulkConfirmBtn" onclick="runBulkAdd()" class="flex-1 text-sm font-bold text-white grad px-4 py-2.5 rounded-xl hover:opacity-90">Añadir</button>
       </div>
     </div>
   </div>
@@ -724,6 +767,7 @@
       if (error) console.error(error);
       ALL = data || [];
       populateFilters();
+      const cEl=document.getElementById('count'); if(cEl) cEl.textContent = ALL.length;
       renderGrid();
     }
 
@@ -738,11 +782,106 @@
     }
     function clearFilters(){ ['fSearch','fCarrera','fIndustria','fDisp'].forEach(id=>document.getElementById(id).value=''); renderGrid(); }
 
+    // ── Filtro por vacante + match determinista candidato↔oferta ──
+    let selectedOfferId = '';
+    let offersLoaded = false;
+
+    function _disp(id,val){ const e=document.getElementById(id); if(e) e.style.display=val; }
+    function poolThreshold(){ const e=document.getElementById('poolThreshold'); return e?(parseInt(e.value,10)||0):0; }
+    function onThresholdChange(){ const l=document.getElementById('poolThresholdVal'); if(l) l.textContent=poolThreshold()+'%'; renderGrid(); }
+    function onPoolOfferChange(){ selectedOfferId=document.getElementById('poolOfferSelect').value; renderGrid(); }
+
+    function populatePoolOfferSelect(){
+      const sel=document.getElementById('poolOfferSelect'); if(!sel) return;
+      const open=offers.filter(o=>o.estado!=='cerrada');
+      sel.innerHTML='<option value="">Selecciona una vacante…</option>'+open.map(o=>`<option value="${o.id}">${escapeHTML(o.titulo)}</option>`).join('');
+      if(selectedOfferId && open.some(o=>o.id===selectedOfferId)) sel.value=selectedOfferId; else selectedOfferId='';
+    }
+
+    function matchTier(pct){
+      if(pct>=80) return {cls:'text-emerald-700 bg-emerald-50 border-emerald-200', bar:'#10B981'};
+      if(pct>=60) return {cls:'text-purple-700 bg-purple-50 border-purple-200', bar:'#7B68EE'};
+      if(pct>=40) return {cls:'text-amber-700 bg-amber-50 border-amber-200', bar:'#F59E0B'};
+      return {cls:'text-slate-500 bg-slate-100 border-slate-200', bar:'#94A3B8'};
+    }
+    function _offerSig(offer){
+      const rawTags=Array.isArray(offer.tags)?offer.tags:[];
+      return {
+        area:_norm(offer.area),
+        tags:rawTags.map(_norm).filter(Boolean),
+        rawTags,
+        text:_norm([offer.titulo,offer.descripcion].filter(Boolean).join(' '))
+      };
+    }
+    function computeOfferMatch(st, offer){
+      const sig=offer.__sig||(offer.__sig=_offerSig(offer));
+      const carrera=_norm(st.carrera);
+      const skills=(Array.isArray(st.hard_skills)?st.hard_skills:[]).map(_norm).filter(Boolean);
+      const inds=(Array.isArray(st.industrias)?st.industrias:[]).map(_norm).filter(Boolean);
+      const sem=_semNum(st.semestre);
+
+      // 1) Coincidencia de skills/tags de la oferta (0.45)
+      const matched=[];
+      sig.tags.forEach((t,i)=>{
+        const hit = skills.some(s=>s.includes(t)||t.includes(s)) || (carrera && (carrera.includes(t)||t.includes(carrera)));
+        if(hit) matched.push(sig.rawTags[i]);
+      });
+      // skills del alumno mencionadas en título/descripción de la vacante
+      skills.forEach((s,i)=>{ if(s.length>2 && sig.text.includes(s) && !matched.some(m=>_norm(m)===s)) matched.push((st.hard_skills||[])[i]); });
+      let skillFit;
+      if(sig.tags.length) skillFit=Math.min(1, matched.length/Math.min(4, sig.tags.length));
+      else skillFit = matched.length?Math.min(1,matched.length/3):0.4;
+
+      // 2) Área ↔ carrera / industrias (0.30)
+      let areaFit=0.5;
+      if(sig.area){
+        const areaToks=sig.area.split(/[\s/·,]+/).filter(t=>t.length>3);
+        const areaHit = (carrera && (carrera.includes(sig.area)||sig.area.includes(carrera)))
+          || inds.some(x=>x.includes(sig.area)||sig.area.includes(x))
+          || areaToks.some(tok=>(carrera&&carrera.includes(tok)) || inds.some(x=>x.includes(tok)));
+        areaFit = areaHit?1:(carrera?0.25:0.5);
+      }
+      // 3) Industria ↔ tags/texto de la vacante (0.15)
+      let indFit=0.5;
+      if(inds.length && (sig.tags.length || sig.text)){
+        const indHit=inds.some(x=>sig.tags.some(t=>t.includes(x)||x.includes(t)) || sig.text.includes(x));
+        indFit=indHit?1:0.3;
+      }
+      // 4) Semestre (0.10) — más avanzado, mejor; suave
+      let semFit=0.6; if(sem!=null) semFit=sem>=5?1:Math.max(0.4, sem/5);
+
+      const score=0.45*skillFit+0.30*areaFit+0.15*indFit+0.10*semFit;
+      const pct=Math.max(15, Math.min(99, Math.round(15+score*84)));
+      const uniq=[...new Set(matched.filter(Boolean))].slice(0,4);
+      let reason;
+      if(uniq.length) reason=`${uniq.length} coincidencia${uniq.length===1?'':'s'}: ${uniq.join(', ')}`;
+      else if(areaFit>=1) reason='Encaja por área';
+      else reason='Coincidencia parcial con la vacante';
+      return {pct, reason, matched:uniq};
+    }
+
+    function showGate(kind){
+      _disp('poolGate','block'); _disp('poolFilters','none'); _disp('poolThresholdWrap','none'); _disp('bulkAddBtn','none'); _disp('poolResults','none');
+      document.getElementById('grid').innerHTML=''; document.getElementById('empty').classList.add('hidden');
+      const g=document.getElementById('poolGate');
+      if(kind==='loading'){ g.innerHTML='<div class="text-slate-400 py-4">Cargando tus vacantes…</div>'; return; }
+      if(kind==='none'){ g.innerHTML='<div class="text-5xl mb-3">📢</div><div class="text-lg font-black text-slate-800">Crea tu primera vacante</div><div class="text-slate-500 mt-1 max-w-md mx-auto">Para descubrir a los estudiantes que encajan, primero publica una vacante con lo que estás buscando.</div><button onclick="openOfferForm()" class="mt-5 text-sm font-bold text-white grad px-5 py-2.5 rounded-xl hover:opacity-90 transition">➕ Crear vacante</button>'; return; }
+      const n=offers.filter(o=>o.estado!=='cerrada').length;
+      g.innerHTML='<div class="text-5xl mb-3">🎯</div><div class="text-lg font-black text-slate-800">Elige una vacante</div><div class="text-slate-500 mt-1 max-w-md mx-auto">Selecciona arriba una de tus '+n+' vacante'+(n===1?'':'s')+' para ver a los estudiantes que mejor encajan, ordenados por match.</div>';
+    }
+
     function renderGrid(){
+      if(!offersLoaded){ showGate('loading'); return; }
+      if(!offers.filter(o=>o.estado!=='cerrada').length){ showGate('none'); return; }
+      const offer=selectedOfferId?offers.find(o=>o.id===selectedOfferId && o.estado!=='cerrada'):null;
+      if(!offer){ selectedOfferId=''; showGate('pick'); return; }
+
+      _disp('poolGate','none'); _disp('poolFilters','flex'); _disp('poolThresholdWrap','flex'); _disp('bulkAddBtn','inline-block'); _disp('poolResults','block');
       const q=_norm(document.getElementById('fSearch').value);
       const fc=document.getElementById('fCarrera').value, fi=document.getElementById('fIndustria').value, fd=document.getElementById('fDisp').value;
       const hidePipe=document.getElementById('fHidePipe') && document.getElementById('fHidePipe').checked;
-      const list=ALL.filter(s=>{
+      const min=poolThreshold();
+      let list=ALL.filter(s=>{
         if(hidePipe && likedIds.has(s.id)) return false;
         if(q){ const hay=_norm(`${s.nombre} ${s.apellido} ${s.carrera} ${s.universidad}`); if(!hay.includes(q)) return false; }
         if(fc && s.carrera!==fc) return false;
@@ -750,40 +889,90 @@
         if(fd && s.disponibilidad!==fd) return false;
         return true;
       });
-      document.getElementById('count').textContent = ALL.length;
+      const scored=list.map(s=>({st:s, m:computeOfferMatch(s,offer)})).filter(x=>x.m.pct>=min).sort((a,b)=>b.m.pct-a.m.pct);
+      document.getElementById('poolResults').innerHTML=`<strong class="text-slate-700">${scored.length}</strong> candidato${scored.length===1?'':'s'} con match ≥ ${min}% para <strong class="text-slate-700">${escapeHTML(offer.titulo)}</strong>`;
       const grid=document.getElementById('grid'), empty=document.getElementById('empty');
-      if(!list.length){ grid.innerHTML=''; empty.classList.remove('hidden'); return; }
+      if(!scored.length){ grid.innerHTML=''; empty.classList.remove('hidden'); return; }
       empty.classList.add('hidden');
-      grid.innerHTML = list.map(cardHTML).join('');
+      grid.innerHTML = scored.map(x=>cardHTML(x.st, x.m)).join('');
     }
 
-    function cardHTML(st){
-      const m=computeMatches(st)[0];
+    // ── Añadir al pipeline en masa (calibrando el match mínimo) ──
+    function bulkTargets(min){
+      const offer=offers.find(o=>o.id===selectedOfferId); if(!offer) return [];
+      return ALL.filter(s=>!likedIds.has(s.id) && computeOfferMatch(s,offer).pct>=min);
+    }
+    function onBulkThresholdChange(){
+      const v=parseInt(document.getElementById('bulkThreshold').value,10)||0;
+      document.getElementById('bulkThresholdVal').textContent=v+'%';
+      const n=bulkTargets(v).length;
+      document.getElementById('bulkPreview').innerHTML = n
+        ? `Se añadirán <strong class="text-purple-700">${n}</strong> candidato${n===1?'':'s'} nuevo${n===1?'':'s'} (los que ya están en tu pipeline se omiten).`
+        : 'No hay candidatos nuevos por encima de ese match.';
+      const btn=document.getElementById('bulkConfirmBtn');
+      if(btn){ btn.disabled=!n; btn.classList.toggle('opacity-40', !n); btn.textContent = n?('Añadir '+n):'Añadir'; }
+    }
+    function openBulkAdd(){
+      const offer=offers.find(o=>o.id===selectedOfferId); if(!offer) return;
+      if(!companyId){ alert('Tu cuenta aún no está vinculada a una empresa registrada.'); return; }
+      document.getElementById('bulkOfferName').textContent=offer.titulo||'esta vacante';
+      document.getElementById('bulkThreshold').value=String(poolThreshold());
+      onBulkThresholdChange();
+      document.getElementById('bulkModal').classList.remove('hidden');
+    }
+    function closeBulkAdd(){ document.getElementById('bulkModal').classList.add('hidden'); }
+    async function runBulkAdd(){
+      const offer=offers.find(o=>o.id===selectedOfferId); if(!offer) return;
+      const min=parseInt(document.getElementById('bulkThreshold').value,10)||0;
+      const targets=bulkTargets(min);
+      if(!targets.length) return;
+      const btn=document.getElementById('bulkConfirmBtn'); if(btn){ btn.disabled=true; btn.textContent='Añadiendo…'; }
+      try {
+        await sb.rpc('ensure_pipeline_stages',{p_company:companyId});
+        const { data:stages } = await sb.from('pipeline_stages').select('id').eq('company_id',companyId).order('posicion').limit(1);
+        const stageId=stages && stages[0] && stages[0].id; if(!stageId) throw new Error('sin etapas');
+        const { data:rows } = await sb.from('pipeline_candidates').select('posicion').eq('company_id',companyId).eq('stage_id',stageId).order('posicion',{ascending:false}).limit(1);
+        let pos=(rows && rows[0] ? rows[0].posicion : -1)+1;
+        const payload=targets.map(s=>({ company_id:companyId, student_id:s.id, stage_id:stageId, posicion:pos++ }));
+        const { error }=await sb.from('pipeline_candidates').insert(payload);
+        if(error && error.code!=='23505') throw error;
+        targets.forEach(s=>likedIds.add(s.id));
+      } catch(e){
+        if(btn){ btn.disabled=false; } onBulkThresholdChange();
+        alert('No se pudieron añadir los candidatos. Intenta de nuevo.');
+        return;
+      }
+      closeBulkAdd(); renderGrid(); refreshPipelineIfOpen();
+      alert(`✅ ${targets.length} candidato${targets.length===1?'':'s'} añadido${targets.length===1?'':'s'} a tu pipeline.`);
+    }
+
+    function cardHTML(st, m){
       const skills=(Array.isArray(st.hard_skills)?st.hard_skills:[]).slice(0,4);
       const carreraLine=escapeHTML([st.carrera, st.ubicacion].filter(Boolean).join(' · '));
       const liked=likedIds.has(st.id);
+      const t=matchTier(m.pct);
       const avatar=st.foto_url ? `<img src="${escapeHTML(st.foto_url)}" class="w-14 h-14 rounded-2xl object-cover"/>` : `<div class="w-14 h-14 rounded-2xl grad flex items-center justify-center text-white font-black text-lg">${initials(st)}</div>`;
       return `
       <div class="cand-card bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer" onclick="openCandidate('${st.id}')">
-        <div class="h-1.5 grad"></div>
+        <div class="h-1.5" style="background:${t.bar}"></div>
         <div class="p-5">
           <div class="flex items-start gap-3">
             ${avatar}
             <div class="flex-1 min-w-0">
-              <div class="font-black text-slate-900 truncate">${fullName(st)}</div>
-              <div class="text-xs text-slate-500 font-semibold truncate">${escapeHTML(st.universidad||'')}</div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="font-black text-slate-900 truncate">${fullName(st)}</span>
+                <span class="text-[13px] font-black px-2 py-0.5 rounded-lg border ${t.cls} whitespace-nowrap">${m.pct}% match</span>
+              </div>
+              <div class="text-xs text-slate-500 font-semibold truncate mt-0.5">${escapeHTML(st.universidad||'')}</div>
               <div class="text-xs text-slate-400 truncate">${carreraLine}</div>
             </div>
-            <div class="flex flex-col items-end gap-2 flex-shrink-0">
-              <button onclick="event.stopPropagation(); toggleLike('${st.id}')" title="${liked?'Quitar de mi pipeline':'Agregar a mi pipeline'}" class="w-9 h-9 rounded-full flex items-center justify-center border transition ${liked?'bg-purple-50 border-purple-200':'bg-white border-slate-200 hover:bg-slate-50'}">${heartSVG(liked)}</button>
-              <span class="text-[10px] font-black text-green-700 bg-green-50 border border-green-200 px-2 py-1 rounded-full whitespace-nowrap">🔍 Activo</span>
-            </div>
+            <button onclick="event.stopPropagation(); toggleLike('${st.id}')" title="${liked?'Quitar de mi pipeline':'Agregar a mi pipeline'}" class="w-9 h-9 rounded-full flex items-center justify-center border transition flex-shrink-0 ${liked?'bg-purple-50 border-purple-200':'bg-white border-slate-200 hover:bg-slate-50'}">${heartSVG(liked)}</button>
           </div>
-          <div class="mt-4 flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2.5">
-            <div class="min-w-0"><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Mejor match</div><div class="text-sm font-bold text-slate-800 truncate">${escapeHTML(m.role)}</div></div>
-            <div class="text-lg font-black grad-text ml-2">${m.pct}%</div>
+          <div class="mt-3">
+            <div class="h-2 rounded-full bg-slate-100 overflow-hidden"><div class="h-full rounded-full" style="width:${m.pct}%;background:${t.bar}"></div></div>
+            <div class="text-[11px] text-slate-500 font-medium mt-1.5 truncate">✓ ${escapeHTML(m.reason)}</div>
           </div>
-          ${skills.length?`<div class="mt-3 flex flex-wrap gap-1.5">${skills.map(s=>`<span class="text-[11px] font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md">${escapeHTML(s)}</span>`).join('')}</div>`:''}
+          ${skills.length?`<div class="mt-3 flex flex-wrap gap-1.5">${skills.map(s=>{const hit=m.matched.some(mm=>_norm(mm)===_norm(s));return `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-md border ${hit?'text-emerald-700 bg-emerald-50 border-emerald-100':'text-indigo-700 bg-indigo-50 border-indigo-100'}">${escapeHTML(s)}</span>`;}).join('')}</div>`:''}
           <div class="mt-4 flex items-center justify-between">
             <span class="text-xs text-slate-500 font-medium">${st.disponibilidad?('📅 '+escapeHTML(st.disponibilidad)):''}</span>
             ${liked?'<span class="text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">💜 En pipeline</span>':'<span class="text-sm font-bold text-purple-700">Ver perfil →</span>'}
@@ -1123,6 +1312,9 @@
       });
       renderOffers();
       populateOfferFilter();
+      populatePoolOfferSelect();
+      offersLoaded=true;
+      renderGrid();
     }
 
     function renderOffers(){
