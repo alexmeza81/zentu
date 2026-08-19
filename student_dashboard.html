@@ -418,6 +418,7 @@
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     // Sanitize all user-supplied strings before innerHTML insertion
+    function safeUrl(u){ u = String(u==null?'':u).trim(); return /^https?:\/\//i.test(u) ? u : ''; }
     function escapeHTML(str) {
       if (!str) return '';
       return String(str)
@@ -892,7 +893,7 @@
       const headline = st.headline ? escapeHTML(st.headline) : '';
       const email = escapeHTML(state.user.email);
       const telefono = st.telefono ? escapeHTML(st.telefono) : '';
-      const linkedin = st.linkedin_url ? escapeHTML(st.linkedin_url) : '';
+      const linkedin = escapeHTML(safeUrl(st.linkedin_url));
       const hasTest = ejesRC ? true : Object.keys(hab).length > 0;
       const { pct: rcPct } = computeProgress(state.student, testResults);
       const egresado = st.semestre === 'Egresado/a';
