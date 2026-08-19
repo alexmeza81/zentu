@@ -419,6 +419,19 @@
 
     // Sanitize all user-supplied strings before innerHTML insertion
     function safeUrl(u){ u = String(u==null?'':u).trim(); return /^https?:\/\//i.test(u) ? u : ''; }
+    // Vista dual (cambiar entre estudiante/reclutador). Por ahora solo el fundador;
+    // a futuro: agregar más correos aquí, o cambiar canSwitchViews por un check is_admin().
+    const DUAL_VIEW_EMAILS = ['alexmeza.m81@gmail.com'];
+    function canSwitchViews(email){ return DUAL_VIEW_EMAILS.includes(String(email||'').trim().toLowerCase()); }
+    function mountViewSwitch(){
+      const email = (state.user && state.user.email) || '';
+      if (!canSwitchViews(email) || document.getElementById('view-switch')) return;
+      const a = document.createElement('a');
+      a.id = 'view-switch'; a.href = '/zentu-company-dashboard.html';
+      a.textContent = '🏢 Vista reclutador';
+      a.style.cssText = 'position:fixed;bottom:78px;left:12px;z-index:9999;background:#0F172A;color:#fff;font-family:Inter,sans-serif;font-size:12px;font-weight:800;padding:8px 13px;border-radius:999px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.25);';
+      document.body.appendChild(a);
+    }
     function escapeHTML(str) {
       if (!str) return '';
       return String(str)
@@ -530,6 +543,7 @@
         });
       }
       state.student = student;
+      mountViewSwitch();
 
       const { data: tr } = await sb.from('test_results').select('habilidades, clasificacion, arquetipo')
         .eq('student_id', student.id).order('completado_at', { ascending:false }).limit(1).maybeSingle();

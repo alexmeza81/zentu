@@ -280,6 +280,18 @@
     function escapeHTML(str){ if(!str) return ''; return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
     // Solo permite http/https en enlaces (evita javascript:, data:, etc. — XSS vía href de datos de otro usuario)
     function safeUrl(u){ u = String(u==null?'':u).trim(); return /^https?:\/\//i.test(u) ? u : ''; }
+    // Vista dual (fundador por ahora; a futuro: más correos o un check is_admin()).
+    const DUAL_VIEW_EMAILS = ['alexmeza.m81@gmail.com'];
+    function canSwitchViews(email){ return DUAL_VIEW_EMAILS.includes(String(email||'').trim().toLowerCase()); }
+    function mountViewSwitch(){
+      const email = (currentUser && currentUser.email) || '';
+      if (!canSwitchViews(email) || document.getElementById('view-switch')) return;
+      const a = document.createElement('a');
+      a.id = 'view-switch'; a.href = '/student_dashboard.html';
+      a.textContent = '🎓 Vista estudiante';
+      a.style.cssText = 'position:fixed;bottom:16px;left:12px;z-index:9999;background:#0F172A;color:#fff;font-family:Inter,sans-serif;font-size:12px;font-weight:800;padding:8px 13px;border-radius:999px;text-decoration:none;box-shadow:0 4px 14px rgba(0,0,0,.25);';
+      document.body.appendChild(a);
+    }
 
     const _norm = s => (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
     function _semNum(sem){ if(!sem) return null; const s=_norm(sem); if(s.includes('egres')) return 10; const m=s.match(/\d+/); return m?parseInt(m[0],10):null; }
@@ -385,6 +397,7 @@
       const { data:{ session } } = await sb.auth.getSession();
       if (!session){ location.replace('acceso.html'); return; }
       currentUser = session.user;
+      mountViewSwitch();
       document.getElementById('companyEmail').textContent = session.user.email;
       try { const { data } = await sb.rpc('ensure_my_company'); companyId = data || null; } catch(e){ companyId = null; }
       if(companyId){ try { const { data:co } = await sb.from('companies').select('nombre_empresa').eq('id',companyId).maybeSingle(); companyName = (co&&co.nombre_empresa)||''; } catch(e){} }
