@@ -501,7 +501,7 @@
         if(!stageId) throw new Error('sin etapas');
         const { data:rows } = await sb.from('pipeline_candidates').select('posicion').eq('company_id',companyId).eq('stage_id',stageId).order('posicion',{ascending:false}).limit(1);
         const pos = (rows && rows[0] ? rows[0].posicion : -1) + 1;
-        const { error } = await sb.from('pipeline_candidates').insert({ company_id:companyId, student_id:id, stage_id:stageId, posicion:pos });
+        const { error } = await sb.from('pipeline_candidates').insert({ company_id:companyId, student_id:id, stage_id:stageId, posicion:pos, offer_id:(typeof selectedOfferId!=='undefined'&&selectedOfferId)||null });
         if(error && error.code!=='23505') throw error; // 23505 = ya existe, idempotente
       } catch(e){
         likedIds.delete(id); refreshLikeUI(id); alert('No se pudo agregar al pipeline. Intenta de nuevo.');
@@ -539,9 +539,9 @@
       const { data:stages } = await sb.from('pipeline_stages').select('id,nombre,posicion,color').eq('company_id',companyId).order('posicion');
       pipe.stages = stages||[];
       const { data:rows } = await sb.from('pipeline_candidates')
-        .select('id, stage_id, posicion, student:students(id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, linkedin_url, telefono, experiencia, estado)')
+        .select('id, stage_id, posicion, offer_id, student:students(id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, linkedin_url, telefono, experiencia, estado)')
         .eq('company_id',companyId).order('posicion');
-      pipe.rows = (rows||[]).map(r=>({ id:r.id, stage_id:r.stage_id, posicion:r.posicion, student:r.student }));
+      pipe.rows = (rows||[]).map(r=>({ id:r.id, stage_id:r.stage_id, posicion:r.posicion, offer_id:r.offer_id, student:r.student }));
       renderBoard();
     }
 
@@ -554,7 +554,7 @@
       const offerFilter=offEl?offEl.value:'';
       board.innerHTML = pipe.stages.map(stg=>{
         let rows = pipe.rows.filter(r=>r.stage_id===stg.id);
-        if(offerFilter) rows = rows.filter(r=> r.student && offerApplicantsByStudent[r.student.id] && offerApplicantsByStudent[r.student.id].has(offerFilter));
+        if(offerFilter) rows = rows.filter(r=> r.offer_id===offerFilter || (r.student && offerApplicantsByStudent[r.student.id] && offerApplicantsByStudent[r.student.id].has(offerFilter)));
         rows = rows.sort((a,b)=>a.posicion-b.posicion);
         return `
           <div class="pipe-col flex-shrink-0 w-64 bg-slate-100 rounded-2xl p-2.5" data-stage="${stg.id}" ondragover="onColDragOver(event)" ondragleave="onColDragLeave(event)" ondrop="onColDrop(event,'${stg.id}')">
@@ -914,19 +914,25 @@
     }
 
     // ── Añadir al pipeline en masa (calibrando el match mínimo) ──
-    function bulkTargets(min){
+    // Todos los candidatos ≥ umbral: los nuevos se insertan (etiquetados con la oferta) y
+    // los que ya están en el pipeline SIN etiqueta se etiquetan para esta oferta (rellena
+    // solo NULL, no pisa candidatos ya asignados a otra oferta). Así el filtro del pipeline
+    // por oferta también encuentra a los importados (incluidos los de importaciones previas).
+    function bulkMatching(min){
       const offer=offers.find(o=>o.id===selectedOfferId); if(!offer) return [];
-      return ALL.filter(s=>!likedIds.has(s.id) && computeOfferMatch(s,offer).pct>=min);
+      return ALL.filter(s=>computeOfferMatch(s,offer).pct>=min);
     }
     function onBulkThresholdChange(){
       const v=parseInt(document.getElementById('bulkThreshold').value,10)||0;
       document.getElementById('bulkThresholdVal').textContent=v+'%';
-      const n=bulkTargets(v).length;
-      document.getElementById('bulkPreview').innerHTML = n
-        ? `Se añadirán <strong class="text-purple-700">${n}</strong> candidato${n===1?'':'s'} nuevo${n===1?'':'s'} (los que ya están en tu pipeline se omiten).`
-        : 'No hay candidatos nuevos por encima de ese match.';
+      const all=bulkMatching(v);
+      const nuevos=all.filter(s=>!likedIds.has(s.id)).length;
+      const ya=all.length-nuevos;
+      document.getElementById('bulkPreview').innerHTML = all.length
+        ? `<strong class="text-purple-700">${all.length}</strong> candidato${all.length===1?'':'s'} con match ≥ ${v}%: ${nuevos} nuevo${nuevos===1?'':'s'} al pipeline${ya?`, ${ya} ya en tu pipeline (se etiquetan para esta oferta)`:''}.`
+        : 'No hay candidatos por encima de ese match.';
       const btn=document.getElementById('bulkConfirmBtn');
-      if(btn){ btn.disabled=!n; btn.classList.toggle('opacity-40', !n); btn.textContent = n?('Añadir '+n):'Añadir'; }
+      if(btn){ btn.disabled=!all.length; btn.classList.toggle('opacity-40', !all.length); btn.textContent = nuevos?('Añadir '+nuevos):'Etiquetar'; }
     }
     function openBulkAdd(){
       const offer=offers.find(o=>o.id===selectedOfferId); if(!offer) return;
@@ -940,26 +946,35 @@
     async function runBulkAdd(){
       const offer=offers.find(o=>o.id===selectedOfferId); if(!offer) return;
       const min=parseInt(document.getElementById('bulkThreshold').value,10)||0;
-      const targets=bulkTargets(min);
-      if(!targets.length) return;
-      const btn=document.getElementById('bulkConfirmBtn'); if(btn){ btn.disabled=true; btn.textContent='Añadiendo…'; }
+      const all=bulkMatching(min);
+      if(!all.length) return;
+      const nuevos=all.filter(s=>!likedIds.has(s.id));
+      const btn=document.getElementById('bulkConfirmBtn'); if(btn){ btn.disabled=true; btn.textContent='Procesando…'; }
       try {
-        await sb.rpc('ensure_pipeline_stages',{p_company:companyId});
-        const { data:stages } = await sb.from('pipeline_stages').select('id').eq('company_id',companyId).order('posicion').limit(1);
-        const stageId=stages && stages[0] && stages[0].id; if(!stageId) throw new Error('sin etapas');
-        const { data:rows } = await sb.from('pipeline_candidates').select('posicion').eq('company_id',companyId).eq('stage_id',stageId).order('posicion',{ascending:false}).limit(1);
-        let pos=(rows && rows[0] ? rows[0].posicion : -1)+1;
-        const payload=targets.map(s=>({ company_id:companyId, student_id:s.id, stage_id:stageId, posicion:pos++ }));
-        const { error }=await sb.from('pipeline_candidates').insert(payload);
-        if(error && error.code!=='23505') throw error;
-        targets.forEach(s=>likedIds.add(s.id));
+        if(nuevos.length){
+          await sb.rpc('ensure_pipeline_stages',{p_company:companyId});
+          const { data:stages } = await sb.from('pipeline_stages').select('id').eq('company_id',companyId).order('posicion').limit(1);
+          const stageId=stages && stages[0] && stages[0].id; if(!stageId) throw new Error('sin etapas');
+          const { data:rows } = await sb.from('pipeline_candidates').select('posicion').eq('company_id',companyId).eq('stage_id',stageId).order('posicion',{ascending:false}).limit(1);
+          let pos=(rows && rows[0] ? rows[0].posicion : -1)+1;
+          const payload=nuevos.map(s=>({ company_id:companyId, student_id:s.id, stage_id:stageId, posicion:pos++, offer_id:selectedOfferId||null }));
+          const { error }=await sb.from('pipeline_candidates').insert(payload);
+          if(error && error.code!=='23505') throw error;
+          nuevos.forEach(s=>likedIds.add(s.id));
+        }
+        // Etiqueta a los que ya estaban en el pipeline sin oferta (rellena solo NULL)
+        const yaIds=all.filter(s=>likedIds.has(s.id) && !nuevos.includes(s)).map(s=>s.id);
+        if(yaIds.length){
+          await sb.from('pipeline_candidates').update({ offer_id:selectedOfferId })
+            .eq('company_id',companyId).is('offer_id',null).in('student_id', yaIds);
+        }
       } catch(e){
         if(btn){ btn.disabled=false; } onBulkThresholdChange();
-        alert('No se pudieron añadir los candidatos. Intenta de nuevo.');
+        alert('No se pudieron procesar los candidatos. Intenta de nuevo.');
         return;
       }
       closeBulkAdd(); renderGrid(); refreshPipelineIfOpen();
-      alert(`✅ ${targets.length} candidato${targets.length===1?'':'s'} añadido${targets.length===1?'':'s'} a tu pipeline.`);
+      alert(`✅ Listo: ${nuevos.length} añadido${nuevos.length===1?'':'s'} y los candidatos ≥ ${min}% quedaron etiquetados para "${offer.titulo}".`);
     }
 
     function cardHTML(st, m){
