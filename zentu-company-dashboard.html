@@ -114,7 +114,7 @@
             <p class="text-slate-500 font-medium mt-1">Arrastra a los candidatos entre etapas. Personaliza tus etapas a tu proceso.</p>
           </div>
           <div class="flex items-center gap-2">
-            <select id="pipeOfferFilter" onchange="renderBoard()" class="py-2 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 focus:border-purple-400 focus:outline-none">
+            <select id="pipeOfferFilter" onchange="onPipeOfferChange()" class="py-2 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 focus:border-purple-400 focus:outline-none">
               <option value="">Todas las ofertas</option>
             </select>
             <button onclick="openPipelineConfig()" class="flex items-center gap-1.5 text-sm font-bold text-slate-600 border border-slate-200 px-3 py-2 rounded-xl hover:bg-slate-50 transition" title="Configuración del pipeline">
@@ -544,9 +544,24 @@
         .select('id, stage_id, posicion, offer_id, student:students(id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, linkedin_url, telefono, experiencia, estado)')
         .eq('company_id',companyId).order('posicion');
       pipe.rows = (rows||[]).map(r=>({ id:r.id, stage_id:r.stage_id, posicion:r.posicion, offer_id:r.offer_id, student:r.student }));
-      renderBoard();
+      onPipeOfferChange();
     }
 
+    let pipeAiMatches = {};   // student_id -> {pct,razon} para la oferta filtrada en el pipeline
+    let pipeFilterOffer = null;
+    async function onPipeOfferChange(){
+      const id=document.getElementById('pipeOfferFilter').value;
+      pipeAiMatches={};
+      if(id){ try { const { data }=await sb.from('offer_matches').select('student_id, pct, razon').eq('offer_id',id); (data||[]).forEach(r=>{ pipeAiMatches[r.student_id]={ pct:r.pct, razon:r.razon }; }); } catch(e){} }
+      renderBoard();
+    }
+    // Match del candidato con la oferta filtrada en el pipeline (IA si existe, si no palabras clave).
+    function pipeMatch(st){
+      if(!pipeFilterOffer) return null;
+      const a=pipeAiMatches[st.id];
+      if(a) return { pct:a.pct, ai:true };
+      return { pct:computeOfferMatch(st, pipeFilterOffer).pct, ai:false };
+    }
     function renderBoard(){
       const board=document.getElementById('board');
       const hint=document.getElementById('pipelineHint');
@@ -554,6 +569,7 @@
       if(hint) hint.classList.toggle('hidden', pipe.rows.length>0);
       const offEl=document.getElementById('pipeOfferFilter');
       const offerFilter=offEl?offEl.value:'';
+      pipeFilterOffer = offerFilter ? (offers.find(o=>o.id===offerFilter)||null) : null;
       board.innerHTML = pipe.stages.map(stg=>{
         let rows = pipe.rows.filter(r=>r.stage_id===stg.id);
         if(offerFilter) rows = rows.filter(r=> r.offer_id===offerFilter || (r.student && offerApplicantsByStudent[r.student.id] && offerApplicantsByStudent[r.student.id].has(offerFilter)));
@@ -580,7 +596,7 @@
 
     function pipelineCardHTML(row){
       const st=row.student||{};
-      const m=computeMatches(st)[0];
+      const m=pipeMatch(st);
       const avatar=st.foto_url ? `<img src="${escapeHTML(st.foto_url)}" class="w-9 h-9 rounded-lg object-cover"/>` : `<div class="w-9 h-9 rounded-lg grad flex items-center justify-center text-white font-black text-xs">${initials(st)}</div>`;
       return `
         <div class="pipe-card bg-white rounded-xl border border-slate-200 p-3 cursor-pointer shadow-sm hover:shadow-md transition" draggable="true" data-pc="${row.id}" ondragstart="onCardDragStart(event,'${row.id}')" ondragend="onCardDragEnd(event)" onclick="openCandidate('${st.id}')">
@@ -591,10 +607,10 @@
               <div class="text-[11px] text-slate-500 truncate">${escapeHTML(st.carrera||'')}</div>
             </div>
           </div>
-          <div class="mt-2 flex items-center justify-between">
-            <span class="text-[10px] text-slate-400 truncate">${m?escapeHTML(m.role):''}</span>
-            <span class="text-xs font-black grad-text ml-1 flex-shrink-0">${m?m.pct+'%':''}</span>
-          </div>
+          ${m?`<div class="mt-2 flex items-center justify-between">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Match con la vacante${m.ai?' · ✨IA':''}</span>
+            <span class="text-xs font-black ml-1 flex-shrink-0" style="color:${matchTier(m.pct).bar}">${m.pct}%</span>
+          </div>`:''}
         </div>`;
     }
 
@@ -1542,7 +1558,7 @@
     function viewOfferApplicants(id){
       showTab('pipeline');
       const sel=document.getElementById('pipeOfferFilter');
-      if(sel){ sel.value=id; renderBoard(); }
+      if(sel){ sel.value=id; onPipeOfferChange(); }
     }
 
     // ── Filtro del pipeline por oferta ─────────────────────────
