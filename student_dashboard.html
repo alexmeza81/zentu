@@ -256,6 +256,20 @@
   .swipe-dot { width: 6px; height: 6px; border-radius: 999px; background: #CBD5E1; }
   .swipe-dot.current { background: #7B68EE; width: 18px; transition: width 0.2s; }
   .swipe-hint { text-align: center; font-size: 12px; color: #94A3B8; margin-top: 8px; }
+  /* Efecto tipo Tinder al accionar una oferta */
+  .swipe-wrapper { overflow: hidden; }
+  .job-card { transition: transform .35s cubic-bezier(.22,1,.36,1), opacity .35s ease; }
+  .job-card.out-left  { transform: translateX(-135%) rotate(-16deg); opacity: 0; }
+  .job-card.out-right { transform: translateX(135%) rotate(16deg); opacity: 0; }
+  .job-card.out-up    { transform: translateY(-130%) scale(.96); opacity: 0; }
+  .swipe-stamp { position: absolute; top: 20px; font-size: 23px; font-weight: 900; letter-spacing: 1.5px; padding: 5px 14px; border-radius: 12px; border: 3px solid; opacity: 0; pointer-events: none; z-index: 6; transition: opacity .12s ease; }
+  .stamp-like { right: 20px; color: #10B981; border-color: #10B981; transform: rotate(14deg); }
+  .stamp-nope { left: 20px; color: #EF4444; border-color: #EF4444; transform: rotate(-14deg); }
+  .stamp-save { left: 50%; margin-left: -52px; top: 42%; color: #F59E0B; border-color: #F59E0B; transform: rotate(-8deg); }
+  .job-card.out-right .stamp-like { opacity: 1; }
+  .job-card.out-left  .stamp-nope { opacity: 1; }
+  .job-card.out-up    .stamp-save { opacity: 1; }
+  @media (prefers-reduced-motion: reduce) { .job-card { transition: opacity .15s ease; } .job-card.out-left,.job-card.out-right,.job-card.out-up { transform: none; } }
 
   /* Modal */
   .modal-overlay { display: none; position: fixed; inset: 0; z-index: 100; background: rgba(15,23,42,0.5); backdrop-filter: blur(4px); align-items: flex-end; justify-content: center; }
@@ -1502,6 +1516,9 @@
       wrapper.innerHTML = `
         <div class="job-card" style="--accent:${color}">
           <style>.job-card::before{background:${color};}</style>
+          <div class="swipe-stamp stamp-like">LIKE</div>
+          <div class="swipe-stamp stamp-nope">NOPE</div>
+          <div class="swipe-stamp stamp-save">GUARDAR</div>
           <div class="job-top">
             <div class="job-logo" style="background:${color}">${escapeHTML(initial)}</div>
             <div>
@@ -1563,9 +1580,23 @@
       }).join('')}</div>`;
     }
 
+    function animateSwipe(action, done) {
+      const card = document.querySelector('#swipe-wrapper .job-card');
+      if (!card) { done(); return; }
+      const cls = action === 'yes' ? 'out-right' : action === 'no' ? 'out-left' : 'out-up';
+      let called = false; const fin = () => { if (called) return; called = true; done(); };
+      card.classList.add(cls);
+      card.addEventListener('transitionend', fin, { once: true });
+      setTimeout(fin, 450);
+    }
     async function swipeAction(action) {
+      if (state._swiping) return;
       const j = state.offers[state.offersIdx];
       if (!j) return;
+      state._swiping = true;
+      animateSwipe(action, () => { state._swiping = false; commitSwipe(action, j); });
+    }
+    async function commitSwipe(action, j) {
       if (action === 'yes' || action === 'save') {
         const estado = action === 'yes' ? 'aplicada' : 'guardada';
         if (estado === 'aplicada') { state.appliedOffers = [j, ...state.appliedOffers]; state.appliedCount++; }
