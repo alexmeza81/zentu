@@ -599,7 +599,7 @@
       const m=pipeMatch(st);
       const avatar=st.foto_url ? `<img src="${escapeHTML(st.foto_url)}" class="w-9 h-9 rounded-lg object-cover"/>` : `<div class="w-9 h-9 rounded-lg grad flex items-center justify-center text-white font-black text-xs">${initials(st)}</div>`;
       return `
-        <div class="pipe-card bg-white rounded-xl border border-slate-200 p-3 cursor-pointer shadow-sm hover:shadow-md transition" draggable="true" data-pc="${row.id}" ondragstart="onCardDragStart(event,'${row.id}')" ondragend="onCardDragEnd(event)" onclick="openCandidate('${st.id}')">
+        <div class="pipe-card bg-white rounded-xl border border-slate-200 p-3 cursor-pointer shadow-sm hover:shadow-md transition" draggable="true" data-pc="${row.id}" ondragstart="onCardDragStart(event,'${row.id}')" ondragend="onCardDragEnd(event)" onclick="openCandidate('${st.id}','${pipeFilterOffer?pipeFilterOffer.id:''}')">
           <div class="flex items-center gap-2.5">
             ${avatar}
             <div class="min-w-0 flex-1">
@@ -1047,7 +1047,7 @@
       const t=matchTier(m.pct);
       const avatar=st.foto_url ? `<img src="${escapeHTML(st.foto_url)}" class="w-14 h-14 rounded-2xl object-cover"/>` : `<div class="w-14 h-14 rounded-2xl grad flex items-center justify-center text-white font-black text-lg">${initials(st)}</div>`;
       return `
-      <div class="cand-card bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer" onclick="openCandidate('${st.id}')">
+      <div class="cand-card bg-white rounded-2xl border border-slate-200 overflow-hidden cursor-pointer" onclick="openCandidate('${st.id}','${selectedOfferId}')">
         <div class="h-1.5" style="background:${t.bar}"></div>
         <div class="p-5">
           <div class="flex items-start gap-3">
@@ -1076,7 +1076,7 @@
       </div>`;
     }
 
-    async function openCandidate(id){
+    async function openCandidate(id, offerId){
       let st=ALL.find(s=>s.id===id);
       if(!st){ const r=pipe.rows.find(r=>r.student&&r.student.id===id); st=r&&r.student; }
       if(!st && inbox.students) st=inbox.students[id];
@@ -1088,7 +1088,17 @@
         tc={ hab:(data&&data.habilidades)||{}, clasif:(data&&data.clasificacion)||null, arq:(data&&data.arquetipo)||null };
         testCache[id]=tc;
       }
-      renderDetail(st, tc);
+      // Match con la oferta activa (la que abrió el perfil): IA guardado si existe, si no palabras clave.
+      const oId = offerId || selectedOfferId || (pipeFilterOffer && pipeFilterOffer.id) || '';
+      let matchInfo = null;
+      const offer = oId ? offers.find(o=>o.id===oId) : null;
+      if(offer){
+        let ai=null;
+        try { const { data:om }=await sb.from('offer_matches').select('pct, razon').eq('offer_id',oId).eq('student_id',id).maybeSingle(); ai=om||null; } catch(e){}
+        if(ai) matchInfo={ offer, pct:ai.pct, reason:ai.razon||'Match con IA', ai:true };
+        else { const km=computeOfferMatch(st, offer); matchInfo={ offer, pct:km.pct, reason:km.reason, ai:false }; }
+      }
+      renderDetail(st, tc, matchInfo);
       document.getElementById('modal').classList.remove('hidden');
       loadThread(id);
     }
@@ -1106,7 +1116,7 @@
       const mini=a=>{ const v=ejes[a.key]||0; return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;"><span style="font-size:11.5px;color:#475569;font-weight:600;flex:1;">${escapeHTML(a.label)}</span><div style="width:52px;height:5px;background:#E9ECF6;border-radius:999px;overflow:hidden;"><div style="width:${nz(v)}%;height:100%;background:linear-gradient(90deg,#7B68EE,#4A9EFF);border-radius:999px;"></div></div><span style="font-size:9.5px;font-weight:700;color:${nivelColor(v)};width:74px;text-align:right;">${nivelOf(v)}</span></div>`; };
       return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin:2px 0 10px;">${rk.slice(0,3).map(card).join('')}</div><div style="font-size:9px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Los demás</div>${rk.slice(3).map(mini).join('')}`;
     }
-    function renderDetail(st, tc){
+    function renderDetail(st, tc, matchInfo){
       tc = tc || {};
       // Retrocompatibilidad: tc pudo venir como el objeto hab plano (formato viejo)
       const hab = (tc.hab!==undefined ? tc.hab : tc) || {};
@@ -1115,7 +1125,6 @@
       const ejes = (clasif && clasif.ejes) || null;
       const validez = (clasif && clasif.validez) || null;
       const arq = (clasif && clasif.arquetipo) || tc.arq || null;
-      const matches=computeMatches(st).slice(0,4);
       const carreraLine=escapeHTML([st.carrera, st.ubicacion].filter(Boolean).join(' · '));
       const egreso = st.egreso_mes&&st.egreso_year ? `${escapeHTML(st.egreso_mes)} ${escapeHTML(st.egreso_year)}` : '—';
       const skills=(Array.isArray(st.hard_skills)?st.hard_skills:[]);
@@ -1175,10 +1184,15 @@
         <div class="p-5 space-y-4">
           ${st.headline?`<div class="bg-slate-50 rounded-xl p-3.5"><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Sobre mí</div><div class="text-sm text-slate-700 leading-relaxed">${escapeHTML(st.headline)}</div></div>`:''}
           ${st.experiencia?`<div class="bg-slate-50 rounded-xl p-3.5"><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Proyectos y experiencia</div><div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">${escapeHTML(st.experiencia)}</div></div>`:''}
-          <div>
-            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Match con roles</div>
-            ${matches.map(m=>`<div class="mb-2"><div class="flex justify-between text-sm"><span class="font-semibold text-slate-700">${escapeHTML(m.role)}</span><span class="font-black grad-text">${m.pct}%</span></div><div class="h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1"><div class="h-full grad rounded-full" style="width:${m.pct}%"></div></div></div>`).join('')}
-          </div>
+          ${matchInfo?`<div class="bg-slate-50 rounded-xl p-3.5">
+            <div class="flex items-center justify-between mb-1">
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Match con la vacante${matchInfo.ai?' · <span class="text-purple-600">✨ IA</span>':''}</div>
+              <span class="text-lg font-black" style="color:${matchTier(matchInfo.pct).bar}">${matchInfo.pct}%</span>
+            </div>
+            <div class="text-sm font-bold text-slate-700 truncate">${escapeHTML(matchInfo.offer.titulo)}</div>
+            <div class="h-2 bg-slate-100 rounded-full overflow-hidden mt-2"><div class="h-full rounded-full" style="width:${matchInfo.pct}%;background:${matchTier(matchInfo.pct).bar}"></div></div>
+            ${matchInfo.reason?`<div class="text-xs text-slate-600 leading-relaxed mt-2.5"><span class="font-bold text-slate-500 uppercase text-[10px] tracking-wide">Por qué encaja</span><br>${escapeHTML(matchInfo.reason)}</div>`:''}
+          </div>`:''}
           ${testBlock}
           ${skills.length?`<div><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Habilidades técnicas</div><div class="flex flex-wrap gap-1.5">${skills.map(s=>`<span class="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">${escapeHTML(s)}</span>`).join('')}</div></div>`:''}
           ${inds.length?`<div><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Industrias de interés</div><div class="flex flex-wrap gap-1.5">${inds.map(s=>`<span class="text-xs font-semibold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">${escapeHTML(s)}</span>`).join('')}</div></div>`:''}
