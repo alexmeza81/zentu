@@ -40,13 +40,26 @@ function validateUrl(raw: string): URL {
   if (/^\d+\.\d+\.\d+\.\d+$/.test(host) && isPrivateIPv4(host)) throw new Error("Host no permitido");
   return u;
 }
+function isPrivateIPv6(ip: string): boolean {
+  const s = ip.toLowerCase();
+  if (s === "::1" || s === "::") return true;                       // loopback / unspecified
+  if (/^fe[89ab]/.test(s)) return true;                            // fe80::/10 link-local
+  if (/^f[cd]/.test(s)) return true;                               // fc00::/7 unique-local
+  const m = s.match(/::ffff:(\d+\.\d+\.\d+\.\d+)$/);               // IPv4-mapped ::ffff:a.b.c.d
+  if (m) return isPrivateIPv4(m[1]);
+  return false;
+}
 async function assertPublicHost(host: string) {
-  try {
-    const ips = await Deno.resolveDns(host, "A");
-    if (ips.length && ips.some(isPrivateIPv4)) throw new Error("Host resuelve a IP privada");
-  } catch (e) {
-    if (String(e?.message || e).includes("privada")) throw e; // re-lanza el bloqueo real; ignora fallos de DNS
-  }
+  // IP literal ya validada como pública en validateUrl (las privadas/IPv6 se bloquean allí).
+  if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return;
+  // Hostname: resolvemos A y AAAA y FALLAMOS CERRADO — si no verificamos que resuelve a
+  // IPs públicas, bloqueamos. Residual: DNS rebinding entre esta resolución y el fetch
+  // (Deno no permite fijar la IP del socket); el fail-closed + A/AAAA reduce el riesgo real.
+  let a: string[] = [], aaaa: string[] = [];
+  try { a = await Deno.resolveDns(host, "A"); } catch { /* sin registro A */ }
+  try { aaaa = await Deno.resolveDns(host, "AAAA"); } catch { /* sin registro AAAA */ }
+  if (!a.length && !aaaa.length) throw new Error("No se pudo resolver el host (bloqueado por seguridad)");
+  if (a.some(isPrivateIPv4) || aaaa.some(isPrivateIPv6)) throw new Error("Host resuelve a IP privada");
 }
 async function safeFetch(rawUrl: string): Promise<Response> {
   let url = rawUrl;
