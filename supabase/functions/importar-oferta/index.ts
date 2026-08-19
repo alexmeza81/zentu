@@ -156,7 +156,7 @@ async function extractDeepSeek(sourceText: string, key: string) {
     "\"ubicacion\" (ciudad y/o país, o ''), " +
     "\"salario\" (el salario TAL COMO aparece en el texto, o '' si no aparece — NO lo inventes), " +
     "\"tags\" (array de 3 a 8 habilidades o herramientas clave, cortas y en singular, p.ej. ['SQL','Python','Excel']), " +
-    "\"descripcion\" (resumen claro en español de 400 a 900 caracteres del rol, responsabilidades y requisitos). " +
+    "\"descripcion\" (resumen MUY BREVE en español: de 3 a 5 viñetas cortas, cada una en su PROPIA LÍNEA y empezando con '• ', SOLO lo más importante — qué hace el rol, requisitos clave y qué ofrece; máx ~90 caracteres por viñeta, sin párrafos largos ni relleno). " +
     "Si un dato no aparece usa '' o []. Responde SOLO con el JSON, sin texto adicional.";
   const res = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
@@ -184,7 +184,7 @@ function coerceOffer(o: any) {
     ubicacion: str(o?.ubicacion, 80),
     salario: str(o?.salario, 60),
     tags,
-    descripcion: str(o?.descripcion, 2000),
+    descripcion: str(o?.descripcion, 800),
   };
 }
 function fallbackOffer(jp: any, text: string) {
