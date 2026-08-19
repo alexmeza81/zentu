@@ -520,6 +520,12 @@
         .select('id, empresa_nombre, titulo, area, ubicacion, modalidad, salario, descripcion, tags')
         .eq('estado', 'publicada').order('created_at', { ascending: false });
       const all = offs || [];
+      // Match con IA (premium): si el reclutador lo calculó para estas ofertas, lo usamos.
+      state.aiMatchByOffer = {};
+      try {
+        const { data: oms } = await sb.from('offer_matches').select('offer_id, pct, razon').eq('student_id', state.student.id);
+        (oms || []).forEach(r => { state.aiMatchByOffer[r.offer_id] = { pct: r.pct, razon: r.razon }; });
+      } catch (e) { /* sin match IA */ }
       state.deckAll = all.filter(o => !acted[o.id]);
       state.savedOffers = all.filter(o => acted[o.id] === 'guardada');
       state.appliedOffers = all.filter(o => acted[o.id] === 'aplicada');
@@ -1165,6 +1171,15 @@
       return `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px;">${rk.slice(0,3).map(card).join('')}</div><div style="font-size:11px;color:#94A3B8;line-height:1.5;margin-bottom:14px;">Mide cuánto te inclinas hacia cada estilo cuando puedes elegir — no qué tan bueno eres.</div><div style="font-size:11px;font-weight:800;color:#94A3B8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Los demás estilos</div>${rk.slice(3).map(mini).join('')}`;
     }
 
+    function psychComingSoon(){
+      return `<div style="margin:0 20px 22px;padding:14px 16px;border-radius:16px;background:linear-gradient(135deg,rgba(123,104,238,0.09),rgba(74,158,255,0.06));border:1px solid rgba(123,104,238,0.16);display:flex;align-items:flex-start;gap:12px;">
+        <div style="font-size:22px;line-height:1;">🧠</div>
+        <div>
+          <div style="font-size:13px;font-weight:800;color:#0F172A;">Pronto: test psicométrico profesional <span style="font-size:10px;font-weight:800;color:#7B68EE;background:rgba(123,104,238,0.12);padding:2px 7px;border-radius:999px;margin-left:4px;">PRÓXIMAMENTE</span></div>
+          <div style="font-size:12px;color:#64748B;line-height:1.5;margin-top:3px;">Estamos preparando una evaluación psicométrica más profunda para potenciar tu perfil y darte mejores matches. ¡Muy pronto!</div>
+        </div>
+      </div>`;
+    }
     function renderTest(state){
       const el = document.getElementById('sec-test');
       const c = state.testResults && state.testResults.clasificacion;
@@ -1214,7 +1229,8 @@
         <div class="section-title">¿Qué obtienes?</div>
         <div class="card" style="margin:0 20px 24px;padding:18px 20px;">
           <div style="font-size:13px;color:#475569;line-height:1.7;">En cada pregunta eliges <strong>la opción que más se parece a ti</strong> — no hay respuestas correctas. Con eso construimos tu <strong>perfil de fortalezas</strong> en 8 competencias (gráfica de radar), un <strong>feedback personalizado</strong> y los roles que más encajan contigo. Es lo que ven los reclutadores.</div>
-        </div>`;
+        </div>
+        ${psychComingSoon()}`;
     }
 
     function renderTestResult(c){
@@ -1228,6 +1244,7 @@
           ${c.arquetipo?`<div class="result-badge">Estilo dominante · ${escapeHTML(c.arquetipo)}</div>`:''}
           ${tags?`<div class="result-tags">${tags}</div>`:''}
         </div>
+        ${psychComingSoon()}
         <div class="section-title">Tu perfil de fortalezas</div>
         <div class="card" style="margin:0 20px 20px;padding:18px 18px;">${strengthsC(ejes)}</div>
         ${c.descripcion_breve?`<div class="card" style="margin:0 20px 20px;padding:16px 20px;"><div style="font-size:13.5px;color:#334155;line-height:1.6;">${escapeHTML(c.descripcion_breve)}</div></div>`:''}
@@ -1416,6 +1433,8 @@
     // ── OFERTAS v2: descubrir (swipe) + guardadas + aplicadas + filtros + detalle ──
     function offerMatch(o) {
       const st = state.student || {};
+      const ai = state.aiMatchByOffer && state.aiMatchByOffer[o.id];
+      if (ai) return { pct: ai.pct, reason: ai.razon || 'Match personalizado con IA', ai: true };
       const skills = (Array.isArray(st.hard_skills) ? st.hard_skills : []).map(_norm);
       const inds = (Array.isArray(st.industrias) ? st.industrias : []).map(_norm);
       const tags = (Array.isArray(o.tags) ? o.tags : []).map(_norm);
@@ -1493,6 +1512,7 @@
           </div>
           <div class="job-match-pill">
             <span class="job-match-num">${m.pct}%</span>
+            ${m.ai ? '<span style="font-size:10px;font-weight:800;color:#7B68EE;">✨ IA</span>' : ''}
             <span class="job-match-txt">${escapeHTML(m.reason)}</span>
           </div>
           ${tags.length ? `<div class="job-tags">${tags.slice(0, 6).map(t => `<span class="job-tag">${escapeHTML(t)}</span>`).join('')}</div>` : ''}
@@ -1586,7 +1606,7 @@
             <div class="job-logo" style="background:${color}">${escapeHTML(initialsOf(o.empresa_nombre || 'Z'))}</div>
             <div><div class="job-company">${escapeHTML(o.empresa_nombre || 'Empresa')}</div><div class="job-title">${escapeHTML(o.titulo)}</div></div>
           </div>
-          <div class="job-match-pill" style="margin:12px 0;"><span class="job-match-num">${m.pct}%</span><span class="job-match-txt">${escapeHTML(m.reason)}</span></div>
+          <div class="job-match-pill" style="margin:12px 0;"><span class="job-match-num">${m.pct}%</span>${m.ai ? '<span style="font-size:10px;font-weight:800;color:#7B68EE;">✨ IA</span>' : ''}<span class="job-match-txt">${escapeHTML(m.reason)}</span></div>
           <div class="of-detail-meta">
             ${o.modalidad ? `<span>📍 ${escapeHTML(o.modalidad)}</span>` : ''}
             ${o.ubicacion ? `<span>🌎 ${escapeHTML(o.ubicacion)}</span>` : ''}
