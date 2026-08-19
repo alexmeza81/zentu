@@ -92,7 +92,7 @@
         <select id="fCarrera" onchange="renderGrid()" class="py-2.5 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 focus:border-purple-400 focus:outline-none"><option value="">Todas las carreras</option></select>
         <select id="fIndustria" onchange="renderGrid()" class="py-2.5 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 focus:border-purple-400 focus:outline-none"><option value="">Todas las industrias</option></select>
         <select id="fDisp" onchange="renderGrid()" class="py-2.5 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 focus:border-purple-400 focus:outline-none">
-          <option value="">Cualquier disponibilidad</option><option>Inmediata</option><option>En 1 mes</option><option>Al egresar</option>
+          <option value="">Cualquier disponibilidad</option><option value="0">Disponible ahora</option><option value="3">En ≤ 3 meses</option><option value="6">En ≤ 6 meses</option><option value="12">En ≤ 12 meses</option>
         </select>
         <label class="flex items-center gap-2 text-sm font-semibold text-slate-600 cursor-pointer select-none whitespace-nowrap"><input id="fHidePipe" type="checkbox" onchange="renderGrid()" class="w-4 h-4 accent-purple-600"/> Ocultar los de mi pipeline</label>
         <button onclick="clearFilters()" class="text-sm font-bold text-purple-700 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition">Limpiar</button>
@@ -541,7 +541,7 @@
       const { data:stages } = await sb.from('pipeline_stages').select('id,nombre,posicion,color').eq('company_id',companyId).order('posicion');
       pipe.stages = stages||[];
       const { data:rows } = await sb.from('pipeline_candidates')
-        .select('id, stage_id, posicion, offer_id, student:students(id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, linkedin_url, telefono, experiencia, estado)')
+        .select('id, stage_id, posicion, offer_id, student:students(id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, disponible_desde, linkedin_url, telefono, experiencia, estado)')
         .eq('company_id',companyId).order('posicion');
       pipe.rows = (rows||[]).map(r=>({ id:r.id, stage_id:r.stage_id, posicion:r.posicion, offer_id:r.offer_id, student:r.student }));
       onPipeOfferChange();
@@ -796,7 +796,7 @@
 
     async function loadCandidates(){
       const { data, error } = await sb.from('students')
-        .select('id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, modalidad, tipo_contrato, disponibilidad, linkedin_url, telefono, experiencia, estado, demo')
+        .select('id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, modalidad, tipo_contrato, disponibilidad, disponible_desde, linkedin_url, telefono, experiencia, estado, demo')
         .eq('estado','en_busqueda').order('updated_at',{ascending:false});
       if (error) console.error(error);
       ALL = data || [];
@@ -879,6 +879,26 @@
       if(pct>=60) return {cls:'text-purple-700 bg-purple-50 border-purple-200', bar:'#7B68EE'};
       if(pct>=40) return {cls:'text-amber-700 bg-amber-50 border-amber-200', bar:'#F59E0B'};
       return {cls:'text-slate-500 bg-slate-100 border-slate-200', bar:'#94A3B8'};
+    }
+    // Disponibilidad anclada a fecha (disponible_desde). Fallback a etiqueta vieja.
+    const _MESES3=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    function _dispDate(st){ return st&&st.disponible_desde ? new Date(st.disponible_desde+'T00:00:00') : null; }
+    function dispMonths(st){ // meses de hoy a la fecha (0 si ya/pasado); null si desconocido
+      const d=_dispDate(st);
+      if(d){ const n=new Date(); return Math.max(0,(d.getFullYear()-n.getFullYear())*12+(d.getMonth()-n.getMonth())); }
+      const leg=(st&&st.disponibilidad)||'';
+      if(leg==='Inmediata') return 0;
+      if(leg==='En 1 mes') return 1;
+      return null;
+    }
+    function dispLabel(st){
+      const d=_dispDate(st);
+      if(d){ const n=new Date(); const first=new Date(n.getFullYear(),n.getMonth(),1);
+        return d<=first ? 'Disponible ahora' : ('Disponible: '+_MESES3[d.getMonth()]+' '+d.getFullYear()); }
+      const leg=(st&&st.disponibilidad)||'';
+      if(leg==='Inmediata') return 'Disponible ahora';
+      if(leg==='Al egresar'){ const e=(st.egreso_mes&&st.egreso_year)?` (${st.egreso_mes} ${st.egreso_year})`:''; return 'Al egresar'+e; }
+      return leg;
     }
     function _offerSig(offer){
       const rawTags=Array.isArray(offer.tags)?offer.tags:[];
@@ -964,7 +984,7 @@
         if(q){ const hay=_norm(`${s.nombre} ${s.apellido} ${s.carrera} ${s.universidad}`); if(!hay.includes(q)) return false; }
         if(fc && s.carrera!==fc) return false;
         if(fi && !(Array.isArray(s.industrias)&&s.industrias.includes(fi))) return false;
-        if(fd && s.disponibilidad!==fd) return false;
+        if(fd){ const mm=dispMonths(s); if(mm==null) return false; if(mm>parseInt(fd,10)) return false; }
         return true;
       });
       const scored=list.map(s=>({st:s, m:effectiveMatch(s,offer)})).filter(x=>x.m.pct>=min).sort((a,b)=>b.m.pct-a.m.pct);
@@ -1070,7 +1090,7 @@
           </div>
           ${skills.length?`<div class="mt-3 flex flex-wrap gap-1.5">${skills.map(s=>{const hit=m.matched.some(mm=>_norm(mm)===_norm(s));return `<span class="text-[11px] font-semibold px-2 py-0.5 rounded-md border ${hit?'text-emerald-700 bg-emerald-50 border-emerald-100':'text-indigo-700 bg-indigo-50 border-indigo-100'}">${escapeHTML(s)}</span>`;}).join('')}</div>`:''}
           <div class="mt-4 flex items-center justify-between">
-            <span class="text-xs text-slate-500 font-medium">${st.disponibilidad?('📅 '+escapeHTML(st.disponibilidad)):''}</span>
+            <span class="text-xs text-slate-500 font-medium">${(function(){const l=dispLabel(st);return l?('📅 '+escapeHTML(l)):'';})()}</span>
             ${liked?'<span class="text-[11px] font-bold text-purple-700 bg-purple-50 border border-purple-100 px-2 py-0.5 rounded-full">💜 En pipeline</span>':'<span class="text-sm font-bold text-purple-700">Ver perfil →</span>'}
           </div>
         </div>
@@ -1179,7 +1199,7 @@
           <div class="flex gap-2 mt-3 flex-wrap">
             <span class="text-[11px] font-bold bg-white/20 px-2.5 py-1 rounded-full">🔍 Activo</span>
             <span class="text-[11px] font-bold bg-white/20 px-2.5 py-1 rounded-full">🎓 ${(_semNum(st.semestre)===10)?'Egresó':'Egresa'} ${egreso}</span>
-            ${st.disponibilidad?`<span class="text-[11px] font-bold bg-white/20 px-2.5 py-1 rounded-full">📅 ${escapeHTML(st.disponibilidad)}</span>`:''}
+            ${(function(){const l=dispLabel(st);return l?`<span class="text-[11px] font-bold bg-white/20 px-2.5 py-1 rounded-full">📅 ${escapeHTML(l)}</span>`:'';})()}
           </div>
         </div>
         <div class="p-5 space-y-4">
@@ -1284,7 +1304,7 @@
       let studentsMap={};
       if(ids.length){
         const { data:studs } = await sb.from('students')
-          .select('id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, linkedin_url, telefono, experiencia, estado')
+          .select('id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, disponible_desde, linkedin_url, telefono, experiencia, estado')
           .in('id', ids);
         (studs||[]).forEach(s=>{ studentsMap[s.id]=s; });
       }

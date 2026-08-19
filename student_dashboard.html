@@ -654,7 +654,7 @@
         { key:'modalidad', label:'Modalidad', type:'select', required:true, options:['Remoto','Híbrido','Presencial'] },
         { key:'tipo_contrato', label:'Tipo de contrato', type:'select', required:true, options:['Tiempo completo','Medio tiempo','Prácticas'] },
         { key:'industrias', label:'Industrias de interés', type:'tags', required:true, options:['Tecnología','Fintech','Banca y Finanzas','Consultoría','Marketing','Medios y Entretenimiento','Retail','Consumo (FMCG)','Salud','Educación','Startups','Manufactura','Energía','Logística','Bienes raíces','Turismo','Gobierno y ONG'] },
-        { key:'disponibilidad', label:'Disponibilidad', type:'select', required:true, options:['Inmediata','En 1 mes','Al egresar'] },
+        { key:'disponibilidad', label:'¿Cuándo puedes empezar?', type:'availability', required:true },
         { key:'expectativa_salarial', label:'Expectativa salarial (opcional)', type:'text', required:false, placeholder:'$18,000–22,000/mes' },
       ]},
       { id:'links', label:'Links', icon:'🔗', fields:[
@@ -853,7 +853,7 @@
       const buscoPills = [];
       if (st.modalidad) buscoPills.push(st.modalidad);
       if (st.tipo_contrato) buscoPills.push(st.tipo_contrato);
-      if (st.disponibilidad) buscoPills.push('Disponible: ' + st.disponibilidad);
+      { const al = availLabel(st); if (al) buscoPills.push(al); }
       industrias.forEach(i => buscoPills.push(i));
 
       document.getElementById('sec-perfil').innerHTML = `
@@ -964,7 +964,7 @@
       const buscoPills = [];
       if (st.modalidad) buscoPills.push(st.modalidad);
       if (st.tipo_contrato) buscoPills.push(st.tipo_contrato);
-      if (st.disponibilidad) buscoPills.push('Disponible: ' + st.disponibilidad);
+      { const al = availLabel(st); if (al) buscoPills.push(al); }
       industrias.forEach(i => buscoPills.push(i));
       const hab = testResults?.habilidades || {};
       const clasif = testResults && testResults.clasificacion;
@@ -1731,6 +1731,15 @@
       return (editDraft.hard_skills||[]).map((s,i)=>`<span class="skill-chip">${escapeHTML(s)}<button type="button" onclick="removeSkillAt(${i})">✕</button></span>`).join('');
     }
 
+    const MESES_ES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+    function toggleDispNow(){ const on = document.getElementById('disp-now').checked; const w = document.getElementById('disp-when'); if (w) w.style.display = on ? 'none' : ''; }
+    function availLabel(st){
+      if (st && st.disponible_desde){ const d = new Date(st.disponible_desde+'T00:00:00'); const n = new Date(); const first = new Date(n.getFullYear(),n.getMonth(),1);
+        if (d <= first) return 'Disponible ahora';
+        const M = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+        return 'Disponible: '+M[d.getMonth()]+' '+d.getFullYear(); }
+      return (st && st.disponibilidad) ? ('Disponible: '+st.disponibilidad) : '';
+    }
     function fieldHTML(f) {
       const val = editDraft[f.key];
       if (f.type === 'textarea')
@@ -1758,6 +1767,36 @@
             <button type="button" class="progress-cta" style="color:#4A2FD6;" onclick="triggerFotoInput()">Subir foto</button>
             <input id="foto-file-input" type="file" accept="image/*" style="position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;" onchange="onPhotoPick(event)"/>
           </div></div>`;
+      }
+      if (f.type === 'availability') {
+        const st = state.student || {};
+        const now = new Date();
+        let immediate = true, mes = now.getMonth()+1, anio = now.getFullYear();
+        if (st.disponible_desde) {
+          const d = new Date(st.disponible_desde + 'T00:00:00');
+          const first = new Date(now.getFullYear(), now.getMonth(), 1);
+          immediate = d <= first; mes = d.getMonth()+1; anio = d.getFullYear();
+        } else {
+          const leg = editDraft.disponibilidad || st.disponibilidad || '';
+          const em = MESES_ES.indexOf(st.egreso_mes) + 1;
+          if (em > 0) mes = em;
+          if (/^[0-9]{4}$/.test(st.egreso_year||'')) anio = parseInt(st.egreso_year,10);
+          immediate = (leg === 'Inmediata');
+          if (leg === '' && em > 0) immediate = false; // perfil nuevo con egreso -> sugiere fecha
+        }
+        if (anio < now.getFullYear()) anio = now.getFullYear();
+        const years = []; for (let y = now.getFullYear(); y <= now.getFullYear()+5; y++) years.push(y);
+        return `<div data-key="${f.key}" data-type="availability">
+          <label class="chk-row" style="margin-bottom:10px;"><input type="checkbox" id="disp-now" ${immediate?'checked':''} onchange="toggleDispNow()"/><span>Puedo empezar de inmediato</span></label>
+          <div id="disp-when" style="${immediate?'display:none;':''}">
+            <div class="field-label" style="margin-bottom:6px;">Disponible a partir de</div>
+            <div style="display:flex;gap:8px;">
+              <select class="field-select" id="disp-mes">${MESES_ES.map((m,i)=>`<option value="${i+1}" ${mes===i+1?'selected':''}>${m}</option>`).join('')}</select>
+              <select class="field-select" id="disp-anio">${years.map(y=>`<option ${anio===y?'selected':''}>${y}</option>`).join('')}</select>
+            </div>
+            <div style="font-size:11.5px;color:#94A3B8;margin-top:6px;">Si aún estudias, usa tu fecha aproximada de egreso.</div>
+          </div>
+        </div>`;
       }
       if (f.type === 'checkbox') {
         return `<label class="chk-row" data-key="${f.key}" data-type="checkbox"><input type="checkbox" ${val ? 'checked' : ''}/><span>${escapeHTML(f.label)}</span></label>`;
@@ -1844,6 +1883,16 @@
         const key = el.getAttribute('data-key');
         const type = el.getAttribute('data-type');
         if (type === 'tags') editDraft[key] = [...el.querySelectorAll('.tag-opt.sel')].map(t => t.textContent);
+        else if (type === 'availability') {
+          const now = el.querySelector('#disp-now').checked;
+          if (now) { editDraft.disponibilidad = 'Inmediata'; editDraft.disponible_desde = new Date().toISOString().slice(0,10); }
+          else {
+            const mes = parseInt(el.querySelector('#disp-mes').value, 10);
+            const anio = parseInt(el.querySelector('#disp-anio').value, 10);
+            editDraft.disponible_desde = `${anio}-${String(mes).padStart(2,'0')}-01`;
+            editDraft.disponibilidad = 'Desde ' + MESES_ES[mes-1] + ' ' + anio;
+          }
+        }
         else if (type === 'skills' || type === 'photo') { /* ya en editDraft */ }
         else if (type === 'checkbox') editDraft[key] = el.querySelector('input').checked;
         else if (el.tagName === 'SELECT' || el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') editDraft[key] = el.value.trim();
@@ -1869,6 +1918,7 @@
       if (err) { errEl.textContent = err; errEl.style.display = 'block'; return; }
       const patch = {};
       sec.fields.forEach(f => { patch[f.key] = editDraft[f.key]; });
+      if (sec.fields.some(f => f.type === 'availability')) patch.disponible_desde = editDraft.disponible_desde;
       await dbUpsertStudent(state.user, patch);
       await maybeUnlockRecruiting();
       closeEditSheet();
