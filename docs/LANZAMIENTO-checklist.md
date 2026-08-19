@@ -9,18 +9,16 @@ Fecha: 2026-08-18. Estado tras la auditoría de esta sesión.
   **Acción (solo tú):** Supabase → Authentication → Emails → configurar **SMTP propio**
   (Resend o SendGrid). Probar a Gmail, Outlook y Hotmail.
 
-- [ ] **Verificar que el registro (signup) exista.** `submit_student_waitlist` /
-  `submit_company_waitlist` NO están en las migraciones del repo (igual que la
-  función de login que estaba rota). Corre la **query 4** de
-  `docs/supabase-migrations/2026-08-18-rls-audit.sql`. Si no aparecen, el registro
-  está roto y hay que crearlas.
+- [x] **Registro (signup) existe.** Verificado 2026-08-18: `submit_student_waitlist`
+  y `submit_company_waitlist` existen (security definer). El registro funciona.
 
-- [ ] **RLS — verificar el alcance de usuarios autenticados.** Confirmado que
-  **anon NO puede leer** (RLS activo bloquea; `students`/`test_results`/waitlist con
-  datos devuelven 0 filas a anon ✓). Falta confirmar que un **estudiante logueado
-  solo vea SU fila** (no la de sus compañeros). Corre la **query 1 y 2** del audit y
-  revisa que `students`/`test_results`/`messages` tengan una política que ate por
-  `user_id = auth.uid()` (o participante), no un `SELECT` abierto.
+- [ ] **🔴 Aplicar `2026-08-18-rls-hardening.sql`.** La auditoría de políticas
+  encontró 3 fugas hacia usuarios **logueados** (anon estaba bien): (1) la waitlist
+  completa era legible por cualquier autenticado — **fuga de todos los correos**;
+  (2) un estudiante podía leer a todos los compañeros reclutables; (3) igual con sus
+  tests. El SQL corrige las 3 (política de waitlist solo admin; pool/tests solo para
+  empresas) + revoca grants sobrantes. Aplícalo y prueba: login, que una empresa siga
+  viendo candidatos, y que un estudiante ya NO pueda leer a otros.
 
 - [ ] **Endurecer grants de waitlist (higiene).** `anon`/`authenticated` tienen
   SELECT/INSERT/UPDATE/DELETE/**TRUNCATE** directos sobre `waitlist_estudiantes` y
