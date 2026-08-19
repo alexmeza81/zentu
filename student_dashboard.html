@@ -307,6 +307,27 @@
   .skill-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px; border-radius: 999px; background: #EEF2FF; color: #4F46E5; font-size: 12.5px; font-weight: 600; margin: 0 6px 6px 0; }
   .skill-chip button { border: none; background: none; color: #4F46E5; cursor: pointer; font-size: 14px; line-height: 1; }
   .photo-preview { width: 72px; height: 72px; border-radius: 18px; object-fit: cover; border: 1px solid #E2E8F0; }
+  /* Ofertas v2: tabs, filtros, listas, detalle */
+  .of-tabs { display:flex; gap:6px; padding:12px 20px 0; }
+  .of-tab { flex:1; border:none; background:#EEF1FB; color:#64748B; font-family:inherit; font-size:12.5px; font-weight:800; padding:9px 6px; border-radius:10px; cursor:pointer; }
+  .of-tab.on { background:linear-gradient(135deg,#7B68EE,#4A9EFF); color:#fff; }
+  .of-filters { display:flex; gap:7px; flex-wrap:wrap; padding:14px 20px 2px; }
+  .of-chip { border:1.5px solid #E2E8F0; background:#fff; color:#64748B; font-family:inherit; font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px; cursor:pointer; }
+  .of-chip.on { border-color:#7B68EE; background:#F5F7FF; color:#6D5AE6; }
+  .of-detail-link { background:none; border:none; color:#7B68EE; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; padding:6px 0; }
+  .of-list { padding:14px 20px 24px; display:flex; flex-direction:column; gap:10px; }
+  .of-list-item { display:flex; align-items:center; gap:12px; background:#fff; border:1px solid #E8EBF5; border-radius:14px; padding:12px 14px; cursor:pointer; }
+  .of-status { font-size:11px; font-weight:800; padding:5px 10px; border-radius:999px; flex:none; }
+  .of-status.ok { background:#DCFCE7; color:#15803D; }
+  .of-mini-btn { background:linear-gradient(135deg,#7B68EE,#4A9EFF); color:#fff; border:none; font-family:inherit; font-size:12px; font-weight:800; padding:8px 14px; border-radius:10px; cursor:pointer; flex:none; }
+  .of-detail-overlay { position:fixed; inset:0; background:rgba(15,23,42,.5); z-index:10000; display:flex; align-items:flex-end; justify-content:center; }
+  .of-detail-card { background:#fff; width:100%; max-width:430px; border-radius:24px 24px 0 0; padding:22px 20px; max-height:88vh; overflow:auto; position:relative; }
+  .of-detail-close { position:absolute; top:14px; right:16px; background:#F1F5F9; border:none; width:32px; height:32px; border-radius:999px; font-size:14px; cursor:pointer; color:#64748B; }
+  .of-detail-meta { display:flex; flex-wrap:wrap; gap:8px; font-size:12.5px; color:#475569; font-weight:600; }
+  .of-detail-meta span { background:#F8FAFC; border:1px solid #E2E8F0; padding:5px 10px; border-radius:8px; }
+  .of-detail-desc { font-size:13.5px; color:#334155; line-height:1.6; margin-top:14px; white-space:pre-wrap; }
+  .of-cta { flex:1; border:none; border-radius:12px; padding:13px; font-family:inherit; font-size:14px; font-weight:800; cursor:pointer; background:linear-gradient(135deg,#7B68EE,#4A9EFF); color:#fff; }
+  .of-cta.ghost { background:#fff; border:1.5px solid #E2E8F0; color:#6D5AE6; }
 </style>
 </head>
 <body>
@@ -487,19 +508,40 @@
 
     async function dbLoadOffers() {
       state.offers = []; state.offersIdx = 0; state.appliedCount = 0; state.savedCount = 0;
+      state.deckAll = []; state.savedOffers = []; state.appliedOffers = []; state.acted = {};
+      state.offerFilters = state.offerFilters || { modalidad: '', area: '' };
+      state.offerView = state.offerView || 'descubrir';
       if (!state.student) return;
       const { data: apps } = await sb.from('job_applications').select('offer_id, estado').eq('student_id', state.student.id);
-      const acted = new Set();
-      (apps || []).forEach(a => { acted.add(a.offer_id); if (a.estado === 'aplicada') state.appliedCount++; else if (a.estado === 'guardada') state.savedCount++; });
+      const acted = {};
+      (apps || []).forEach(a => { acted[a.offer_id] = a.estado; });
+      state.acted = acted;
       const { data: offs } = await sb.from('job_offers')
         .select('id, empresa_nombre, titulo, area, ubicacion, modalidad, salario, descripcion, tags')
         .eq('estado', 'publicada').order('created_at', { ascending: false });
-      state.offers = (offs || []).filter(o => !acted.has(o.id));
+      const all = offs || [];
+      state.deckAll = all.filter(o => !acted[o.id]);
+      state.savedOffers = all.filter(o => acted[o.id] === 'guardada');
+      state.appliedOffers = all.filter(o => acted[o.id] === 'aplicada');
+      state.savedCount = state.savedOffers.length;
+      state.appliedCount = state.appliedOffers.length;
+      state.offers = applyOfferFilters(state.deckAll);
+    }
+    function applyOfferFilters(list) {
+      const f = state.offerFilters || {};
+      return (list || []).filter(o =>
+        (!f.modalidad || _norm(o.modalidad || '') === _norm(f.modalidad)) &&
+        (!f.area || _norm(o.area || '') === _norm(f.area))
+      );
+    }
+    function offerAreas() {
+      return [...new Set((state.deckAll || []).map(o => o.area).filter(Boolean))].slice(0, 6);
     }
     async function dbApplyOffer(offerId, estado) {
       if (!state.student) return;
-      const { error } = await sb.from('job_applications').insert({ offer_id: offerId, student_id: state.student.id, estado });
-      if (error && error.code !== '23505') throw error; // 23505 = ya registrado
+      const { error } = await sb.from('job_applications')
+        .upsert({ offer_id: offerId, student_id: state.student.id, estado }, { onConflict: 'offer_id,student_id' });
+      if (error) throw error;
     }
 
     async function dbLoadCompanies(ids) {
@@ -1356,50 +1398,73 @@
     }
 
     // ── RENDER: OFERTAS DE EMPLEO ───────────────────────────
+    // ── OFERTAS v2: descubrir (swipe) + guardadas + aplicadas + filtros + detalle ──
     function offerMatch(o) {
       const st = state.student || {};
       const skills = (Array.isArray(st.hard_skills) ? st.hard_skills : []).map(_norm);
       const inds = (Array.isArray(st.industrias) ? st.industrias : []).map(_norm);
       const tags = (Array.isArray(o.tags) ? o.tags : []).map(_norm);
+      const carrera = _norm(st.carrera || ''), area = _norm(o.area || '');
       let hits = 0;
       tags.forEach(t => { if (skills.some(s => s.includes(t) || t.includes(s)) || inds.some(i => i.includes(t) || t.includes(i))) hits++; });
-      const ratio = tags.length ? hits / tags.length : 0;
-      return Math.max(62, Math.min(98, Math.round(62 + ratio * 36)));
+      const tagRatio = tags.length ? hits / tags.length : 0;
+      const carreraHit = !!(carrera && area && (carrera.includes(area) || area.includes(carrera)));
+      const arq = (state.testResults && state.testResults.clasificacion && state.testResults.clasificacion.arquetipo) || '';
+      let pct = 62 + tagRatio * 30 + (carreraHit ? 8 : 0);
+      pct = Math.max(60, Math.min(98, Math.round(pct)));
+      let reason;
+      if (carreraHit) reason = 'Va con tu carrera';
+      else if (hits > 0) reason = 'Coincide con tus habilidades';
+      else if (arq) reason = 'Encaja con tu perfil ' + arq.toLowerCase();
+      else reason = 'Nueva oportunidad para ti';
+      return { pct, reason };
     }
 
+    function setOfferView(v) { state.offerView = v; renderOfertas(); }
+    function setOfferFilter(k, val) {
+      const f = state.offerFilters || {}; f[k] = (f[k] === val ? '' : val); state.offerFilters = f;
+      state.offers = applyOfferFilters(state.deckAll); state.offersIdx = 0; renderOfertas();
+    }
+    function clearOfferFilters() { state.offerFilters = { modalidad: '', area: '' }; state.offers = applyOfferFilters(state.deckAll); state.offersIdx = 0; renderOfertas(); }
+
     function renderOfertas() {
-      document.getElementById('sec-ofertas').innerHTML = `
-        <div class="swipe-stats">
-          <div class="swipe-stat"><div class="swipe-stat-n" style="color:#10B981;">${state.appliedCount}</div><div class="swipe-stat-l">Aplicadas</div></div>
-          <div class="swipe-stat"><div class="swipe-stat-n" style="color:#F59E0B;">${state.savedCount}</div><div class="swipe-stat-l">Guardadas</div></div>
-          <div class="swipe-stat"><div class="swipe-stat-n" style="color:#7B68EE;">${state.offers.length}</div><div class="swipe-stat-l">Disponibles</div></div>
-        </div>
-        <div class="swipe-wrapper" id="swipe-wrapper"></div>
-      `;
-      renderJobCard();
+      const el = document.getElementById('sec-ofertas');
+      const v = state.offerView || 'descubrir';
+      const tabs = `
+        <div class="of-tabs">
+          <button class="of-tab ${v === 'descubrir' ? 'on' : ''}" onclick="setOfferView('descubrir')">Descubrir</button>
+          <button class="of-tab ${v === 'guardadas' ? 'on' : ''}" onclick="setOfferView('guardadas')">Guardadas${state.savedCount ? ' · ' + state.savedCount : ''}</button>
+          <button class="of-tab ${v === 'aplicadas' ? 'on' : ''}" onclick="setOfferView('aplicadas')">Aplicadas${state.appliedCount ? ' · ' + state.appliedCount : ''}</button>
+        </div>`;
+      let body;
+      if (v === 'guardadas') body = renderOfferList(state.savedOffers, 'guardada');
+      else if (v === 'aplicadas') body = renderOfferList(state.appliedOffers, 'aplicada');
+      else body = renderDiscover();
+      el.innerHTML = tabs + body;
+      if (v === 'descubrir') renderJobCard();
+    }
+
+    function renderDiscover() {
+      const f = state.offerFilters || {};
+      const mods = ['Remoto', 'Híbrido', 'Presencial'];
+      const areas = offerAreas();
+      const chip = (k, label, val) => `<button class="of-chip ${f[k] === val ? 'on' : ''}" onclick="setOfferFilter('${k}','${escapeHTML(val)}')">${escapeHTML(label)}</button>`;
+      const showFilters = (state.deckAll || []).length > 0;
+      const filters = showFilters ? `<div class="of-filters">${mods.map(m => chip('modalidad', m, m)).join('')}${areas.map(a => chip('area', a, a)).join('')}</div>` : '';
+      return `${filters}<div class="swipe-wrapper" id="swipe-wrapper"></div>`;
     }
 
     function renderJobCard() {
       const wrapper = document.getElementById('swipe-wrapper');
-      if (!state.offers.length || state.offersIdx >= state.offers.length) {
-        const done = state.offers.length > 0;
-        wrapper.innerHTML = `
-          <div style="text-align:center;padding:48px 20px;">
-            <div style="font-size:48px;margin-bottom:16px;">${done ? '🎉' : '📭'}</div>
-            <div style="font-size:16px;font-weight:800;color:#0F172A;margin-bottom:6px;">${done ? '¡Revisaste todas las ofertas!' : 'Aún no hay ofertas'}</div>
-            <div style="font-size:13px;color:#64748B;">${done ? 'Vuelve pronto para ver nuevas oportunidades.' : 'Las empresas publicarán vacantes muy pronto.'}</div>
-          </div>`;
-        return;
-      }
-
+      if (!wrapper) return;
+      if (!state.offers.length || state.offersIdx >= state.offers.length) { wrapper.innerHTML = renderDeckEmpty(); return; }
       const j = state.offers[state.offersIdx];
       const color = avatarColor(j.empresa_nombre || j.titulo);
       const initial = initialsOf(j.empresa_nombre || 'Z');
-      const match = offerMatch(j);
+      const m = offerMatch(j);
       const loc = [j.ubicacion, j.modalidad].filter(Boolean).join(' · ');
       const tags = Array.isArray(j.tags) ? j.tags : [];
       const dots = state.offers.map((_, i) => `<div class="swipe-dot ${i === state.offersIdx ? 'current' : ''}"></div>`).join('');
-
       wrapper.innerHTML = `
         <div class="job-card" style="--accent:${color}">
           <style>.job-card::before{background:${color};}</style>
@@ -1412,11 +1477,12 @@
             </div>
           </div>
           <div class="job-match-pill">
-            <span class="job-match-num">${match}%</span>
-            <span class="job-match-txt">match con tu perfil</span>
+            <span class="job-match-num">${m.pct}%</span>
+            <span class="job-match-txt">${escapeHTML(m.reason)}</span>
           </div>
-          ${tags.length ? `<div class="job-tags">${tags.map(t => `<span class="job-tag">${escapeHTML(t)}</span>`).join('')}</div>` : ''}
+          ${tags.length ? `<div class="job-tags">${tags.slice(0, 6).map(t => `<span class="job-tag">${escapeHTML(t)}</span>`).join('')}</div>` : ''}
           ${j.descripcion ? `<p class="job-desc">${escapeHTML(j.descripcion)}</p>` : ''}
+          <button class="of-detail-link" onclick="openOfferDetail('${j.id}')">Ver detalle →</button>
           <div class="swipe-btns">
             <button class="swipe-btn no" onclick="swipeAction('no')" title="Descartar">✕</button>
             <button class="swipe-btn save" onclick="swipeAction('save')" title="Guardar">★</button>
@@ -1424,8 +1490,42 @@
           </div>
         </div>
         <div class="swipe-counter-bar">${dots}</div>
-        <div class="swipe-hint">${state.offersIdx + 1} de ${state.offers.length} ofertas</div>
-      `;
+        <div class="swipe-hint">${state.offersIdx + 1} de ${state.offers.length} ofertas</div>`;
+    }
+
+    function renderDeckEmpty() {
+      const f = state.offerFilters || {};
+      const hasFilters = !!(f.modalidad || f.area);
+      const anyDeck = (state.deckAll || []).length > 0;
+      const { pct } = computeProgress(state.student, state.testResults);
+      if (hasFilters && anyDeck) {
+        return `<div style="text-align:center;padding:44px 20px;"><div style="font-size:42px;margin-bottom:14px;">🔎</div><div style="font-size:15px;font-weight:800;color:#0F172A;margin-bottom:6px;">Nada con esos filtros</div><div style="font-size:13px;color:#64748B;margin-bottom:14px;">Prueba quitar alguno.</div><button class="of-detail-link" onclick="clearOfferFilters()">Quitar filtros</button></div>`;
+      }
+      if (anyDeck) {
+        return `<div style="text-align:center;padding:44px 20px;"><div style="font-size:42px;margin-bottom:14px;">🎉</div><div style="font-size:15px;font-weight:800;color:#0F172A;margin-bottom:6px;">¡Revisaste todas!</div><div style="font-size:13px;color:#64748B;margin-bottom:10px;">Te avisaremos cuando lleguen nuevas oportunidades.</div>${state.savedCount ? `<button class="of-detail-link" onclick="setOfferView('guardadas')">Ver tus guardadas →</button>` : ''}</div>`;
+      }
+      return `<div style="text-align:center;padding:44px 20px;"><div style="font-size:42px;margin-bottom:14px;">📭</div><div style="font-size:15px;font-weight:800;color:#0F172A;margin-bottom:6px;">Aún no hay ofertas</div><div style="font-size:13px;color:#64748B;line-height:1.5;margin-bottom:14px;">Las empresas publicarán vacantes muy pronto. Te avisaremos.</div>${pct < 100 ? `<button class="of-detail-link" onclick="showSection('perfil')">Completa tu perfil para mejores matches →</button>` : ''}</div>`;
+    }
+
+    function renderOfferList(list, kind) {
+      if (!list || !list.length) {
+        const msg = kind === 'guardada' ? 'Guarda ofertas con ★ para revisarlas luego.' : 'Aplica a ofertas desde Descubrir.';
+        return `<div style="text-align:center;padding:40px 20px;"><div style="font-size:40px;margin-bottom:12px;">${kind === 'guardada' ? '★' : '📨'}</div><div style="font-size:14px;font-weight:800;color:#0F172A;">${kind === 'guardada' ? 'Sin guardadas' : 'Sin aplicaciones'}</div><div style="font-size:13px;color:#64748B;margin-top:6px;">${msg}</div></div>`;
+      }
+      return `<div class="of-list">${list.map(o => {
+        const color = avatarColor(o.empresa_nombre || o.titulo);
+        const loc = [o.ubicacion, o.modalidad].filter(Boolean).join(' · ');
+        return `<div class="of-list-item" onclick="openOfferDetail('${o.id}')">
+          <div class="job-logo" style="background:${color};width:42px;height:42px;flex:none;">${escapeHTML(initialsOf(o.empresa_nombre || 'Z'))}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:14px;font-weight:800;color:#0F172A;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(o.titulo)}</div>
+            <div style="font-size:12px;color:#64748B;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(o.empresa_nombre || 'Empresa')}${loc ? ' · ' + escapeHTML(loc) : ''}</div>
+          </div>
+          ${kind === 'aplicada'
+            ? `<span class="of-status ok">Aplicada ✓</span>`
+            : `<button class="of-mini-btn" onclick="event.stopPropagation();applyFromSaved('${o.id}')">Aplicar</button>`}
+        </div>`;
+      }).join('')}</div>`;
     }
 
     async function swipeAction(action) {
@@ -1433,15 +1533,75 @@
       if (!j) return;
       if (action === 'yes' || action === 'save') {
         const estado = action === 'yes' ? 'aplicada' : 'guardada';
-        if (action === 'yes') state.appliedCount++; else state.savedCount++;
-        state.offersIdx++;
-        renderOfertas();
+        if (estado === 'aplicada') { state.appliedOffers = [j, ...state.appliedOffers]; state.appliedCount++; }
+        else { state.savedOffers = [j, ...state.savedOffers]; state.savedCount++; }
+        state.acted[j.id] = estado; state.offersIdx++; renderOfertas();
         try { await dbApplyOffer(j.id, estado); }
-        catch (e) { if (action === 'yes') state.appliedCount--; else state.savedCount--; renderOfertas(); alert('No se pudo registrar. Intenta de nuevo.'); }
+        catch (e) {
+          if (estado === 'aplicada') { state.appliedOffers = state.appliedOffers.filter(x => x.id !== j.id); state.appliedCount--; }
+          else { state.savedOffers = state.savedOffers.filter(x => x.id !== j.id); state.savedCount--; }
+          delete state.acted[j.id]; renderOfertas(); alert('No se pudo registrar. Intenta de nuevo.');
+        }
         return;
       }
-      state.offersIdx++;
+      state.offersIdx++; renderOfertas();
+    }
+
+    async function applyFromSaved(offerId) {
+      try { await dbApplyOffer(offerId, 'aplicada'); }
+      catch (e) { alert('No se pudo aplicar. Intenta de nuevo.'); return; }
+      const o = (state.savedOffers || []).find(x => x.id === offerId);
+      if (o) { state.savedOffers = state.savedOffers.filter(x => x.id !== offerId); state.appliedOffers = [o, ...state.appliedOffers]; state.savedCount = state.savedOffers.length; state.appliedCount = state.appliedOffers.length; state.acted[offerId] = 'aplicada'; }
       renderOfertas();
+    }
+
+    function allOffersFlat() { return (state.deckAll || []).concat(state.savedOffers || [], state.appliedOffers || []); }
+    function openOfferDetail(offerId) {
+      const o = allOffersFlat().find(x => x.id === offerId);
+      if (!o) return;
+      const m = offerMatch(o), status = state.acted[offerId], color = avatarColor(o.empresa_nombre || o.titulo);
+      const tags = Array.isArray(o.tags) ? o.tags : [];
+      const overlay = document.createElement('div');
+      overlay.className = 'of-detail-overlay'; overlay.id = 'of-detail';
+      overlay.onclick = (e) => { if (e.target.id === 'of-detail') closeOfferDetail(); };
+      overlay.innerHTML = `
+        <div class="of-detail-card">
+          <button class="of-detail-close" onclick="closeOfferDetail()">✕</button>
+          <div class="job-top">
+            <div class="job-logo" style="background:${color}">${escapeHTML(initialsOf(o.empresa_nombre || 'Z'))}</div>
+            <div><div class="job-company">${escapeHTML(o.empresa_nombre || 'Empresa')}</div><div class="job-title">${escapeHTML(o.titulo)}</div></div>
+          </div>
+          <div class="job-match-pill" style="margin:12px 0;"><span class="job-match-num">${m.pct}%</span><span class="job-match-txt">${escapeHTML(m.reason)}</span></div>
+          <div class="of-detail-meta">
+            ${o.modalidad ? `<span>📍 ${escapeHTML(o.modalidad)}</span>` : ''}
+            ${o.ubicacion ? `<span>🌎 ${escapeHTML(o.ubicacion)}</span>` : ''}
+            ${o.area ? `<span>🏷️ ${escapeHTML(o.area)}</span>` : ''}
+            ${o.salario ? `<span>💰 ${escapeHTML(o.salario)}</span>` : ''}
+          </div>
+          ${tags.length ? `<div class="job-tags" style="margin-top:10px;">${tags.map(t => `<span class="job-tag">${escapeHTML(t)}</span>`).join('')}</div>` : ''}
+          ${o.descripcion ? `<div class="of-detail-desc">${escapeHTML(o.descripcion)}</div>` : ''}
+          ${status === 'aplicada'
+            ? `<div class="of-status ok" style="margin-top:16px;display:block;text-align:center;padding:12px;">Ya aplicaste a esta oferta ✓</div>`
+            : `<div style="display:flex;gap:10px;margin-top:16px;">
+                 ${status === 'guardada' ? '' : `<button class="of-cta ghost" onclick="detailAction('${o.id}','save')">★ Guardar</button>`}
+                 <button class="of-cta" onclick="detailAction('${o.id}','yes')">✓ Aplicar</button>
+               </div>`}
+        </div>`;
+      document.body.appendChild(overlay);
+    }
+    function closeOfferDetail() { const el = document.getElementById('of-detail'); if (el) el.remove(); }
+    async function detailAction(offerId, action) {
+      const estado = action === 'yes' ? 'aplicada' : 'guardada';
+      try { await dbApplyOffer(offerId, estado); } catch (e) { alert('No se pudo. Intenta de nuevo.'); return; }
+      const o = allOffersFlat().find(x => x.id === offerId);
+      state.deckAll = (state.deckAll || []).filter(x => x.id !== offerId);
+      state.savedOffers = (state.savedOffers || []).filter(x => x.id !== offerId);
+      state.appliedOffers = (state.appliedOffers || []).filter(x => x.id !== offerId);
+      if (o) { if (estado === 'aplicada') state.appliedOffers = [o, ...state.appliedOffers]; else state.savedOffers = [o, ...state.savedOffers]; state.acted[offerId] = estado; }
+      state.savedCount = state.savedOffers.length; state.appliedCount = state.appliedOffers.length;
+      state.offers = applyOfferFilters(state.deckAll);
+      if (state.offersIdx >= state.offers.length) state.offersIdx = Math.max(0, state.offers.length - 1);
+      closeOfferDetail(); renderOfertas();
     }
 
     init();
