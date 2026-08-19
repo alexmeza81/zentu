@@ -76,6 +76,7 @@
           <input id="poolThreshold" type="range" min="0" max="95" step="5" value="60" oninput="onThresholdChange()" class="w-28 accent-purple-600"/>
           <span id="poolThresholdVal" class="text-sm font-black grad-text w-10 text-right">60%</span>
         </div>
+        <button id="aiMatchBtn" onclick="runAiMatch()" class="text-sm font-bold text-purple-700 bg-purple-50 border border-purple-200 px-4 py-2.5 rounded-xl hover:bg-purple-100 transition whitespace-nowrap" style="display:none">✨ Match con IA</button>
         <button id="bulkAddBtn" onclick="openBulkAdd()" class="text-sm font-bold text-white grad px-4 py-2.5 rounded-xl hover:opacity-90 transition whitespace-nowrap" style="display:none">➕ Añadir al pipeline en masa</button>
       </div>
 
@@ -459,6 +460,7 @@
       mountViewSwitch();
       document.getElementById('companyEmail').textContent = session.user.email;
       try { const { data } = await sb.rpc('ensure_my_company'); companyId = data || null; } catch(e){ companyId = null; }
+      try { const { data:adm } = await sb.rpc('is_admin'); isAdminUser = !!adm; } catch(e){ isAdminUser = false; }
       if(companyId){ try { const { data:co } = await sb.from('companies').select('nombre_empresa').eq('id',companyId).maybeSingle(); companyName = (co&&co.nombre_empresa)||''; } catch(e){} }
       await loadMyPipelineIds();
       document.getElementById('loading').classList.add('hidden');
@@ -801,11 +803,53 @@
     // ── Filtro por vacante + match determinista candidato↔oferta ──
     let selectedOfferId = '';
     let offersLoaded = false;
+    let isAdminUser = false;           // gate del match con IA (premium; hoy solo admin)
+    let aiMatches = {};                // student_id -> {pct, razon} para la oferta seleccionada
 
     function _disp(id,val){ const e=document.getElementById(id); if(e) e.style.display=val; }
     function poolThreshold(){ const e=document.getElementById('poolThreshold'); return e?(parseInt(e.value,10)||0):0; }
     function onThresholdChange(){ const l=document.getElementById('poolThresholdVal'); if(l) l.textContent=poolThreshold()+'%'; renderGrid(); }
-    function onPoolOfferChange(){ selectedOfferId=document.getElementById('poolOfferSelect').value; renderGrid(); }
+    async function onPoolOfferChange(){
+      selectedOfferId=document.getElementById('poolOfferSelect').value;
+      aiMatches={};
+      renderGrid();
+      if(selectedOfferId){ await loadAiMatches(selectedOfferId); renderGrid(); }
+    }
+    // Carga los match con IA ya calculados (cache) para la oferta.
+    async function loadAiMatches(offerId){
+      aiMatches={};
+      try {
+        const { data } = await sb.from('offer_matches').select('student_id, pct, razon').eq('offer_id',offerId);
+        (data||[]).forEach(r=>{ aiMatches[r.student_id]={ pct:r.pct, razon:r.razon }; });
+      } catch(e){ /* sin match IA */ }
+    }
+    const aiActive = () => Object.keys(aiMatches).length>0;
+    // Match efectivo: usa el de IA si existe para ese estudiante; si no, el determinista.
+    function effectiveMatch(st, offer){
+      const a=aiMatches[st.id];
+      if(a) return { pct:a.pct, reason:a.razon||'Match con IA', matched:[], ai:true };
+      return computeOfferMatch(st, offer);
+    }
+    // Dispara el cálculo con IA (Edge Function). Premium; hoy gateado a admin.
+    async function runAiMatch(){
+      const offer=offers.find(o=>o.id===selectedOfferId); if(!offer) return;
+      const btn=document.getElementById('aiMatchBtn'); const old=btn.textContent;
+      btn.disabled=true; btn.textContent='Calculando con IA…';
+      try {
+        const { data, error }=await sb.functions.invoke('match-oferta-ia',{ body:{ offer_id:selectedOfferId } });
+        let res=data;
+        if(error){ try{ res=(error.context&&typeof error.context.json==='function')?await error.context.json():null; }catch(_e){ res=null; } }
+        if(!res) throw new Error(error?(error.message||'Error de red'):'Sin respuesta');
+        if(res.error) throw new Error(res.error);
+        aiMatches={};
+        (res.matches||[]).forEach(m=>{ aiMatches[m.student_id]={ pct:m.pct, razon:m.razon }; });
+        renderGrid();
+        alert(`✨ Match con IA listo: ${res.count} candidato${res.count===1?'':'s'} evaluado${res.count===1?'':'s'} para "${offer.titulo}".`);
+      } catch(e){
+        const em=(((e&&e.message)||String(e))||'').trim();
+        alert(/premium|autenticad|acceso/i.test(em) ? em : 'No se pudo calcular el match con IA. Intenta de nuevo.');
+      } finally { btn.disabled=false; btn.textContent=old; }
+    }
 
     function populatePoolOfferSelect(){
       const sel=document.getElementById('poolOfferSelect'); if(!sel) return;
@@ -877,7 +921,7 @@
     }
 
     function showGate(kind){
-      _disp('poolGate','block'); _disp('poolFilters','none'); _disp('poolThresholdWrap','none'); _disp('bulkAddBtn','none'); _disp('poolResults','none');
+      _disp('poolGate','block'); _disp('poolFilters','none'); _disp('poolThresholdWrap','none'); _disp('bulkAddBtn','none'); _disp('aiMatchBtn','none'); _disp('poolResults','none');
       document.getElementById('grid').innerHTML=''; document.getElementById('empty').classList.add('hidden');
       const g=document.getElementById('poolGate');
       if(kind==='loading'){ g.innerHTML='<div class="text-slate-400 py-4">Cargando tus vacantes…</div>'; return; }
@@ -893,6 +937,8 @@
       if(!offer){ selectedOfferId=''; showGate('pick'); return; }
 
       _disp('poolGate','none'); _disp('poolFilters','flex'); _disp('poolThresholdWrap','flex'); _disp('bulkAddBtn','inline-block'); _disp('poolResults','block');
+      _disp('aiMatchBtn', isAdminUser ? 'inline-block' : 'none');
+      const aiBtn=document.getElementById('aiMatchBtn'); if(aiBtn && isAdminUser) aiBtn.textContent = aiActive() ? '✨ Recalcular con IA' : '✨ Match con IA';
       const q=_norm(document.getElementById('fSearch').value);
       const fc=document.getElementById('fCarrera').value, fi=document.getElementById('fIndustria').value, fd=document.getElementById('fDisp').value;
       const hidePipe=document.getElementById('fHidePipe') && document.getElementById('fHidePipe').checked;
@@ -905,8 +951,9 @@
         if(fd && s.disponibilidad!==fd) return false;
         return true;
       });
-      const scored=list.map(s=>({st:s, m:computeOfferMatch(s,offer)})).filter(x=>x.m.pct>=min).sort((a,b)=>b.m.pct-a.m.pct);
-      document.getElementById('poolResults').innerHTML=`<strong class="text-slate-700">${scored.length}</strong> candidato${scored.length===1?'':'s'} con match ≥ ${min}% para <strong class="text-slate-700">${escapeHTML(offer.titulo)}</strong>`;
+      const scored=list.map(s=>({st:s, m:effectiveMatch(s,offer)})).filter(x=>x.m.pct>=min).sort((a,b)=>b.m.pct-a.m.pct);
+      const aiTag = aiActive() ? ` · <span class="text-purple-700 font-bold">✨ match por IA</span>` : '';
+      document.getElementById('poolResults').innerHTML=`<strong class="text-slate-700">${scored.length}</strong> candidato${scored.length===1?'':'s'} con match ≥ ${min}% para <strong class="text-slate-700">${escapeHTML(offer.titulo)}</strong>${aiTag}`;
       const grid=document.getElementById('grid'), empty=document.getElementById('empty');
       if(!scored.length){ grid.innerHTML=''; empty.classList.remove('hidden'); return; }
       empty.classList.add('hidden');
@@ -920,7 +967,7 @@
     // por oferta también encuentra a los importados (incluidos los de importaciones previas).
     function bulkMatching(min){
       const offer=offers.find(o=>o.id===selectedOfferId); if(!offer) return [];
-      return ALL.filter(s=>computeOfferMatch(s,offer).pct>=min);
+      return ALL.filter(s=>effectiveMatch(s,offer).pct>=min);
     }
     function onBulkThresholdChange(){
       const v=parseInt(document.getElementById('bulkThreshold').value,10)||0;
@@ -993,6 +1040,7 @@
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="font-black text-slate-900 truncate">${fullName(st)}</span>
                 <span class="text-[13px] font-black px-2 py-0.5 rounded-lg border ${t.cls} whitespace-nowrap">${m.pct}% match</span>
+                ${m.ai?'<span class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 border border-purple-200 whitespace-nowrap">✨ IA</span>':''}
               </div>
               <div class="text-xs text-slate-500 font-semibold truncate mt-0.5">${escapeHTML(st.universidad||'')}</div>
               <div class="text-xs text-slate-400 truncate">${carreraLine}</div>
