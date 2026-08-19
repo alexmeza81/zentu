@@ -120,7 +120,8 @@ async function interpretDeepSeek(s: ReturnType<typeof score>, p: any, key: strin
   const schema = `{"cintillo":"string atractivo máx 50 caracteres","descripcion_breve":"string máx 220 caracteres que describe el estilo/perfil de fortalezas (se muestra junto a la gráfica)","tags":["5 a 8 palabras clave"],"resumen":"string máx 150 caracteres para el reclutador","recomendacion":"string con 2-3 roles junior afines, máx 200 caracteres","feedback_estudiante":{"fortalezas":"2-3 fortalezas específicas, 30-50 palabras","areas_mejora":"1-2 estilos a explorar (NO debilidades), 30-50 palabras","recomendaciones":"acciones concretas (proyectos/hábitos), 40-60 palabras","mensaje_completo":"150-200 palabras, 3-4 párrafos cortos, tono de mentor cercano y alentador"}}`;
   const sys = `Eres un mentor y evaluador de talento para una plataforma de reclutamiento de estudiantes universitarios en México. El test es de ELECCIÓN FORZADA: el resultado es un PERFIL DE FORTALEZAS RELATIVO (afinidad), NO una medida de qué tan bueno es en algo. Un puntaje bajo en una competencia significa que es MENOS su estilo dominante, NUNCA una debilidad o carencia. Los puntajes YA ESTÁN CALCULADOS: NO los recalcules ni los cites como números. Tu tarea es SOLO interpretarlos y redactar la narrativa en positivo. Enmarca los ejes bajos como "estilos a explorar", nunca como defectos. Devuelve ÚNICAMENTE un objeto JSON válido en español con EXACTAMENTE este esquema: ${schema}`;
   const ejesTxt = [...AXES].sort((a,b)=>s.ejes[b]-s.ejes[a]).map((a)=>`- ${AXIS_LABEL[a]}: ${s.ejes[a]}`).join("\n");
-  const usr = `PERFIL DEL ESTUDIANTE:\n- Carrera: ${p.carrera||"N/D"}\n- Semestre: ${p.semestre||"N/D"}\n- Inglés: ${p.ingles||"N/D"}\n- Disponibilidad: ${p.disponibilidad||"N/D"}\n\nAFINIDAD POR COMPETENCIA (0-100, relativo, ya calculado):\n${ejesTxt}\n\nEstilos dominantes: ${s.fortalezas.map((a)=>AXIS_LABEL[a as Axis]).join(", ")}\nEstilo a explorar: ${AXIS_LABEL[s.desarrollo as Axis]}`;
+  const exp = (p.experiencia && String(p.experiencia).trim()) ? `\n\nPROYECTOS Y EXPERIENCIA (contexto del propio estudiante, úsalo para personalizar):\n${String(p.experiencia).slice(0, 1200)}` : "";
+  const usr = `PERFIL DEL ESTUDIANTE:\n- Carrera: ${p.carrera||"N/D"}\n- Semestre: ${p.semestre||"N/D"}\n- Inglés: ${p.ingles||"N/D"}\n- Disponibilidad: ${p.disponibilidad||"N/D"}\n\nAFINIDAD POR COMPETENCIA (0-100, relativo, ya calculado):\n${ejesTxt}\n\nEstilos dominantes: ${s.fortalezas.map((a)=>AXIS_LABEL[a as Axis]).join(", ")}\nEstilo a explorar: ${AXIS_LABEL[s.desarrollo as Axis]}${exp}`;
   const res = await fetch("https://api.deepseek.com/chat/completions", {
     method: "POST",
     headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
@@ -147,7 +148,7 @@ Deno.serve(async (req: Request) => {
     const timings = body?.timings;
     validate(answers);
 
-    const { data: student } = await supabase.from("students").select("id, carrera, semestre, disponibilidad, ingles").eq("user_id", user.id).maybeSingle();
+    const { data: student } = await supabase.from("students").select("id, carrera, semestre, disponibilidad, ingles, experiencia").eq("user_id", user.id).maybeSingle();
     if (!student) return json({ error: "Perfil de estudiante no encontrado" }, 404);
 
     const s = score(answers, timings);

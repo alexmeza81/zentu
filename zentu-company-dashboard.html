@@ -480,7 +480,7 @@
       const { data:stages } = await sb.from('pipeline_stages').select('id,nombre,posicion,color').eq('company_id',companyId).order('posicion');
       pipe.stages = stages||[];
       const { data:rows } = await sb.from('pipeline_candidates')
-        .select('id, stage_id, posicion, student:students(id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, linkedin_url, telefono, estado)')
+        .select('id, stage_id, posicion, student:students(id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, linkedin_url, telefono, experiencia, estado)')
         .eq('company_id',companyId).order('posicion');
       pipe.rows = (rows||[]).map(r=>({ id:r.id, stage_id:r.stage_id, posicion:r.posicion, student:r.student }));
       renderBoard();
@@ -719,7 +719,7 @@
 
     async function loadCandidates(){
       const { data, error } = await sb.from('students')
-        .select('id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, modalidad, tipo_contrato, disponibilidad, linkedin_url, telefono, estado')
+        .select('id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, modalidad, tipo_contrato, disponibilidad, linkedin_url, telefono, experiencia, estado')
         .eq('estado','en_busqueda').order('updated_at',{ascending:false});
       if (error) console.error(error);
       ALL = data || [];
@@ -890,6 +890,7 @@
         </div>
         <div class="p-5 space-y-4">
           ${st.headline?`<div class="bg-slate-50 rounded-xl p-3.5"><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Sobre mí</div><div class="text-sm text-slate-700 leading-relaxed">${escapeHTML(st.headline)}</div></div>`:''}
+          ${st.experiencia?`<div class="bg-slate-50 rounded-xl p-3.5"><div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1">Proyectos y experiencia</div><div class="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">${escapeHTML(st.experiencia)}</div></div>`:''}
           <div>
             <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2">Match con roles</div>
             ${matches.map(m=>`<div class="mb-2"><div class="flex justify-between text-sm"><span class="font-semibold text-slate-700">${escapeHTML(m.role)}</span><span class="font-black grad-text">${m.pct}%</span></div><div class="h-1.5 bg-slate-100 rounded-full overflow-hidden mt-1"><div class="h-full grad rounded-full" style="width:${m.pct}%"></div></div></div>`).join('')}
@@ -984,7 +985,7 @@
       let studentsMap={};
       if(ids.length){
         const { data:studs } = await sb.from('students')
-          .select('id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, linkedin_url, telefono, estado')
+          .select('id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, linkedin_url, telefono, experiencia, estado')
           .in('id', ids);
         (studs||[]).forEach(s=>{ studentsMap[s.id]=s; });
       }

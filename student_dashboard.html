@@ -627,6 +627,9 @@
       { id:'habilidades', label:'Habilidades', icon:'🧠', fields:[
         { key:'hard_skills', label:'Herramientas / hard skills', type:'skills', required:true },
       ]},
+      { id:'proyectos', label:'Proyectos y experiencia', icon:'💼', fields:[
+        { key:'experiencia', label:'Proyectos, experiencia, prácticas, voluntariado… (opcional pero suma mucho)', type:'textarea', required:false, placeholder:'Ej: Hice un dashboard de ventas en un proyecto escolar (Python + PowerBI). Prácticas en atención a clientes. Voluntariado organizando un hackathon…' },
+      ]},
       { id:'intereses', label:'Intereses y preferencias', icon:'🔍', fields:[
         { key:'modalidad', label:'Modalidad', type:'select', required:true, options:['Remoto','Híbrido','Presencial'] },
         { key:'tipo_contrato', label:'Tipo de contrato', type:'select', required:true, options:['Tiempo completo','Medio tiempo','Prácticas'] },
@@ -869,6 +872,12 @@
           <div style="font-size:14px; color:#334155; line-height:1.55; white-space:pre-wrap;">${headline}</div>
         </div>` : ''}
 
+        ${st.experiencia ? `
+        <div class="card" style="margin:16px 20px 0; padding:15px 18px;">
+          <div class="info-key" style="margin-bottom:6px;">💼 Proyectos y experiencia</div>
+          <div style="font-size:14px; color:#334155; line-height:1.55; white-space:pre-wrap;">${escapeHTML(st.experiencia)}</div>
+        </div>` : ''}
+
         <div class="recruiter-btn" onclick="openModal()">
           <div class="recruiter-btn-border"></div>
           <div class="recruiter-btn-inner">
@@ -989,6 +998,12 @@
         <div style="background:#F8FAFC;border-radius:12px;padding:12px 14px;margin-bottom:10px;">
           <div class="rc-match-label" style="margin-bottom:6px;">SOBRE MÍ</div>
           <div style="font-size:13px;color:#334155;line-height:1.5;white-space:pre-wrap;">${headline}</div>
+        </div>` : ''}
+
+        ${st.experiencia ? `
+        <div style="background:#F8FAFC;border-radius:12px;padding:12px 14px;margin-bottom:10px;">
+          <div class="rc-match-label" style="margin-bottom:6px;">PROYECTOS Y EXPERIENCIA</div>
+          <div style="font-size:13px;color:#334155;line-height:1.5;white-space:pre-wrap;">${escapeHTML(st.experiencia)}</div>
         </div>` : ''}
 
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:12px;flex-wrap:wrap;">
