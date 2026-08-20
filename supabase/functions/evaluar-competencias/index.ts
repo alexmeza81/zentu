@@ -14,6 +14,25 @@ const CORS = {
 };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
+// ── Monitoreo (uso de IA + errores) ──
+async function logUsage(fn: string, data: any) {
+  try {
+    const u = data?.usage || {};
+    const pt = u.prompt_tokens || 0, ct = u.completion_tokens || 0;
+    const cost = pt / 1e6 * 0.27 + ct / 1e6 * 1.10;
+    const url = Deno.env.get("SUPABASE_URL"), sk = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !sk) return;
+    await fetch(`${url}/rest/v1/ai_usage`, { method: "POST", headers: { apikey: sk, Authorization: `Bearer ${sk}`, "Content-Type": "application/json" }, body: JSON.stringify({ fn, model: "deepseek-chat", prompt_tokens: pt, completion_tokens: ct, cost_usd: Number(cost.toFixed(5)) }) });
+  } catch (_e) { /* noop */ }
+}
+async function logErr(fn: string, message: unknown, detail?: unknown) {
+  try {
+    const url = Deno.env.get("SUPABASE_URL"), sk = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !sk) return;
+    await fetch(`${url}/rest/v1/error_log`, { method: "POST", headers: { apikey: sk, Authorization: `Bearer ${sk}`, "Content-Type": "application/json" }, body: JSON.stringify({ source: "edge", fn, message: String(message).slice(0, 600), detail: detail ?? null }) });
+  } catch (_e) { /* noop */ }
+}
+
 const INSTRUMENT_VERSION = "fc-v1";
 
 const AXES = ["pensamiento_critico","comunicacion_asertiva","trabajo_equipo","resiliencia","adaptabilidad","autogestion","liderazgo","competencia_digital"] as const;
@@ -129,6 +148,7 @@ async function interpretDeepSeek(s: ReturnType<typeof score>, p: any, key: strin
   });
   if (!res.ok) throw new Error("DeepSeek HTTP " + res.status);
   const data = await res.json();
+  await logUsage("evaluar-competencias", data);
   const parsed = JSON.parse(data?.choices?.[0]?.message?.content ?? "{}");
   if (!parsed?.descripcion_breve || !parsed?.feedback_estudiante?.mensaje_completo) throw new Error("Respuesta IA con formato inesperado");
   return parsed;
@@ -157,7 +177,7 @@ Deno.serve(async (req: Request) => {
     let narrative: any, modelo: string;
     if (key) {
       try { narrative = await interpretDeepSeek(s, student, key); modelo = "deepseek-chat"; }
-      catch (_e) { narrative = fallbackNarrative(s, student); modelo = "reglas (fallback IA)"; }
+      catch (e2) { await logErr("evaluar-competencias", "IA falló, usando reglas: " + ((e2 as Error)?.message || e2)); narrative = fallbackNarrative(s, student); modelo = "reglas (fallback IA)"; }
     } else { narrative = fallbackNarrative(s, student); modelo = "reglas"; }
 
     const clasificacion = {
@@ -168,6 +188,7 @@ Deno.serve(async (req: Request) => {
     await supabase.from("test_results").insert({ student_id: student.id, respuestas, clasificacion, arquetipo: s.arquetipo, modelo });
     return json({ modelo, arquetipo: s.arquetipo, clasificacion });
   } catch (e) {
+    await logErr("evaluar-competencias", (e as Error)?.message || e);
     return json({ error: String((e as Error)?.message || e) }, 400);
   }
 });

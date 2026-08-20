@@ -75,6 +75,7 @@
         <button id="tab-metricas" onclick="showTab('metricas')" class="tab-btn">Métricas</button>
         <button id="tab-waitlist" onclick="showTab('waitlist')" class="tab-btn">Waitlist</button>
         <button id="tab-usuarios" onclick="showTab('usuarios')" class="tab-btn">Usuarios</button>
+        <button id="tab-monitoreo" onclick="showTab('monitoreo')" class="tab-btn">Monitoreo</button>
         <button id="tab-cumplimiento" onclick="showTab('cumplimiento')" class="tab-btn">Cumplimiento</button>
       </div>
     </nav>
@@ -121,6 +122,22 @@
           </div>
         </div>
         <div class="bg-white rounded-2xl border border-slate-200 overflow-x-auto"><table class="w-full text-sm"><thead id="usHead" class="text-left text-slate-400 border-b border-slate-100"></thead><tbody id="usBody"></tbody></table></div>
+      </div>
+
+      <div id="sec-monitoreo" class="tab-sec hidden">
+        <h1 class="text-3xl font-black tracking-tight mb-1">Monitoreo</h1>
+        <p class="text-slate-500 font-medium mb-5">Gasto de IA (DeepSeek) y errores de las funciones. Estimado según tokens usados.</p>
+        <div id="monAlert" class="mb-5"></div>
+        <div id="monKpis" class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+          <div id="monByFn"></div>
+          <div id="monHint"></div>
+        </div>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-black">Últimos errores</h2>
+          <button onclick="loadMonitoring()" class="text-sm font-bold text-purple-700 px-3 py-1.5 rounded-lg hover:bg-purple-50">↻ Actualizar</button>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-x-auto"><table class="w-full text-sm"><thead class="text-left text-slate-400 border-b border-slate-100"><tr><th class="py-2 px-4">Función</th><th class="py-2 px-4">Mensaje</th><th class="py-2 px-4 whitespace-nowrap">Cuándo</th></tr></thead><tbody id="monErrBody"></tbody></table></div>
       </div>
 
       <div id="sec-cumplimiento" class="tab-sec hidden">
@@ -192,6 +209,61 @@
     document.getElementById('sec-'+id).classList.remove('hidden');
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.getElementById('tab-'+id).classList.add('active');
+    if(id==='monitoreo') loadMonitoring();
+  }
+
+  // ── Monitoreo: gasto de IA (DeepSeek) + errores ──
+  const DEEPSEEK_ALERT_USD = 25; // umbral mensual de alerta (editable)
+  function usd(n){ return '$' + (Number(n)||0).toFixed(2); }
+  async function loadMonitoring(){
+    const since = new Date(Date.now() - 35*864e5).toISOString();
+    const [{ data:usage }, { data:errs }] = await Promise.all([
+      sb.from('ai_usage').select('fn,prompt_tokens,completion_tokens,cost_usd,created_at').gte('created_at',since).order('created_at',{ascending:false}).limit(5000),
+      sb.from('error_log').select('source,fn,message,created_at').order('created_at',{ascending:false}).limit(50)
+    ]);
+    const now=new Date(); const today=now.toISOString().slice(0,10); const mKey=today.slice(0,7);
+    let costToday=0,costMonth=0,callsMonth=0,tokMonth=0; const byFn={};
+    (usage||[]).forEach(u=>{ const d=(u.created_at||'').slice(0,10); const c=Number(u.cost_usd)||0;
+      if(d===today) costToday+=c;
+      if(d.slice(0,7)===mKey){ costMonth+=c; callsMonth++; tokMonth+=(u.prompt_tokens||0)+(u.completion_tokens||0); (byFn[u.fn]=byFn[u.fn]||{c:0,n:0}); byFn[u.fn].c+=c; byFn[u.fn].n++; } });
+
+    // Alerta
+    const pct=Math.min(100, Math.round(costMonth/DEEPSEEK_ALERT_USD*100));
+    const over=costMonth>=DEEPSEEK_ALERT_USD;
+    document.getElementById('monAlert').innerHTML = `<div class="rounded-2xl border p-4 ${over?'bg-red-50 border-red-200':'bg-white border-slate-200'}">
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="font-black ${over?'text-red-700':'text-slate-800'}">${over?'⚠️ Gasto del mes por encima del umbral':'✅ Gasto del mes dentro del umbral'}</div>
+        <div class="text-sm font-semibold ${over?'text-red-600':'text-slate-500'}">${usd(costMonth)} / ${usd(DEEPSEEK_ALERT_USD)}</div>
+      </div>
+      <div class="h-2 bg-slate-100 rounded-full overflow-hidden mt-3"><div class="h-full rounded-full" style="width:${pct}%;background:${over?'#EF4444':'#7B68EE'}"></div></div>
+    </div>`;
+
+    // KPIs
+    const kpi=(n,l,c)=>`<div class="bg-white rounded-2xl border border-slate-200 p-5"><div class="text-3xl font-black tabular-nums" style="color:${c}">${n}</div><div class="text-sm font-semibold text-slate-500 mt-1">${l}</div></div>`;
+    document.getElementById('monKpis').innerHTML =
+      kpi(usd(costToday),'Gasto DeepSeek hoy','#0F172A') +
+      kpi(usd(costMonth),'Gasto este mes','#7B68EE') +
+      kpi(callsMonth.toLocaleString('es-MX'),'Llamadas IA (mes)','#4A9EFF') +
+      kpi((tokMonth/1000).toFixed(0)+'k','Tokens (mes)','#10B981');
+
+    // Desglose por función
+    const entries=Object.entries(byFn).sort((a,b)=>b[1].c-a[1].c);
+    const maxc=Math.max(0.00001,...entries.map(e=>e[1].c));
+    document.getElementById('monByFn').innerHTML = card('Gasto por función (mes)',
+      entries.length ? entries.map(([fn,v])=>`<div class="mb-2.5">
+        <div class="flex justify-between text-sm mb-1"><span class="font-semibold text-slate-700 truncate pr-2">${escapeHTML(fn)} <span class="text-slate-400">· ${v.n}</span></span><span class="font-bold text-slate-500 tabular-nums">${usd(v.c)}</span></div>
+        <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:${Math.round(v.c/maxc*100)}%;background:#7B68EE"></div></div>
+      </div>`).join('') : '<div class="text-sm text-slate-400 py-3">Aún no hay uso de IA registrado.</div>');
+    document.getElementById('monHint').innerHTML = card('Notas',
+      `<div class="text-sm text-slate-600 leading-relaxed">El costo es un <b>estimado</b> con tarifas de DeepSeek (≈ $0.27/1M tokens de entrada, $1.10/1M de salida). El umbral de alerta (${usd(DEEPSEEK_ALERT_USD)}/mes) se ajusta en el código (<code>DEEPSEEK_ALERT_USD</code>).<br><br>Los errores se registran desde las funciones <b>importar-oferta</b>, <b>match-oferta-ia</b> y <b>evaluar-competencias</b>.</div>`);
+
+    // Errores
+    const eb=document.getElementById('monErrBody');
+    eb.innerHTML = (errs&&errs.length) ? errs.map(e=>`<tr class="border-b border-slate-50">
+      <td class="py-2 px-4 font-semibold text-slate-700 whitespace-nowrap">${escapeHTML(e.fn||e.source||'—')}</td>
+      <td class="py-2 px-4 text-slate-600">${escapeHTML(e.message||'')}</td>
+      <td class="py-2 px-4 text-slate-400 whitespace-nowrap">${fmtAgo(e.created_at)}</td></tr>`).join('')
+      : '<tr><td colspan="3" class="py-8 text-center text-slate-400">Sin errores registrados 🎉</td></tr>';
   }
 
   async function loadAll(){

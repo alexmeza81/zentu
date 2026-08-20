@@ -14,6 +14,25 @@ const CORS = {
 };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
+// ── Monitoreo (uso de IA + errores) ──
+async function logUsage(fn: string, data: any) {
+  try {
+    const u = data?.usage || {};
+    const pt = u.prompt_tokens || 0, ct = u.completion_tokens || 0;
+    const cost = pt / 1e6 * 0.27 + ct / 1e6 * 1.10;
+    const url = Deno.env.get("SUPABASE_URL"), sk = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !sk) return;
+    await fetch(`${url}/rest/v1/ai_usage`, { method: "POST", headers: { apikey: sk, Authorization: `Bearer ${sk}`, "Content-Type": "application/json" }, body: JSON.stringify({ fn, model: "deepseek-chat", prompt_tokens: pt, completion_tokens: ct, cost_usd: Number(cost.toFixed(5)) }) });
+  } catch (_e) { /* noop */ }
+}
+async function logErr(fn: string, message: unknown, detail?: unknown) {
+  try {
+    const url = Deno.env.get("SUPABASE_URL"), sk = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !sk) return;
+    await fetch(`${url}/rest/v1/error_log`, { method: "POST", headers: { apikey: sk, Authorization: `Bearer ${sk}`, "Content-Type": "application/json" }, body: JSON.stringify({ source: "edge", fn, message: String(message).slice(0, 600), detail: detail ?? null }) });
+  } catch (_e) { /* noop */ }
+}
+
 const BATCH = 25;
 const MAX_STUDENTS = 200; // tope de seguridad por corrida
 
@@ -43,6 +62,7 @@ async function scoreBatch(offerText: string, cands: any[], key: string) {
   });
   if (!res.ok) throw new Error("DeepSeek " + res.status);
   const data = await res.json();
+  await logUsage("match-oferta-ia", data);
   const parsed = JSON.parse(data?.choices?.[0]?.message?.content || "{}");
   return Array.isArray(parsed?.matches) ? parsed.matches : [];
 }
@@ -150,6 +170,7 @@ Deno.serve(async (req: Request) => {
       matches: rows.map((r) => ({ student_id: r.student_id, pct: r.pct, razon: r.razon })),
     });
   } catch (e) {
+    await logErr("match-oferta-ia", (e as Error)?.message || e);
     return json({ error: String((e as Error)?.message || e) }, 400);
   }
 });

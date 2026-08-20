@@ -14,6 +14,25 @@ const CORS = {
 };
 const json = (b: unknown, s = 200) => new Response(JSON.stringify(b), { status: s, headers: { ...CORS, "Content-Type": "application/json" } });
 
+// ── Monitoreo (uso de IA + errores) — inserta vía REST con service role ──
+async function logUsage(fn: string, data: any) {
+  try {
+    const u = data?.usage || {};
+    const pt = u.prompt_tokens || 0, ct = u.completion_tokens || 0;
+    const cost = pt / 1e6 * 0.27 + ct / 1e6 * 1.10;
+    const url = Deno.env.get("SUPABASE_URL"), sk = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !sk) return;
+    await fetch(`${url}/rest/v1/ai_usage`, { method: "POST", headers: { apikey: sk, Authorization: `Bearer ${sk}`, "Content-Type": "application/json" }, body: JSON.stringify({ fn, model: "deepseek-chat", prompt_tokens: pt, completion_tokens: ct, cost_usd: Number(cost.toFixed(5)) }) });
+  } catch (_e) { /* noop */ }
+}
+async function logErr(fn: string, message: unknown, detail?: unknown) {
+  try {
+    const url = Deno.env.get("SUPABASE_URL"), sk = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !sk) return;
+    await fetch(`${url}/rest/v1/error_log`, { method: "POST", headers: { apikey: sk, Authorization: `Bearer ${sk}`, "Content-Type": "application/json" }, body: JSON.stringify({ source: "edge", fn, message: String(message).slice(0, 600), detail: detail ?? null }) });
+  } catch (_e) { /* noop */ }
+}
+
 const UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 const MODALIDADES = ["Remoto", "Híbrido", "Presencial"];
 
@@ -168,6 +187,7 @@ async function extractDeepSeek(sourceText: string, key: string) {
   });
   if (!res.ok) throw new Error("DeepSeek " + res.status);
   const data = await res.json();
+  await logUsage("importar-oferta", data);
   const content = data?.choices?.[0]?.message?.content || "{}";
   return JSON.parse(content);
 }
@@ -252,6 +272,7 @@ Deno.serve(async (req: Request) => {
     if (!offer.titulo && !offer.descripcion) return json({ error: "No se encontraron datos de una oferta en ese contenido." }, 422);
     return json({ ok: true, offer, source, structured: !!jsonld, modelo });
   } catch (e) {
+    await logErr("importar-oferta", (e as Error)?.message || e);
     return json({ error: String((e as Error)?.message || e) }, 400);
   }
 });
