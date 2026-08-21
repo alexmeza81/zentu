@@ -113,16 +113,34 @@
             <h1 class="text-3xl font-black tracking-tight">Tu pipeline</h1>
             <p class="text-slate-500 font-medium mt-1">Arrastra a los candidatos entre etapas. Personaliza tus etapas a tu proceso.</p>
           </div>
-          <div class="flex items-center gap-2">
-            <select id="pipeOfferFilter" onchange="onPipeOfferChange()" class="py-2 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600 focus:border-purple-400 focus:outline-none">
-              <option value="">Todas las ofertas</option>
-            </select>
-            <button onclick="openPipelineConfig()" class="flex items-center gap-1.5 text-sm font-bold text-slate-600 border border-slate-200 px-3 py-2 rounded-xl hover:bg-slate-50 transition" title="Configuración del pipeline">
-              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
-              Configurar
-            </button>
-          </div>
+          <button onclick="openPipelineConfig()" class="flex items-center gap-1.5 text-sm font-bold text-slate-600 border border-slate-200 px-3 py-2 rounded-xl hover:bg-slate-50 transition" title="Configuración del pipeline">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+            Configurar
+          </button>
         </div>
+
+        <!-- Filtros del pipeline: vacante + match mínimo + búsqueda + limpieza -->
+        <div id="pipeFilters" class="bg-white rounded-2xl border border-slate-200 p-4 mb-4 flex flex-wrap items-center gap-x-4 gap-y-3">
+          <div class="flex items-center gap-2 min-w-[240px]">
+            <span class="text-sm font-bold text-slate-700 whitespace-nowrap">🎯 Match contra:</span>
+            <select id="pipeOfferFilter" onchange="onPipeOfferChange()" class="flex-1 min-w-[150px] py-2.5 px-3 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:border-purple-400 focus:outline-none">
+              <option value="">La vacante de cada uno</option>
+            </select>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-sm font-semibold text-slate-600 whitespace-nowrap">Match mínimo</span>
+            <input id="pipeThreshold" type="range" min="0" max="95" step="5" value="0" oninput="onPipeThresholdChange()" class="w-28 accent-purple-600"/>
+            <span id="pipeThresholdVal" class="text-sm font-black text-slate-400 w-16 text-right">Todos</span>
+          </div>
+          <div class="relative flex-1 min-w-[180px]">
+            <svg class="w-5 h-5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+            <input id="pipeSearch" oninput="renderBoard()" type="text" placeholder="Buscar en tu pipeline…" class="w-full pl-11 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm font-medium focus:border-purple-400 focus:outline-none"/>
+          </div>
+          <button id="pipeCleanBtn" onclick="openPipeClean()" class="text-sm font-bold text-rose-600 bg-rose-50 border border-rose-200 px-4 py-2.5 rounded-xl hover:bg-rose-100 transition whitespace-nowrap" style="display:none">🧹 Limpiar pipeline</button>
+          <button id="pipeClearFiltersBtn" onclick="clearPipeFilters()" class="text-sm font-bold text-purple-700 px-3 py-2.5 rounded-xl hover:bg-purple-50 transition" style="display:none">Limpiar filtros</button>
+        </div>
+        <div id="pipeResults" class="text-sm font-semibold text-slate-500 mb-4" style="display:none"></div>
+
         <div id="pipelineHint" class="hidden bg-purple-50 border border-purple-100 rounded-2xl p-5 mb-5 text-sm text-purple-900">
           💜 Dale <strong>like</strong> a un candidato en la pestaña <strong>Candidatos</strong> para agregarlo a tu pipeline. Aquí lo moverás entre etapas.
         </div>
@@ -263,6 +281,22 @@
       <div class="flex gap-2 mt-5">
         <button onclick="closeBulkAdd()" class="flex-1 text-sm font-bold text-slate-600 border border-slate-200 px-4 py-2.5 rounded-xl hover:bg-slate-50">Cancelar</button>
         <button id="bulkConfirmBtn" onclick="runBulkAdd()" class="flex-1 text-sm font-bold text-white grad px-4 py-2.5 rounded-xl hover:opacity-90">Añadir</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="pipeCleanModal" class="hidden fixed inset-0 z-[60] bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target.id==='pipeCleanModal')closePipeClean()">
+    <div class="bg-white rounded-3xl max-w-md w-full p-6" style="max-height:88vh;overflow-y:auto;">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-xl font-black">Limpiar el pipeline</h3>
+        <button onclick="closePipeClean()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center">✕</button>
+      </div>
+      <p class="text-sm text-slate-600 mb-4">Vas a quitar del pipeline a los candidatos con <strong id="pipeCleanThreshold" class="text-slate-900"></strong>. Seguirán en el pool de candidatos: solo dejan de ocupar una etapa de tu proceso.</p>
+      <div id="pipeCleanList" class="bg-slate-50 rounded-2xl p-3 space-y-2 max-h-64 overflow-y-auto"></div>
+      <p id="pipeCleanUnknown" class="text-xs text-slate-500 mt-3 hidden"></p>
+      <div class="flex gap-2 mt-5">
+        <button onclick="closePipeClean()" class="flex-1 text-sm font-bold text-slate-600 border border-slate-200 px-4 py-2.5 rounded-xl hover:bg-slate-50">Cancelar</button>
+        <button id="pipeCleanConfirmBtn" onclick="runPipeClean()" class="flex-1 text-sm font-bold text-white bg-rose-600 px-4 py-2.5 rounded-xl hover:bg-rose-700">Quitar</button>
       </div>
     </div>
   </div>
@@ -537,6 +571,7 @@
     async function loadPipeline(){
       const board=document.getElementById('board');
       if(!companyId){ board.innerHTML='<div class="text-slate-400 py-10">Tu cuenta aún no está vinculada a una empresa registrada.</div>'; return; }
+      if(!offersLoaded) await loadOffers();   // el match del pipeline necesita las vacantes
       await sb.rpc('ensure_pipeline_stages',{p_company:companyId});
       const { data:stages } = await sb.from('pipeline_stages').select('id,nombre,posicion,color').eq('company_id',companyId).order('posicion');
       pipe.stages = stages||[];
@@ -544,23 +579,56 @@
         .select('id, stage_id, posicion, offer_id, student:students(id, nombre, apellido, email, universidad, carrera, semestre, egreso_mes, egreso_year, ubicacion, headline, foto_url, hard_skills, industrias, disponibilidad, disponible_desde, linkedin_url, telefono, experiencia, estado)')
         .eq('company_id',companyId).order('posicion');
       pipe.rows = (rows||[]).map(r=>({ id:r.id, stage_id:r.stage_id, posicion:r.posicion, offer_id:r.offer_id, student:r.student }));
-      onPipeOfferChange();
-    }
-
-    let pipeAiMatches = {};   // student_id -> {pct,razon} para la oferta filtrada en el pipeline
-    let pipeFilterOffer = null;
-    async function onPipeOfferChange(){
-      const id=document.getElementById('pipeOfferFilter').value;
-      pipeAiMatches={};
-      if(id){ try { const { data }=await sb.from('offer_matches').select('student_id, pct, razon').eq('offer_id',id); (data||[]).forEach(r=>{ pipeAiMatches[r.student_id]={ pct:r.pct, razon:r.razon }; }); } catch(e){} }
+      await loadPipeAiMatches();
       renderBoard();
     }
-    // Match del candidato con la oferta filtrada en el pipeline (IA si existe, si no palabras clave).
-    function pipeMatch(st){
-      if(!pipeFilterOffer) return null;
-      const a=pipeAiMatches[st.id];
-      if(a) return { pct:a.pct, ai:true };
-      return { pct:computeOfferMatch(st, pipeFilterOffer).pct, ai:false };
+
+    // Match IA de TODAS las vacantes de la empresa: el pipeline evalúa a cada
+    // candidato contra la vacante por la que entró, no solo contra la filtrada.
+    let pipeAiByOffer = {};   // offer_id -> { student_id: {pct,razon} }
+    let pipeFilterOffer = null;
+    let pipeThreshold = 0;    // 0 = sin filtro de match
+    let pipeHidden = [];      // filas ocultas por match bajo → candidatas a limpieza
+    let pipeUnknown = 0;      // filas sin vacante contra la cual medir
+
+    async function loadPipeAiMatches(){
+      pipeAiByOffer = {};
+      const ids=(offers||[]).map(o=>o.id);
+      if(!ids.length) return;
+      try {
+        const { data } = await sb.from('offer_matches').select('offer_id, student_id, pct, razon').in('offer_id', ids);
+        (data||[]).forEach(r=>{ (pipeAiByOffer[r.offer_id]=pipeAiByOffer[r.offer_id]||{})[r.student_id]={ pct:r.pct, razon:r.razon }; });
+      } catch(e){}
+    }
+
+    function onPipeOfferChange(){ renderBoard(); }
+    function onPipeThresholdChange(){
+      pipeThreshold = +document.getElementById('pipeThreshold').value || 0;
+      const el=document.getElementById('pipeThresholdVal');
+      el.textContent = pipeThreshold ? pipeThreshold+'%' : 'Todos';
+      el.className = 'text-sm font-black w-16 text-right ' + (pipeThreshold ? 'grad-text' : 'text-slate-400');
+      renderBoard();
+    }
+    function clearPipeFilters(){
+      const o=document.getElementById('pipeOfferFilter'); if(o) o.value='';
+      const t=document.getElementById('pipeThreshold'); if(t) t.value=0;
+      const q=document.getElementById('pipeSearch'); if(q) q.value='';
+      onPipeThresholdChange();
+    }
+
+    // Vacante contra la que se mide una fila: la filtrada, o la que originó el like.
+    function pipeRowOffer(row){
+      if(pipeFilterOffer) return pipeFilterOffer;
+      return row.offer_id ? (offers.find(o=>o.id===row.offer_id)||null) : null;
+    }
+    // Match del candidato con esa vacante (IA si existe, si no palabras clave).
+    function pipeMatchOf(row){
+      const st=row.student||{};
+      const off=pipeRowOffer(row);
+      if(!off || !st.id) return null;
+      const a=pipeAiByOffer[off.id] && pipeAiByOffer[off.id][st.id];
+      if(a) return { pct:a.pct, ai:true, offer:off };
+      return { pct:computeOfferMatch(st, off).pct, ai:false, offer:off };
     }
     function renderBoard(){
       const board=document.getElementById('board');
@@ -570,10 +638,28 @@
       const offEl=document.getElementById('pipeOfferFilter');
       const offerFilter=offEl?offEl.value:'';
       pipeFilterOffer = offerFilter ? (offers.find(o=>o.id===offerFilter)||null) : null;
+      const qEl=document.getElementById('pipeSearch');
+      const q=_norm((qEl&&qEl.value||'').trim());
+
+      // Partición previa: qué se ve, qué esconde el match mínimo y qué no se puede evaluar.
+      pipeHidden=[]; pipeUnknown=0;
+      const visible=new Set();
+      pipe.rows.forEach(r=>{
+        if(offerFilter && !(r.offer_id===offerFilter || (r.student && offerApplicantsByStudent[r.student.id] && offerApplicantsByStudent[r.student.id].has(offerFilter)))) return;
+        const st=r.student||{};
+        if(q){
+          const hay=_norm([fullName(st), st.carrera, st.universidad].filter(Boolean).join(' '));
+          if(!hay.includes(q)) return;
+        }
+        r.__m = pipeMatchOf(r);
+        if(!r.__m){ pipeUnknown++; visible.add(r.id); return; }   // sin vacante: nunca se oculta ni se limpia
+        if(pipeThreshold && r.__m.pct < pipeThreshold){ pipeHidden.push(r); return; }
+        visible.add(r.id);
+      });
+      renderPipeResults(visible.size);
+
       board.innerHTML = pipe.stages.map(stg=>{
-        let rows = pipe.rows.filter(r=>r.stage_id===stg.id);
-        if(offerFilter) rows = rows.filter(r=> r.offer_id===offerFilter || (r.student && offerApplicantsByStudent[r.student.id] && offerApplicantsByStudent[r.student.id].has(offerFilter)));
-        rows = rows.sort((a,b)=>a.posicion-b.posicion);
+        const rows = pipe.rows.filter(r=>r.stage_id===stg.id && visible.has(r.id)).sort((a,b)=>a.posicion-b.posicion);
         return `
           <div class="pipe-col flex-shrink-0 w-64 bg-slate-100 rounded-2xl p-2.5" data-stage="${stg.id}" ondragover="onColDragOver(event)" ondragleave="onColDragLeave(event)" ondrop="onColDrop(event,'${stg.id}')">
             <div class="flex items-center justify-between mb-3 px-1" draggable="true" ondragstart="onColHeadDragStart(event,'${stg.id}')" ondragend="onColHeadDragEnd(event)">
@@ -594,9 +680,30 @@
         </div>`;
     }
 
+    // Línea de resultados + estado del botón de limpieza.
+    function renderPipeResults(shown){
+      const box=document.getElementById('pipeResults');
+      const cleanBtn=document.getElementById('pipeCleanBtn');
+      const clearBtn=document.getElementById('pipeClearFiltersBtn');
+      const total=pipe.rows.length;
+      const filtering = !!(pipeThreshold || pipeFilterOffer || (document.getElementById('pipeSearch')||{}).value);
+      if(clearBtn) clearBtn.style.display = filtering ? '' : 'none';
+      if(cleanBtn){
+        cleanBtn.style.display = pipeHidden.length ? '' : 'none';
+        cleanBtn.textContent = `🧹 Quitar ${pipeHidden.length} del pipeline`;
+      }
+      if(!box) return;
+      if(!total){ box.style.display='none'; return; }
+      const parts=[`<strong class="text-slate-700">${shown}</strong> de ${total} candidato${total===1?'':'s'}`];
+      if(pipeHidden.length) parts.push(`<span class="text-rose-600">${pipeHidden.length} con match menor a ${pipeThreshold}%</span>`);
+      if(pipeUnknown) parts.push(`${pipeUnknown} sin vacante ligada (no se pueden evaluar)`);
+      box.innerHTML = parts.join(' · ');
+      box.style.display='';
+    }
+
     function pipelineCardHTML(row){
       const st=row.student||{};
-      const m=pipeMatch(st);
+      const m=row.__m!==undefined?row.__m:pipeMatchOf(row);
       const avatar=avatarEl(st,'w-9 h-9 rounded-lg');
       return `
         <div class="pipe-card bg-white rounded-xl border border-slate-200 p-3 cursor-pointer shadow-sm hover:shadow-md transition" draggable="true" data-pc="${row.id}" ondragstart="onCardDragStart(event,'${row.id}')" ondragend="onCardDragEnd(event)" onclick="openCandidate('${st.id}','${pipeFilterOffer?pipeFilterOffer.id:''}')">
@@ -607,11 +714,73 @@
               <div class="text-[11px] text-slate-500 truncate">${escapeHTML(st.carrera||'')}</div>
             </div>
           </div>
-          ${m?`<div class="mt-2 flex items-center justify-between">
-            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Match con la vacante${m.ai?' · ✨IA':''}</span>
-            <span class="text-xs font-black ml-1 flex-shrink-0" style="color:${matchTier(m.pct).bar}">${m.pct}%</span>
-          </div>`:''}
+          ${m?`<div class="mt-2 flex items-center justify-between gap-1">
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wide truncate" title="${escapeHTML(m.offer.titulo||'')}">${pipeFilterOffer?'Match con la vacante':escapeHTML(m.offer.titulo||'la vacante')}</span>
+            <span class="flex items-center gap-1 flex-shrink-0">
+              ${m.ai?'<span class="text-[10px] font-bold text-purple-500" title="Match calculado con IA">✨IA</span>':''}
+              <span class="text-xs font-black" style="color:${matchTier(m.pct).bar}">${m.pct}%</span>
+            </span>
+          </div>`:`<div class="mt-2 text-[10px] font-bold text-slate-300 uppercase tracking-wide">Sin vacante ligada</div>`}
         </div>`;
+    }
+
+    // ── Limpieza del pipeline por match ────────────────────────
+    // Quita del tablero a los que el filtro de match está ocultando: likes
+    // dados a la ligera que inflan el proceso. No toca a los que no se pueden
+    // evaluar (sin vacante ligada) ni borra al candidato del pool.
+    function openPipeClean(){
+      if(!pipeHidden.length) return;
+      document.getElementById('pipeCleanThreshold').textContent = `menos de ${pipeThreshold}% de match`;
+      const list=document.getElementById('pipeCleanList');
+      list.innerHTML = pipeHidden
+        .slice().sort((a,b)=>(a.__m?a.__m.pct:0)-(b.__m?b.__m.pct:0))
+        .map(r=>{
+          const st=r.student||{}; const m=r.__m||{pct:0};
+          const off=(m.offer&&m.offer.titulo)||'';
+          return `<div class="flex items-center gap-2.5 bg-white rounded-xl border border-slate-200 p-2.5">
+            ${avatarEl(st,'w-8 h-8 rounded-lg')}
+            <div class="min-w-0 flex-1">
+              <div class="font-bold text-sm text-slate-800 truncate">${fullName(st)}</div>
+              <div class="text-[11px] text-slate-500 truncate">${escapeHTML(off||st.carrera||'')}</div>
+            </div>
+            <span class="text-xs font-black flex-shrink-0" style="color:${matchTier(m.pct).bar}">${m.pct}%</span>
+          </div>`;
+        }).join('');
+      const unk=document.getElementById('pipeCleanUnknown');
+      if(pipeUnknown){
+        unk.textContent = pipeUnknown===1
+          ? '1 candidato se queda fuera de esta limpieza: entró sin vacante ligada, así que no hay match contra el cual medirlo.'
+          : `${pipeUnknown} candidatos se quedan fuera de esta limpieza: entraron sin vacante ligada, así que no hay match contra el cual medirlos.`;
+        unk.classList.remove('hidden');
+      } else unk.classList.add('hidden');
+      document.getElementById('pipeCleanConfirmBtn').textContent = `Quitar ${pipeHidden.length}`;
+      document.getElementById('pipeCleanModal').classList.remove('hidden');
+    }
+    function closePipeClean(){ document.getElementById('pipeCleanModal').classList.add('hidden'); }
+
+    async function runPipeClean(){
+      const rows=pipeHidden.slice();
+      if(!rows.length){ closePipeClean(); return; }
+      const btn=document.getElementById('pipeCleanConfirmBtn');
+      btn.disabled=true; btn.textContent='Quitando…';
+      const ids=rows.map(r=>r.id);
+      try {
+        const { error } = await sb.from('pipeline_candidates').delete().in('id', ids).eq('company_id', companyId);
+        if(error) throw error;
+      } catch(e){
+        btn.disabled=false; btn.textContent=`Quitar ${rows.length}`;
+        alert('No se pudo limpiar el pipeline. Intenta de nuevo.');
+        return;
+      }
+      const gone=new Set(ids);
+      pipe.rows = pipe.rows.filter(r=>!gone.has(r.id));
+      // El like vive en pipeline_candidates: al salir del pipeline, se apaga el corazón.
+      const quedan=new Set(pipe.rows.map(r=>r.student&&r.student.id).filter(Boolean));
+      rows.forEach(r=>{ const sid=r.student&&r.student.id; if(sid && !quedan.has(sid)) likedIds.delete(sid); });
+      btn.disabled=false;
+      closePipeClean();
+      renderBoard();
+      renderGrid();   // los corazones del pool reflejan el pipeline
     }
 
     // ── Drag & drop de candidatos entre etapas ─────────────────
@@ -1612,7 +1781,7 @@
       const sel=document.getElementById('pipeOfferFilter');
       if(!sel) return;
       const cur=sel.value;
-      sel.innerHTML='<option value="">Todas las ofertas</option>'+offers.map(o=>`<option value="${o.id}">${escapeHTML(o.titulo)}</option>`).join('');
+      sel.innerHTML='<option value="">La vacante de cada uno</option>'+offers.map(o=>`<option value="${o.id}">${escapeHTML(o.titulo)}</option>`).join('');
       if([...sel.options].some(op=>op.value===cur)) sel.value=cur;
     }
 
