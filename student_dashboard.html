@@ -325,9 +325,6 @@
   .of-tabs { display:flex; gap:6px; padding:12px 20px 0; }
   .of-tab { flex:1; border:none; background:#EEF1FB; color:#64748B; font-family:inherit; font-size:12.5px; font-weight:800; padding:9px 6px; border-radius:10px; cursor:pointer; }
   .of-tab.on { background:linear-gradient(135deg,#7B68EE,#4A9EFF); color:#fff; }
-  .of-filters { display:flex; gap:7px; flex-wrap:wrap; padding:14px 20px 2px; }
-  .of-chip { border:1.5px solid #E2E8F0; background:#fff; color:#64748B; font-family:inherit; font-size:12px; font-weight:700; padding:6px 12px; border-radius:999px; cursor:pointer; }
-  .of-chip.on { border-color:#7B68EE; background:#F5F7FF; color:#6D5AE6; }
   .of-detail-link { background:none; border:none; color:#7B68EE; font-family:inherit; font-size:13px; font-weight:800; cursor:pointer; padding:6px 0; }
   .of-list { padding:14px 20px 24px; display:flex; flex-direction:column; gap:10px; }
   .of-list-item { display:flex; align-items:center; gap:12px; background:#fff; border:1px solid #E8EBF5; border-radius:14px; padding:12px 14px; cursor:pointer; }
@@ -523,7 +520,6 @@
     async function dbLoadOffers() {
       state.offers = []; state.offersIdx = 0; state.appliedCount = 0; state.savedCount = 0;
       state.deckAll = []; state.savedOffers = []; state.appliedOffers = []; state.acted = {};
-      state.offerFilters = state.offerFilters || { modalidad: '', area: '' };
       state.offerView = state.offerView || 'descubrir';
       if (!state.student) return;
       const { data: apps } = await sb.from('job_applications').select('offer_id, estado').eq('student_id', state.student.id);
@@ -545,17 +541,7 @@
       state.appliedOffers = all.filter(o => acted[o.id] === 'aplicada');
       state.savedCount = state.savedOffers.length;
       state.appliedCount = state.appliedOffers.length;
-      state.offers = applyOfferFilters(state.deckAll);
-    }
-    function applyOfferFilters(list) {
-      const f = state.offerFilters || {};
-      return (list || []).filter(o =>
-        (!f.modalidad || _norm(o.modalidad || '') === _norm(f.modalidad)) &&
-        (!f.area || _norm(o.area || '') === _norm(f.area))
-      );
-    }
-    function offerAreas() {
-      return [...new Set((state.deckAll || []).map(o => o.area).filter(Boolean))].slice(0, 6);
+      state.offers = (state.deckAll || []).slice();
     }
     async function dbApplyOffer(offerId, estado) {
       if (!state.student) return;
@@ -1463,11 +1449,6 @@
     }
 
     function setOfferView(v) { state.offerView = v; renderOfertas(); }
-    function setOfferFilter(k, val) {
-      const f = state.offerFilters || {}; f[k] = (f[k] === val ? '' : val); state.offerFilters = f;
-      state.offers = applyOfferFilters(state.deckAll); state.offersIdx = 0; renderOfertas();
-    }
-    function clearOfferFilters() { state.offerFilters = { modalidad: '', area: '' }; state.offers = applyOfferFilters(state.deckAll); state.offersIdx = 0; renderOfertas(); }
 
     function renderOfertas() {
       const el = document.getElementById('sec-ofertas');
@@ -1487,13 +1468,7 @@
     }
 
     function renderDiscover() {
-      const f = state.offerFilters || {};
-      const mods = ['Remoto', 'Híbrido', 'Presencial'];
-      const areas = offerAreas();
-      const chip = (k, label, val) => `<button class="of-chip ${f[k] === val ? 'on' : ''}" onclick="${escapeHTML('setOfferFilter(' + JSON.stringify(k) + ',' + JSON.stringify(val) + ')')}">${escapeHTML(label)}</button>`;
-      const showFilters = (state.deckAll || []).length > 0;
-      const filters = showFilters ? `<div class="of-filters">${mods.map(m => chip('modalidad', m, m)).join('')}${areas.map(a => chip('area', a, a)).join('')}</div>` : '';
-      return `${filters}<div class="swipe-wrapper" id="swipe-wrapper"></div>`;
+      return `<div class="swipe-wrapper" id="swipe-wrapper"></div>`;
     }
 
     function renderJobCard() {
@@ -1540,13 +1515,8 @@
     }
 
     function renderDeckEmpty() {
-      const f = state.offerFilters || {};
-      const hasFilters = !!(f.modalidad || f.area);
       const anyDeck = (state.deckAll || []).length > 0;
       const { pct } = computeProgress(state.student, state.testResults);
-      if (hasFilters && anyDeck) {
-        return `<div style="text-align:center;padding:44px 20px;"><div style="font-size:42px;margin-bottom:14px;">🔎</div><div style="font-size:15px;font-weight:800;color:#0F172A;margin-bottom:6px;">Nada con esos filtros</div><div style="font-size:13px;color:#64748B;margin-bottom:14px;">Prueba quitar alguno.</div><button class="of-detail-link" onclick="clearOfferFilters()">Quitar filtros</button></div>`;
-      }
       if (anyDeck) {
         return `<div style="text-align:center;padding:44px 20px;"><div style="font-size:42px;margin-bottom:14px;">🎉</div><div style="font-size:15px;font-weight:800;color:#0F172A;margin-bottom:6px;">¡Revisaste todas!</div><div style="font-size:13px;color:#64748B;margin-bottom:10px;">Te avisaremos cuando lleguen nuevas oportunidades.</div>${state.savedCount ? `<button class="of-detail-link" onclick="setOfferView('guardadas')">Ver tus guardadas →</button>` : ''}</div>`;
       }
@@ -1659,7 +1629,7 @@
       state.appliedOffers = (state.appliedOffers || []).filter(x => x.id !== offerId);
       if (o) { if (estado === 'aplicada') state.appliedOffers = [o, ...state.appliedOffers]; else state.savedOffers = [o, ...state.savedOffers]; state.acted[offerId] = estado; }
       state.savedCount = state.savedOffers.length; state.appliedCount = state.appliedOffers.length;
-      state.offers = applyOfferFilters(state.deckAll);
+      state.offers = (state.deckAll || []).slice();
       if (state.offersIdx >= state.offers.length) state.offersIdx = Math.max(0, state.offers.length - 1);
       closeOfferDetail(); renderOfertas();
     }
