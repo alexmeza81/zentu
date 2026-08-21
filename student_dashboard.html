@@ -1448,7 +1448,7 @@
     function offerMatch(o) {
       const st = state.student || {};
       const ai = state.aiMatchByOffer && state.aiMatchByOffer[o.id];
-      if (ai) return { pct: ai.pct, reason: ai.razon || 'Match personalizado con IA', ai: true };
+      if (ai) return { pct: ai.pct, ai: true };
       const skills = (Array.isArray(st.hard_skills) ? st.hard_skills : []).map(_norm);
       const inds = (Array.isArray(st.industrias) ? st.industrias : []).map(_norm);
       const tags = (Array.isArray(o.tags) ? o.tags : []).map(_norm);
@@ -1457,15 +1457,9 @@
       tags.forEach(t => { if (skills.some(s => s.includes(t) || t.includes(s)) || inds.some(i => i.includes(t) || t.includes(i))) hits++; });
       const tagRatio = tags.length ? hits / tags.length : 0;
       const carreraHit = !!(carrera && area && (carrera.includes(area) || area.includes(carrera)));
-      const arq = (state.testResults && state.testResults.clasificacion && state.testResults.clasificacion.arquetipo) || '';
       let pct = 62 + tagRatio * 30 + (carreraHit ? 8 : 0);
       pct = Math.max(60, Math.min(98, Math.round(pct)));
-      let reason;
-      if (carreraHit) reason = 'Va con tu carrera';
-      else if (hits > 0) reason = 'Coincide con tus habilidades';
-      else if (arq) reason = 'Encaja con tu perfil ' + arq.toLowerCase();
-      else reason = 'Nueva oportunidad para ti';
-      return { pct, reason };
+      return { pct };
     }
 
     function setOfferView(v) { state.offerView = v; renderOfertas(); }
@@ -1530,7 +1524,7 @@
           <div class="job-match-pill">
             <span class="job-match-num">${m.pct}%</span>
             ${m.ai ? '<span style="font-size:10px;font-weight:800;color:#7B68EE;">✨ IA</span>' : ''}
-            <span class="job-match-txt">${escapeHTML(m.reason)}</span>
+            <span class="job-match-txt">de match con tu perfil</span>
           </div>
           ${tags.length ? `<div class="job-tags">${tags.slice(0, 6).map(t => `<span class="job-tag">${escapeHTML(t)}</span>`).join('')}</div>` : ''}
           ${j.descripcion ? `<p class="job-desc">${escapeHTML(j.descripcion)}</p>` : ''}
@@ -1637,7 +1631,7 @@
             <div class="job-logo" style="background:${color}">${escapeHTML(initialsOf(o.empresa_nombre || 'Z'))}</div>
             <div><div class="job-company">${escapeHTML(o.empresa_nombre || 'Empresa')}</div><div class="job-title">${escapeHTML(o.titulo)}</div></div>
           </div>
-          <div class="job-match-pill" style="margin:12px 0;"><span class="job-match-num">${m.pct}%</span>${m.ai ? '<span style="font-size:10px;font-weight:800;color:#7B68EE;">✨ IA</span>' : ''}<span class="job-match-txt">${escapeHTML(m.reason)}</span></div>
+          <div class="job-match-pill" style="margin:12px 0;"><span class="job-match-num">${m.pct}%</span>${m.ai ? '<span style="font-size:10px;font-weight:800;color:#7B68EE;">✨ IA</span>' : ''}<span class="job-match-txt">de match con tu perfil</span></div>
           <div class="of-detail-meta">
             ${o.modalidad ? `<span>📍 ${escapeHTML(o.modalidad)}</span>` : ''}
             ${o.ubicacion ? `<span>🌎 ${escapeHTML(o.ubicacion)}</span>` : ''}
