@@ -116,6 +116,42 @@
             50%       { opacity: 0.5; transform: scale(1.3); }
         }
     </style>
+<script>
+/* Modo de lanzamiento. El HTML se sirve SIEMPRE con la copy de espera; si el
+   acceso está abierto, esto intercambia los bloques marcados con data-cuando.
+   Si Supabase no responde, la página se queda en la versión de espera:
+   degrada en vez de romperse.
+   Se usa la clase `hidden` (no CSS con display) porque cada elemento trae su
+   propio display de Tailwind — block, inline-flex — y sobrescribirlo desde CSS
+   lo rompía. */
+(function(){
+  var U='https://jlivxulenqbgsybqodiv.supabase.co';
+  var K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsaXZ4dWxlbnFiZ3N5YnFvZGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMjQ5ODEsImV4cCI6MjA4MzYwMDk4MX0.qG4Tx7yB9185vypoZa91y3PPCdphwqXRz8WQKsKBH5g';
+  var CLAVE='zentu_acceso_estudiantes';
+  function aplicar(abierto){
+    document.documentElement.setAttribute('data-acceso', abierto?'abierto':'cerrado');
+    document.querySelectorAll('[data-cuando]').forEach(function(el){
+      var toca = el.getAttribute('data-cuando') === (abierto?'abierto':'cerrado');
+      el.classList.toggle('hidden', !toca);
+    });
+  }
+  function arranca(){
+    var previo = null;
+    try{ previo = localStorage.getItem(CLAVE); }catch(e){}
+    aplicar(previo === '1');   /* valor de la última visita: evita el parpadeo */
+    fetch(U+'/rest/v1/app_config?select=estudiantes_abierto&limit=1',{headers:{apikey:K,Authorization:'Bearer '+K}})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var abierto = !!(d && d[0] && d[0].estudiantes_abierto);
+        aplicar(abierto);
+        try{ localStorage.setItem(CLAVE, abierto?'1':'0'); }catch(e){}
+      })
+      .catch(function(){ /* sin respuesta: se queda como está */ });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca);
+  else arranca();
+})();
+</script>
 </head>
 <body>
 
@@ -348,12 +384,18 @@
 
             <h2 class="text-4xl font-black text-slate-900 mb-4">¡Ya eres parte del movimiento!</h2>
 
-            <p class="text-lg text-slate-600 leading-relaxed mb-5">
-                Eres de los primeros en unirte a ZentU, <span id="successName" class="font-bold text-slate-900"></span>. Cuando abramos acceso, tú entras primero — con tu <span class="font-bold text-amber-600">Insignia de Fundador</span> lista en tu perfil.
+            <p data-cuando="cerrado" class="text-lg text-slate-600 leading-relaxed mb-5">
+                Eres de los primeros en unirte a ZentU, <span class="successName font-bold text-slate-900"></span>. Cuando abramos acceso, tú entras primero — con tu <span class="font-bold text-amber-600">Insignia de Fundador</span> lista en tu perfil.
             </p>
+            <p data-cuando="abierto" class="hidden text-lg text-slate-600 leading-relaxed mb-5">
+                Listo, <span class="successName font-bold text-slate-900"></span>. Ya puedes entrar y crear tu perfil — te tomará unos 10 minutos.
+            </p>
+            <a data-cuando="abierto" href="acceso.html" class="hidden block w-full gradient-purple-blue text-white px-8 py-4 rounded-xl font-black text-base shadow-lg hover:opacity-90 transition mb-6 text-center">
+                Crear mi perfil →
+            </a>
 
             <!-- Insignia visual -->
-            <div class="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 px-5 py-3 rounded-full mb-8">
+            <div data-cuando="cerrado" class="inline-flex items-center gap-2 bg-amber-50 border border-amber-200 px-5 py-3 rounded-full mb-8">
                 <svg class="w-5 h-5 text-amber-500" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
@@ -527,7 +569,7 @@
             }
 
             // Registro guardado: ya puede entrar.
-            document.getElementById('successName').textContent = nombre;
+            document.querySelectorAll('.successName').forEach(function(el){ el.textContent = nombre; });
             document.getElementById('successState').classList.remove('hidden');
 
             // Web3Forms: notificación por correo, falla silenciosa.

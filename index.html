@@ -135,6 +135,42 @@
             left: 100%;
         }
     </style>
+<script>
+/* Modo de lanzamiento. El HTML se sirve SIEMPRE con la copy de espera; si el
+   acceso está abierto, esto intercambia los bloques marcados con data-cuando.
+   Si Supabase no responde, la página se queda en la versión de espera:
+   degrada en vez de romperse.
+   Se usa la clase `hidden` (no CSS con display) porque cada elemento trae su
+   propio display de Tailwind — block, inline-flex — y sobrescribirlo desde CSS
+   lo rompía. */
+(function(){
+  var U='https://jlivxulenqbgsybqodiv.supabase.co';
+  var K='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpsaXZ4dWxlbnFiZ3N5YnFvZGl2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjgwMjQ5ODEsImV4cCI6MjA4MzYwMDk4MX0.qG4Tx7yB9185vypoZa91y3PPCdphwqXRz8WQKsKBH5g';
+  var CLAVE='zentu_acceso_estudiantes';
+  function aplicar(abierto){
+    document.documentElement.setAttribute('data-acceso', abierto?'abierto':'cerrado');
+    document.querySelectorAll('[data-cuando]').forEach(function(el){
+      var toca = el.getAttribute('data-cuando') === (abierto?'abierto':'cerrado');
+      el.classList.toggle('hidden', !toca);
+    });
+  }
+  function arranca(){
+    var previo = null;
+    try{ previo = localStorage.getItem(CLAVE); }catch(e){}
+    aplicar(previo === '1');   /* valor de la última visita: evita el parpadeo */
+    fetch(U+'/rest/v1/app_config?select=estudiantes_abierto&limit=1',{headers:{apikey:K,Authorization:'Bearer '+K}})
+      .then(function(r){ return r.json(); })
+      .then(function(d){
+        var abierto = !!(d && d[0] && d[0].estudiantes_abierto);
+        aplicar(abierto);
+        try{ localStorage.setItem(CLAVE, abierto?'1':'0'); }catch(e){}
+      })
+      .catch(function(){ /* sin respuesta: se queda como está */ });
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca);
+  else arranca();
+})();
+</script>
 </head>
 <body class="bg-white text-slate-900">
     
@@ -201,7 +237,8 @@
                 <!-- Early Access Badge -->
                 <div class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-full shadow-md mb-6 fade-in-up">
                     <div class="w-2 h-2 rounded-full gradient-purple-blue animate-pulse"></div>
-                    <span class="text-xs font-black gradient-text tracking-widest uppercase">Early Access · Únete a la waitlist</span>
+                    <span data-cuando="cerrado" class="text-xs font-black gradient-text tracking-widest uppercase">Early Access · Únete a la waitlist</span>
+                    <span data-cuando="abierto" class="hidden text-xs font-black gradient-text tracking-widest uppercase">Acceso abierto · Crea tu perfil</span>
                 </div>
 
                 <!-- Tagline -->
@@ -222,7 +259,13 @@
 
                 <!-- CTA Buttons -->
                 <div class="flex flex-col sm:flex-row items-center justify-center gap-4 fade-in-up delay-300">
-                    <button onclick="window.location.href='#estudiantes'" class="btn-primary w-full sm:w-auto gradient-purple-blue text-white px-8 py-4 rounded-xl font-bold shadow-card hover:shadow-card-hover text-lg flex items-center justify-center gap-3 group">
+                    <button data-cuando="abierto" onclick="window.location.href='acceso.html'" class="hidden btn-primary w-full sm:w-auto gradient-purple-blue text-white px-8 py-4 rounded-xl font-bold shadow-card hover:shadow-card-hover text-lg flex items-center justify-center gap-3 group">
+                        <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                        </svg>
+                        Crea tu perfil
+                    </button>
+                    <button data-cuando="cerrado" onclick="window.location.href='#estudiantes'" class="btn-primary w-full sm:w-auto gradient-purple-blue text-white px-8 py-4 rounded-xl font-bold shadow-card hover:shadow-card-hover text-lg flex items-center justify-center gap-3 group">
                         <svg class="w-6 h-6 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5z"/>
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
@@ -1283,7 +1326,13 @@
 
             <!-- CTAs -->
             <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <button onclick="window.location.href='waitlist-estudiantes.html'" class="w-full sm:w-auto gradient-purple-blue text-white px-10 py-5 rounded-xl font-black text-lg shadow-lg hover:opacity-90 transition flex items-center justify-center gap-3 group">
+                <button data-cuando="abierto" onclick="window.location.href='acceso.html'" class="hidden w-full sm:w-auto gradient-purple-blue text-white px-10 py-5 rounded-xl font-black text-lg shadow-lg hover:opacity-90 transition flex items-center justify-center gap-3 group">
+                    <svg class="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                    </svg>
+                    Crea tu perfil
+                </button>
+                <button data-cuando="cerrado" onclick="window.location.href='waitlist-estudiantes.html'" class="w-full sm:w-auto gradient-purple-blue text-white px-10 py-5 rounded-xl font-black text-lg shadow-lg hover:opacity-90 transition flex items-center justify-center gap-3 group">
                     <svg class="w-5 h-5 transition-transform group-hover:scale-110" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 14l9-5-9-5-9 5 9 5zm0 0l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
                     </svg>

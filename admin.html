@@ -74,6 +74,7 @@
         <button id="tab-resumen" onclick="showTab('resumen')" class="tab-btn active">Resumen</button>
         <button id="tab-metricas" onclick="showTab('metricas')" class="tab-btn">Métricas</button>
         <button id="tab-waitlist" onclick="showTab('waitlist')" class="tab-btn">Waitlist</button>
+        <button id="tab-lanzamiento" onclick="showTab('lanzamiento')" class="tab-btn">Lanzamiento</button>
         <button id="tab-usuarios" onclick="showTab('usuarios')" class="tab-btn">Usuarios</button>
         <button id="tab-monitoreo" onclick="showTab('monitoreo')" class="tab-btn">Monitoreo</button>
         <button id="tab-cumplimiento" onclick="showTab('cumplimiento')" class="tab-btn">Cumplimiento</button>
@@ -111,6 +112,83 @@
           </div>
         </div>
         <div class="bg-white rounded-2xl border border-slate-200 overflow-x-auto"><table class="w-full text-sm"><thead id="wlHead" class="text-left text-slate-400 border-b border-slate-100"></thead><tbody id="wlBody"></tbody></table></div>
+      </div>
+
+      <div id="sec-lanzamiento" class="tab-sec hidden">
+        <div class="mb-6">
+          <h1 class="text-3xl font-black tracking-tight">Lanzamiento</h1>
+          <p class="text-slate-500 font-medium mt-1">Mientras el acceso esté cerrado, la waitlist es una cola: la gente se registra pero no puede entrar. Al abrir, la landing cambia a «crea tu perfil» y quien esté en la lista puede acceder.</p>
+        </div>
+
+        <div id="lanzAviso" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 text-sm text-amber-900"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+
+          <div class="bg-white rounded-2xl border-2 p-6" id="lanzCardEst">
+            <div class="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <div class="text-xs font-black uppercase tracking-wide text-slate-400 mb-1">Estudiantes</div>
+                <div id="lanzEstEstado" class="text-2xl font-black">—</div>
+                <div id="lanzEstDesde" class="text-xs text-slate-500 mt-1"></div>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <div id="lanzEstConteo" class="text-3xl font-black grad-text">—</div>
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">en la lista</div>
+              </div>
+            </div>
+            <p id="lanzEstQue" class="text-sm text-slate-600 leading-relaxed mb-4"></p>
+            <button id="lanzEstBtn" onclick="alternarAcceso('estudiantes')" class="w-full py-3.5 rounded-xl font-black text-sm transition">—</button>
+          </div>
+
+          <div class="bg-white rounded-2xl border-2 p-6" id="lanzCardEmp">
+            <div class="flex items-start justify-between gap-3 mb-4">
+              <div>
+                <div class="text-xs font-black uppercase tracking-wide text-slate-400 mb-1">Empresas</div>
+                <div id="lanzEmpEstado" class="text-2xl font-black">—</div>
+                <div id="lanzEmpDesde" class="text-xs text-slate-500 mt-1"></div>
+              </div>
+              <div class="text-right flex-shrink-0">
+                <div id="lanzEmpConteo" class="text-3xl font-black grad-text">—</div>
+                <div class="text-xs font-bold text-slate-400 uppercase tracking-wide">en la lista</div>
+              </div>
+            </div>
+            <p id="lanzEmpQue" class="text-sm text-slate-600 leading-relaxed mb-4"></p>
+            <button id="lanzEmpBtn" onclick="alternarAcceso('empresas')" class="w-full py-3.5 rounded-xl font-black text-sm transition">—</button>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 mt-5">
+          <h2 class="text-lg font-black mb-1">Avisar por correo</h2>
+          <p class="text-sm text-slate-500 mb-4">Abrir el acceso no manda ningún correo. El aviso lo mandas tú desde Resend, con el texto de abajo y la lista de destinatarios.</p>
+          <div class="flex flex-wrap gap-2 mb-4">
+            <button onclick="copiarCorreos('estudiantes')" class="text-sm font-bold text-purple-700 bg-purple-50 border border-purple-200 px-4 py-2.5 rounded-xl hover:bg-purple-100 transition">Copiar correos de estudiantes</button>
+            <button onclick="copiarCorreos('empresas')" class="text-sm font-bold text-slate-600 border border-slate-200 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition">Copiar correos de empresas</button>
+            <a href="https://resend.com/emails" target="_blank" rel="noopener" class="text-sm font-bold text-slate-600 border border-slate-200 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition">Abrir Resend →</a>
+          </div>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-black uppercase tracking-wide text-slate-400">Asunto</span>
+              <button onclick="copiarTexto('correoAsunto', this)" class="text-xs font-bold text-purple-700">Copiar</button>
+            </div>
+            <div id="correoAsunto" class="text-sm font-semibold text-slate-900 mb-4">Ya puedes crear tu perfil en ZentU</div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-xs font-black uppercase tracking-wide text-slate-400">Cuerpo</span>
+              <button onclick="copiarTexto('correoCuerpo', this)" class="text-xs font-bold text-purple-700">Copiar</button>
+            </div>
+            <pre id="correoCuerpo" class="text-sm text-slate-700 whitespace-pre-wrap font-sans leading-relaxed">Hola,
+
+Te apuntaste a ZentU antes de que abriéramos. Ya puedes entrar.
+
+Crea tu perfil aquí: https://www.zentu.app/acceso.html
+Entra con este mismo correo — te mandamos un código de 6 dígitos, sin contraseñas.
+
+Adentro te toma unos 10 minutos: completas tu perfil y contestas el test de competencias. Con eso las empresas te encuentran por lo que sabes hacer, no por la escuela en la que estudias.
+
+Cualquier cosa, responde a este correo.
+
+— Alex, fundador de ZentU</pre>
+          </div>
+        </div>
       </div>
 
       <div id="sec-usuarios" class="tab-sec hidden">
@@ -210,6 +288,101 @@
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.getElementById('tab-'+id).classList.add('active');
     if(id==='monitoreo') loadMonitoring();
+    if(id==='lanzamiento') cargarLanzamiento();
+  }
+
+  // ── Lanzamiento: interruptores de acceso ────────────────────
+  // El acceso vive en app_config (una fila, dos banderas). check_waitlist_role
+  // las exige, así que estar en la waitlist no basta hasta que se abra el público.
+  let lanzCfg = null;
+
+  async function cargarLanzamiento(){
+    const aviso = document.getElementById('lanzAviso');
+    aviso.classList.add('hidden');
+    const { data, error } = await sb.from('app_config').select('*').maybeSingle();
+    if(error || !data){
+      aviso.textContent = 'No pudimos leer la configuración de lanzamiento. Revisa tu conexión y vuelve a entrar a esta pestaña.';
+      aviso.classList.remove('hidden');
+      return;
+    }
+    lanzCfg = data;
+    pintarLanzamiento();
+  }
+
+  function pintarLanzamiento(){
+    const est = cache.wl_estudiantes ? cache.wl_estudiantes.length : 0;
+    const emp = cache.wl_empresas ? cache.wl_empresas.length : 0;
+    pintarTarjeta('Est', 'estudiantes', lanzCfg.estudiantes_abierto, lanzCfg.abierto_estudiantes_at, est);
+    pintarTarjeta('Emp', 'empresas',    lanzCfg.empresas_abierto,    lanzCfg.abierto_empresas_at,    emp);
+  }
+
+  function pintarTarjeta(sufijo, publico, abierto, desde, conteo){
+    const card = document.getElementById('lanzCard'+sufijo);
+    const btn  = document.getElementById('lanz'+sufijo+'Btn');
+    document.getElementById('lanz'+sufijo+'Conteo').textContent = conteo;
+    document.getElementById('lanz'+sufijo+'Estado').textContent = abierto ? 'Acceso abierto' : 'En espera';
+    document.getElementById('lanz'+sufijo+'Estado').className = 'text-2xl font-black ' + (abierto ? 'text-emerald-600' : 'text-slate-900');
+    document.getElementById('lanz'+sufijo+'Desde').textContent = abierto && desde
+      ? 'Abierto desde el ' + new Date(desde).toLocaleDateString('es-MX', { day:'numeric', month:'long', year:'numeric' })
+      : '';
+    document.getElementById('lanz'+sufijo+'Que').textContent = abierto
+      ? 'Quien esté en la lista puede entrar, y quien se registre desde ahora entra de inmediato. La landing muestra «crea tu perfil».'
+      : 'Se pueden registrar, pero nadie entra todavía. La landing muestra «únete a la waitlist». Tú entras igual, por ser admin.';
+    card.className = 'bg-white rounded-2xl border-2 p-6 ' + (abierto ? 'border-emerald-300' : 'border-slate-200');
+    btn.textContent = abierto ? 'Cerrar el acceso' : ('Abrir acceso a ' + publico);
+    btn.className = 'w-full py-3.5 rounded-xl font-black text-sm transition ' + (abierto
+      ? 'text-rose-600 bg-rose-50 border border-rose-200 hover:bg-rose-100'
+      : 'text-white grad hover:opacity-90');
+    btn.disabled = false;
+  }
+
+  async function alternarAcceso(publico){
+    if(!lanzCfg) return;
+    const campo   = publico === 'estudiantes' ? 'estudiantes_abierto' : 'empresas_abierto';
+    const sufijo  = publico === 'estudiantes' ? 'Est' : 'Emp';
+    const abriendo = !lanzCfg[campo];
+    const conteo  = (publico === 'estudiantes' ? cache.wl_estudiantes : cache.wl_empresas || []).length;
+
+    const confirmacion = abriendo
+      ? 'Vas a ABRIR el acceso a ' + publico + '.\n\n' + conteo + ' en la lista podrán entrar, y la landing cambiará a «crea tu perfil».\n\nEsto NO manda ningún correo: el aviso lo mandas tú desde Resend.\n\n¿Continuar?'
+      : 'Vas a CERRAR el acceso a ' + publico + '.\n\nDejarán de poder entrar (tú no, por ser admin) y la landing volverá a «únete a la waitlist».\n\n¿Continuar?';
+    if(!confirm(confirmacion)) return;
+
+    const btn = document.getElementById('lanz'+sufijo+'Btn');
+    btn.disabled = true; btn.textContent = abriendo ? 'Abriendo…' : 'Cerrando…';
+    document.getElementById('lanzAviso').classList.add('hidden');  // el aviso anterior ya no aplica
+
+    const patch = {}; patch[campo] = abriendo;
+    const { data, error } = await sb.from('app_config').update(patch).eq('id', true).select().maybeSingle();
+    if(error || !data){
+      const aviso = document.getElementById('lanzAviso');
+      aviso.textContent = 'No se pudo cambiar el acceso: ' + ((error && error.message) || 'la base no confirmó el cambio') + '. Nada cambió.';
+      aviso.classList.remove('hidden');
+      pintarLanzamiento();
+      return;
+    }
+    lanzCfg = data;
+    pintarLanzamiento();
+    if(abriendo){
+      const aviso = document.getElementById('lanzAviso');
+      aviso.innerHTML = '<strong>Acceso abierto.</strong> Falta el paso del correo: copia los destinatarios y el texto de abajo, y mándalo desde Resend.';
+      aviso.classList.remove('hidden');
+    }
+  }
+
+  function copiarCorreos(publico){
+    const filas = (publico === 'estudiantes' ? cache.wl_estudiantes : cache.wl_empresas) || [];
+    const correos = filas.map(r => r.email).filter(Boolean);
+    if(!correos.length){ alert('No hay correos en esa lista todavía.'); return; }
+    navigator.clipboard.writeText(correos.join(', '))
+      .then(() => alert(correos.length + ' correo(s) copiados al portapapeles.'))
+      .catch(() => alert('No se pudo copiar. Usa «Exportar CSV» en la pestaña Waitlist.'));
+  }
+
+  function copiarTexto(id, btn){
+    navigator.clipboard.writeText(document.getElementById(id).textContent)
+      .then(() => { const t = btn.textContent; btn.textContent = 'Copiado ✓'; setTimeout(() => btn.textContent = t, 1500); })
+      .catch(() => alert('No se pudo copiar.'));
   }
 
   // ── Monitoreo: gasto de IA (DeepSeek) + errores ──
