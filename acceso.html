@@ -224,6 +224,14 @@
       el.textContent = text;
       el.style.display = 'block';
     }
+    // Igual que showMsg pero permite un enlace de salida. El texto NO viene del
+    // usuario: son mensajes fijos de este archivo, por eso el innerHTML es seguro.
+    function showMsgHTML(stepNum, html, isErr) {
+      const el = document.getElementById('msg' + stepNum);
+      el.className = 'auth-msg ' + (isErr ? 'msg-err' : 'msg-ok');
+      el.innerHTML = html;
+      el.style.display = 'block';
+    }
     function clearMsg(stepNum) {
       const el = document.getElementById('msg' + stepNum);
       el.style.display = 'none';
@@ -235,10 +243,19 @@
     }
 
     // ── Waitlist check ───────────────────────────────────────
+    // Devuelve 'student' | 'company' | null (no está) y lanza si la petición falló.
+    // Colapsar ambos casos hacía que una caída del servidor se le presentara al
+    // usuario como un rechazo — decía "no estás en la lista" cuando la verdad era
+    // que nadie contestó.
     async function checkWaitlist(email) {
-      const { data, error } = await sb.rpc('check_waitlist_role', { p_email: email });
-      if (error || !data) return null;
-      return data; // 'student' | 'company'
+      let data, error;
+      try {
+        ({ data, error } = await sb.rpc('check_waitlist_role', { p_email: email }));
+      } catch (netErr) {
+        throw netErr; // fallo de red: la promesa se rechaza
+      }
+      if (error) throw error;
+      return data || null;
     }
 
     // ── Step 1: Email submit ─────────────────────────────────
@@ -251,7 +268,12 @@
       try {
         const role = await checkWaitlist(email);
         if (!role) {
-          showMsg(1, 'Este correo no está en nuestra lista de acceso.', true);
+          // No está en la lista: dale la salida en vez de dejarlo sin camino.
+          showMsgHTML(1,
+            'Este correo no está en nuestra lista de acceso. ' +
+            '<a href="waitlist-estudiantes.html" style="text-decoration:underline;font-weight:700">Regístrate como estudiante</a>' +
+            ' o <a href="waitlist-empresas.html" style="text-decoration:underline;font-weight:700">como empresa</a>.',
+            true);
           return;
         }
 
@@ -268,7 +290,13 @@
         document.getElementById('emailShown').textContent = email;
         goToStep2();
       } catch (err) {
-        showMsg(1, err.message || 'No pudimos enviar el código. Intenta de nuevo.', true);
+        // Un fallo de petición NO es un rechazo: decirlo tal cual evita que la
+        // gente crea que la bloqueamos cuando en realidad el servidor no contestó.
+        const offline = (typeof navigator !== 'undefined' && navigator.onLine === false);
+        const netish = offline || /fetch|network|failed to|load failed|networkerror/i.test(err && err.message || '');
+        showMsg(1, netish
+          ? 'No pudimos conectar con el servidor. Revisa tu conexión e inténtalo de nuevo.'
+          : (err.message || 'No pudimos enviar el código. Intenta de nuevo.'), true);
       } finally {
         setLoading('emailBtn', false, 'Enviar código');
       }
