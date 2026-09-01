@@ -354,9 +354,14 @@
         <span style="width:8px;"></span>
         <span class="topbar-greeting" id="topbar-greeting">Mi Perfil</span>
       </div>
-      <div class="topbar-bell">
-        <svg width="16" height="16" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
-        <div class="notif-dot" id="notif-dot" style="display:none;"></div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <div class="topbar-bell">
+          <svg width="16" height="16" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          <div class="notif-dot" id="notif-dot" style="display:none;"></div>
+        </div>
+        <button class="topbar-bell" onclick="openAccountSheet()" aria-label="Cuenta y ajustes" style="font-family:inherit;">
+          <svg width="16" height="16" fill="none" stroke="#475569" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="7" r="3.2"/><path stroke-linecap="round" d="M4.8 20c0-3.4 3.2-5.6 7.2-5.6s7.2 2.2 7.2 5.6"/></svg>
+        </button>
       </div>
     </div>
 
@@ -428,7 +433,27 @@
     </div>
     <div id="edit-body" style="padding:0 20px;"></div>
     <div id="edit-error" style="display:none;color:#EF4444;font-size:12.5px;padding:6px 20px 0;"></div>
-    <div class="modal-cta" onclick="saveEditSheet()"><div class="modal-cta-text">Guardar</div></div>
+    <div class="modal-cta" id="edit-save" onclick="saveEditSheet()"><div class="modal-cta-text" id="edit-save-text">Guardar</div></div>
+  </div>
+</div>
+
+<!-- MODAL: cuenta (cerrar sesión, privacidad) -->
+<div class="modal-overlay" id="account-modal" onclick="if(event.target.id==='account-modal')closeAccountSheet()">
+  <div class="modal-sheet">
+    <div class="modal-head">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Tu cuenta</div>
+      <button class="sheet-close" onclick="closeAccountSheet()" aria-label="Cerrar">✕</button>
+    </div>
+    <div style="padding:4px 20px 20px;">
+      <div id="account-email" style="font-size:13px;color:#64748B;padding:6px 0 14px;word-break:break-all;"></div>
+      <a href="aviso-privacidad.html" target="_blank" rel="noopener" style="display:block;padding:13px 0;border-top:1px solid #F1F5F9;font-size:14.5px;font-weight:600;color:#0F172A;text-decoration:none;">Aviso de privacidad</a>
+      <a href="terminos.html" target="_blank" rel="noopener" style="display:block;padding:13px 0;border-top:1px solid #F1F5F9;font-size:14.5px;font-weight:600;color:#0F172A;text-decoration:none;">Términos y condiciones</a>
+      <div style="border-top:1px solid #F1F5F9;padding-top:14px;margin-top:2px;">
+        <div style="font-size:12px;color:#94A3B8;line-height:1.5;margin-bottom:12px;">¿Quieres borrar tu cuenta y tus datos? Escríbenos a <a href="mailto:hola@zentu.app" style="color:#7B68EE;font-weight:700;">hola@zentu.app</a> y lo hacemos.</div>
+        <button onclick="logoutStudent()" style="width:100%;padding:13px;border:1px solid #FECACA;border-radius:14px;background:#FEF2F2;color:#B91C1C;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;">Cerrar sesión</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -475,18 +500,43 @@
     }
 
     async function init() {
+      let session;
+      // 1) Autenticación. Solo un fallo AQUÍ justifica mandar al login.
       try {
-        const { data: { session }, error } = await sb.auth.getSession();
-        if (error || !session) {
-          window.location.href = 'acceso.html';
-          return;
-        }
-        document.getElementById('app').style.display = 'block';
-        await loadDashboard(session.user);
+        const { data, error } = await sb.auth.getSession();
+        if (error || !data.session) { window.location.href = 'acceso.html'; return; }
+        session = data.session;
       } catch (err) {
         console.error('Auth init failed:', err);
         window.location.href = 'acceso.html';
+        return;
       }
+      // 2) Carga de datos. Si esto truena, la sesión SIGUE siendo válida: expulsar
+      // al login hacía creer al estudiante que había perdido su cuenta.
+      document.getElementById('app').style.display = 'block';
+      try {
+        await loadDashboard(session.user);
+      } catch (err) {
+        console.error('Dashboard load failed:', err);
+        showLoadError();
+      }
+    }
+
+    // Pantalla de reintento para cuando la sesión es buena pero los datos no cargan.
+    function showLoadError() {
+      const app = document.getElementById('app');
+      if (!app || document.getElementById('load-error')) return;
+      const box = document.createElement('div');
+      box.id = 'load-error';
+      box.style.cssText = 'position:fixed;inset:0;z-index:200;background:#F0F2FF;display:flex;align-items:center;justify-content:center;padding:28px;text-align:center;';
+      box.innerHTML = '<div style="max-width:320px;">'
+        + '<div style="font-size:40px;margin-bottom:14px;">📡</div>'
+        + '<div style="font-size:17px;font-weight:800;color:#0F172A;margin-bottom:8px;">No pudimos cargar tus datos</div>'
+        + '<div style="font-size:13.5px;color:#64748B;line-height:1.55;margin-bottom:18px;">Tu sesión sigue activa. Suele ser la conexión — inténtalo de nuevo.</div>'
+        + '<button id="load-error-retry" style="width:100%;padding:13px;border:none;border-radius:14px;background:linear-gradient(135deg,#7B68EE,#4A9EFF);color:#fff;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer;">Reintentar</button>'
+        + '</div>';
+      app.appendChild(box);
+      document.getElementById('load-error-retry').onclick = () => location.reload();
     }
 
     const state = { user:null, waitlist:null, student:null, testResults:null, messages:[], companies:{}, activeThread:null, offers:[], offersIdx:0, appliedCount:0, savedCount:0 };
@@ -1115,9 +1165,60 @@
     ];
 
     let testState = { active:false, loading:false, idx:0, answers:{}, timings:{}, order:{}, shownAt:0 };
-    function startTest(){ testState = { active:true, loading:false, idx:0, answers:{}, timings:{}, order:{}, shownAt:Date.now() }; renderTest(state); }
+
+    // ── Persistencia del test ────────────────────────────────
+    // Son 18 preguntas y ~8 min, casi siempre en celular. Sin esto, recargar,
+    // una llamada entrante o que iOS descargue la pestaña borraba todo. Se guarda
+    // por usuario para que dos cuentas en el mismo teléfono no se pisen.
+    const TEST_KEY = 'zentu_test_progreso';
+    function testStorageKey(){
+      const uid = (state.user && state.user.id) || 'anon';
+      return TEST_KEY + ':' + uid;
+    }
+    function saveTestProgress(){
+      if(!testState.active) return;
+      try {
+        localStorage.setItem(testStorageKey(), JSON.stringify({
+          idx: testState.idx, answers: testState.answers,
+          timings: testState.timings, order: testState.order, savedAt: Date.now(),
+        }));
+      } catch(e){ /* modo privado o cuota llena: seguir sin persistencia */ }
+    }
+    function clearTestProgress(){
+      try { localStorage.removeItem(testStorageKey()); } catch(e){}
+    }
+    function restoreTestProgress(){
+      let raw;
+      try { raw = localStorage.getItem(testStorageKey()); } catch(e){ return false; }
+      if(!raw) return false;
+      try {
+        const p = JSON.parse(raw);
+        // Caduca a los 7 días: un avance más viejo ya no representa a la persona.
+        if(!p || typeof p.idx !== 'number' || (Date.now() - (p.savedAt||0)) > 7*24*60*60*1000){
+          clearTestProgress(); return false;
+        }
+        // Si ya estaba en la última y no quedó guardado, retrocede una para que
+        // pueda reenviar en vez de quedar atorado en una pantalla sin salida.
+        const idx = Math.min(Math.max(0, p.idx), FC_ITEMS.length - 1);
+        testState = { active:true, loading:false, idx, answers:p.answers||{},
+                      timings:p.timings||{}, order:p.order||{}, shownAt:Date.now() };
+        return true;
+      } catch(e){ clearTestProgress(); return false; }
+    }
+    function hasTestProgress(){
+      try {
+        const raw = localStorage.getItem(testStorageKey());
+        if(!raw) return false;
+        const p = JSON.parse(raw);
+        return !!(p && typeof p.idx === 'number' && Object.keys(p.answers||{}).length > 0
+                  && (Date.now() - (p.savedAt||0)) <= 7*24*60*60*1000);
+      } catch(e){ return false; }
+    }
+    function resumeTest(){ if(restoreTestProgress()) renderTest(state); else startTest(); }
+
+    function startTest(){ clearTestProgress(); testState = { active:true, loading:false, idx:0, answers:{}, timings:{}, order:{}, shownAt:Date.now() }; renderTest(state); }
     function cancelTest(){ testState.active=false; renderTest(state); }
-    function testBack(){ if(testState.idx>0){ testState.idx--; testState.shownAt=Date.now(); renderTest(state); } else cancelTest(); }
+    function testBack(){ if(testState.idx>0){ testState.idx--; testState.shownAt=Date.now(); saveTestProgress(); renderTest(state); } else cancelTest(); }
     function fcOrder(i){
       if(testState.order[i]) return testState.order[i];
       const it=FC_ITEMS[i]; let idx=it.opts.map((_,k)=>k);
@@ -1128,7 +1229,8 @@
       const code=FC_ITEMS[i].code;
       testState.answers[code]=canon;
       testState.timings[code]=Math.max(0, Date.now()-testState.shownAt);
-      if(testState.idx < FC_ITEMS.length-1){ testState.idx++; testState.shownAt=Date.now(); renderTest(state); } else submitTest();
+      if(testState.idx < FC_ITEMS.length-1){ testState.idx++; testState.shownAt=Date.now(); saveTestProgress(); renderTest(state); }
+      else { saveTestProgress(); submitTest(); }
     }
 
     async function submitTest(){
@@ -1144,6 +1246,7 @@
         return;
       }
       testState.loading=false; testState.active=false;
+      clearTestProgress();   // solo al confirmar: si falló arriba, el avance sigue ahí
       renderTest(state); renderPerfil(state);
     }
 
@@ -1217,15 +1320,18 @@
 
       if(hasResult){ el.innerHTML = renderTestResult(c); return; }
 
+      // Si hay avance guardado, ofrecer retomarlo antes que empezar de cero.
+      const enCurso = hasTestProgress();
       el.innerHTML = `
         <div class="test-banner">
           <div class="test-banner-icon">🧭</div>
           <div>
             <div class="test-banner-title">Test de Talento IA</div>
-            <div class="test-banner-sub">18 preguntas · ~8 min</div>
+            <div class="test-banner-sub">${enCurso ? 'Tienes un test a medias' : '18 preguntas · ~8 min'}</div>
           </div>
-          <button class="test-banner-btn" onclick="startTest()">Empezar →</button>
+          <button class="test-banner-btn" onclick="${enCurso ? 'resumeTest()' : 'startTest()'}">${enCurso ? 'Continuar →' : 'Empezar →'}</button>
         </div>
+        ${enCurso ? `<div style="padding:10px 20px 0;"><button onclick="startTest()" style="background:none;border:none;padding:0;font-family:inherit;font-size:12.5px;font-weight:700;color:#7B68EE;cursor:pointer;text-decoration:underline;">Empezar de nuevo</button></div>` : ''}
         <div class="section-title">¿Qué obtienes?</div>
         <div class="card" style="margin:0 20px 24px;padding:18px 20px;">
           <div style="font-size:13px;color:#475569;line-height:1.7;">En cada pregunta eliges <strong>la opción que más se parece a ti</strong> — no hay respuestas correctas. Con eso construimos tu <strong>perfil de fortalezas</strong> en 8 competencias (gráfica de radar), un <strong>feedback personalizado</strong> y los roles que más encajan contigo. Es lo que ven los reclutadores.</div>
@@ -1787,6 +1893,22 @@
       document.getElementById('edit-modal').classList.add('open');
     }
     function closeEditSheet() { document.getElementById('edit-modal').classList.remove('open'); }
+
+    // ── Cuenta: salir y accesos legales ──────────────────────
+    // Sin esto no había forma de cerrar sesión: quien entraba desde una compu
+    // del laboratorio dejaba su perfil y su teléfono abiertos.
+    function openAccountSheet() {
+      const em = document.getElementById('account-email');
+      if (em) em.textContent = (state.user && state.user.email) || '';
+      document.getElementById('account-modal').classList.add('open');
+    }
+    function closeAccountSheet() { document.getElementById('account-modal').classList.remove('open'); }
+    async function logoutStudent() {
+      try { await sb.auth.signOut(); } catch (e) { console.error('signOut falló:', e); }
+      // El avance del test es local: si alguien más usa el teléfono, no debe verlo.
+      try { clearTestProgress(); } catch (e) {}
+      location.replace('acceso.html');
+    }
     function goToTest() { closeEditSheet(); showSection('test'); }
     function closeEditOutside(e) { if (!e.target.closest('.modal-sheet')) closeEditSheet(); }
 
@@ -1883,8 +2005,29 @@
       const patch = {};
       sec.fields.forEach(f => { patch[f.key] = editDraft[f.key]; });
       if (sec.fields.some(f => f.type === 'availability')) patch.disponible_desde = editDraft.disponible_desde;
-      await dbUpsertStudent(state.user, patch);
-      await maybeUnlockRecruiting();
+
+      // dbUpsertStudent lanza si la BD falla. Sin este catch el modal se quedaba
+      // abierto y mudo: el botón "Guardar" parecía no hacer nada.
+      const btn = document.getElementById('edit-save');
+      const btnTxt = document.getElementById('edit-save-text');
+      const prevLabel = btnTxt ? btnTxt.textContent : null;
+      const setSaving = (on) => {
+        if (btnTxt) btnTxt.textContent = on ? 'Guardando…' : prevLabel;
+        if (btn) { btn.style.pointerEvents = on ? 'none' : ''; btn.style.opacity = on ? '.6' : ''; }
+      };
+      setSaving(true);
+      try {
+        await dbUpsertStudent(state.user, patch);
+        await maybeUnlockRecruiting();
+      } catch (err) {
+        console.error('Guardar perfil falló:', err);
+        errEl.textContent = 'No pudimos guardar. Revisa tu conexión e inténtalo de nuevo.';
+        errEl.style.display = 'block';
+        errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      } finally {
+        setSaving(false);
+      }
       closeEditSheet();
       renderPerfil(state);
     }
