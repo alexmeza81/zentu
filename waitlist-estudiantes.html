@@ -189,9 +189,13 @@
                         Acceso anticipado
                     </div>
 
-                    <h1 class="text-4xl md:text-5xl font-black text-slate-900 leading-[1.1] mb-5 tracking-tight">
+                    <h1 data-cuando="cerrado" class="text-4xl md:text-5xl font-black text-slate-900 leading-[1.1] mb-5 tracking-tight">
                         Sé de los primeros<br/>en unirte al<br/>
                         <span class="gradient-text">movimiento ZentU.</span>
+                    </h1>
+                    <h1 data-cuando="abierto" class="hidden text-4xl md:text-5xl font-black text-slate-900 leading-[1.1] mb-5 tracking-tight">
+                        Crea tu perfil y<br/>que las empresas<br/>
+                        <span class="gradient-text">te encuentren.</span>
                     </h1>
 
                     <p class="text-lg text-slate-500 mb-8 leading-relaxed">
@@ -257,8 +261,14 @@
                     <div class="bg-white rounded-3xl shadow-card p-8">
 
                         <div class="mb-7">
-                            <h2 class="text-2xl font-black text-slate-900 mb-1">Regístrate en la waitlist</h2>
-                            <p class="text-sm text-slate-500">Te avisamos en cuanto abramos acceso.</p>
+                            <div data-cuando="cerrado">
+                                <h2 class="text-2xl font-black text-slate-900 mb-1">Regístrate en la waitlist</h2>
+                                <p class="text-sm text-slate-500">Te avisamos en cuanto abramos acceso.</p>
+                            </div>
+                            <div data-cuando="abierto" class="hidden">
+                                <h2 class="text-2xl font-black text-slate-900 mb-1">Crea tu cuenta</h2>
+                                <p class="text-sm text-slate-500">Es gratis. Al terminar entras y completas tu perfil.</p>
+                            </div>
                         </div>
 
                         <form id="waitlistForm" onsubmit="handleSubmit(event)" class="space-y-5" novalidate>
@@ -355,9 +365,14 @@
 
                             <p id="submitErr" class="hidden text-sm font-semibold text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3" role="alert"></p>
 
+                            <p data-cuando="abierto" class="hidden text-center text-sm text-slate-500 pt-1">
+                                ¿Ya tienes cuenta? <a href="acceso.html" class="font-bold text-purple-700 underline">Inicia sesión</a>
+                            </p>
+
                             <!-- Submit -->
                             <button type="submit" id="submitBtn" class="w-full gradient-purple-blue text-white py-4 rounded-xl font-black text-base hover:opacity-90 transition shadow-lg flex items-center justify-center gap-2 mt-2">
-                                Unirme al movimiento
+                                <span data-cuando="cerrado">Unirme al movimiento</span>
+                                <span data-cuando="abierto" class="hidden">Crear mi cuenta</span>
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
                                 </svg>
@@ -544,7 +559,8 @@
             // La función servidor valida el consentimiento y escribe la bitácora.
             const resetBtn = () => {
                 btn.disabled = false;
-                btn.innerHTML = `Unirme al movimiento <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>`;
+                var abierto = document.documentElement.getAttribute('data-acceso') === 'abierto';
+                btn.innerHTML = (abierto ? 'Crear mi cuenta' : 'Unirme al movimiento') + ` <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M17 8l4 4m0 0l-4 4m4-4H3"/></svg>`;
             };
 
             let sbError = null;
