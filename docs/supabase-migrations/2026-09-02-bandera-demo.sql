@@ -32,3 +32,17 @@ comment on column public.companies.demo is
 -- La Edge Function enviar-acceso-abierto filtra `demo = false` al buscar
 -- pendientes. Sin eso, el panel diría "nadie pendiente" —su resumen sí los
 -- excluye— mientras la función les seguiría mandando el correo.
+
+-- ── 4. La actividad tampoco cuenta al fundador ──────────────────────────────
+-- (migración actividad_excluye_usuarios_demo)
+-- El bloque de actividad seguía contando auth.users en crudo: cada vez que el
+-- fundador entraba a su propio panel, "activos hoy" marcaba 1. Ahora hay un
+-- criterio único para decidir si una cuenta es de prueba.
+--
+-- create function public.es_usuario_demo(p_uid uuid, p_email text) returns boolean
+--   -- true si: está en `admins`, o su perfil/empresa/waitlist están marcados demo.
+--   -- Solo se usa para métricas; no concede ni quita permisos.
+--
+-- `activos_24h` y `activos_7d` lo aplican. La LISTA de sesiones sigue mostrando
+-- a todos —es la pantalla para vigilar si alguien se atora— pero cada fila trae
+-- `es_demo` y el panel le pinta una etiqueta ámbar.

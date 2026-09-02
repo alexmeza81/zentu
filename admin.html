@@ -250,7 +250,7 @@ Cualquier cosa, responde a este correo.
         <div class="flex items-end justify-between flex-wrap gap-3 mb-3">
           <div>
             <h2 class="text-lg font-black">Sesiones</h2>
-            <p class="text-sm text-slate-500">Quién ha entrado y hasta dónde llegó. Ordenado por sesión más reciente.</p>
+            <p class="text-sm text-slate-500">Quién ha entrado y hasta dónde llegó. Ordenado por sesión más reciente. <span class="text-slate-400">Salen todos, incluidas las cuentas de prueba, para ver si alguien se atora; los contadores de la derecha sí las excluyen.</span></p>
           </div>
           <div id="actividadResumen" class="flex gap-2 flex-wrap"></div>
         </div>
@@ -706,7 +706,8 @@ Cualquier cosa, responde a este correo.
     document.getElementById('sesionesBody').innerHTML = filas.length ? filas.map(r => {
       const si = (v) => v ? '<span class="text-emerald-600 font-bold">✓</span>' : '<span class="text-slate-300">—</span>';
       return `<tr class="border-b border-slate-50">
-        <td class="px-4 py-2.5 font-semibold text-slate-700">${escapeHTML(r.email||'')}</td>
+        <td class="px-4 py-2.5 font-semibold text-slate-700">${escapeHTML(r.email||'')}${r.es_demo
+          ? ' <span class="text-[10px] font-black px-1.5 py-0.5 rounded align-middle" style="background:#FEF3C7;color:#B45309">DEMO</span>' : ''}</td>
         <td class="px-4 py-2.5 text-slate-500">${escapeHTML(r.tipo||'—')}</td>
         <td class="px-4 py-2.5 text-slate-500">${escapeHTML(fechaCorta(r.ultima_sesion))}</td>
         <td class="px-4 py-2.5">${si(r.perfil_completo)}</td>

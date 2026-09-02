@@ -17,6 +17,17 @@
     // Fuera también las pruebas locales.
     if (location.protocol === 'file:' || /localhost|127\.0\.0\.1/.test(location.hostname)) return;
 
+    // Autoexclusión por navegador. El fundador recarga su propia landing decenas de
+    // veces al día y eso infla el tráfico del lanzamiento; abrir una vez
+    // zentu.app/?zentu_no_contar=1 en cada dispositivo deja de contar para siempre.
+    // Con =0 se vuelve a contar. Es una marca local: no identifica a nadie.
+    try {
+      var interruptor = new URLSearchParams(location.search).get('zentu_no_contar');
+      if (interruptor === '1') localStorage.setItem('zentu_no_contar', '1');
+      if (interruptor === '0') localStorage.removeItem('zentu_no_contar');
+      if (localStorage.getItem('zentu_no_contar') === '1') return;
+    } catch (e) { /* modo privado: sin autoexclusión, se cuenta */ }
+
     var ruta = (location.pathname || '/').slice(0, 120);
 
     // Id de pestaña, efímero. Solo sirve para no contar diez veces a quien recarga.
