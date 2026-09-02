@@ -69,6 +69,7 @@
         </div>
         <div class="flex items-center gap-4">
           <span id="adminEmail" class="hidden sm:block text-sm font-semibold text-slate-500"></span>
+          <div id="selectorDatos" class="flex items-center gap-1 bg-slate-100 rounded-xl p-1" title="Cambia entre los registros de demostración y los reales"></div>
           <button id="btnRefrescar" onclick="refrescar(true)" title="Volver a leer los datos" class="flex items-center gap-1.5 text-sm font-bold text-purple-700 border border-purple-200 px-3 py-2 rounded-xl hover:bg-purple-50 transition">
             <span id="refrescarIcono">↻</span>
             <span id="refrescarTexto" class="hidden sm:inline">Actualizar</span>
@@ -110,7 +111,7 @@
 
       <div id="sec-waitlist" class="tab-sec hidden">
         <div class="flex items-end justify-between flex-wrap gap-3 mb-5">
-          <div><h1 class="text-3xl font-black tracking-tight">Waitlist</h1><p class="text-slate-500 font-medium mt-1">Registros previos al lanzamiento.</p></div>
+          <div><h1 class="text-3xl font-black tracking-tight">Waitlist</h1><p class="text-slate-500 font-medium mt-1">Registros previos al lanzamiento. <span class="text-slate-400">Todos son reales: aquí no hay datos de demostración, así que el selector no aplica.</span></p></div>
           <div class="flex items-center gap-2">
             <select id="wlKind" onchange="renderWaitlist()" class="py-2 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600"><option value="estudiantes">Estudiantes</option><option value="empresas">Empresas</option></select>
             <input id="wlSearch" oninput="renderWaitlist()" placeholder="Buscar…" class="py-2 px-3 border border-slate-200 rounded-xl text-sm w-48 focus:outline-none focus:border-purple-400"/>
@@ -200,7 +201,7 @@ Cualquier cosa, responde a este correo.
 
       <div id="sec-usuarios" class="tab-sec hidden">
         <div class="flex items-end justify-between flex-wrap gap-3 mb-5">
-          <div><h1 class="text-3xl font-black tracking-tight">Usuarios</h1><p class="text-slate-500 font-medium mt-1">Estudiantes y empresas registrados.</p></div>
+          <div><h1 class="text-3xl font-black tracking-tight">Usuarios</h1><p class="text-slate-500 font-medium mt-1">Estudiantes y empresas registrados. <span class="text-slate-400">Las empresas no tienen marca de demostración, así que se muestran siempre.</span></p></div>
           <div class="flex items-center gap-2">
             <select id="usKind" onchange="renderUsers()" class="py-2 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600"><option value="students">Estudiantes</option><option value="companies">Empresas</option></select>
             <input id="usSearch" oninput="renderUsers()" placeholder="Buscar…" class="py-2 px-3 border border-slate-200 rounded-xl text-sm w-48 focus:outline-none focus:border-purple-400"/>
@@ -522,23 +523,79 @@ Cualquier cosa, responde a este correo.
   }
 
   async function loadAll(){
+    // Se traen las filas, no solo los conteos: el selector demo/reales necesita
+    // filtrar, y para las tablas sin bandera propia hay que derivar del estudiante.
     const [est, emp, stu, comp, offers, apps, msgs] = await Promise.all([
       sb.from('waitlist_estudiantes').select('*').order('created_at',{ascending:false}),
       sb.from('waitlist_empresas').select('*').order('created_at',{ascending:false}),
-      sb.from('students').select('id,nombre,apellido,email,universidad,carrera,ubicacion,estado,suspendido,created_at').order('created_at',{ascending:false}),
+      sb.from('students').select('id,nombre,apellido,email,universidad,carrera,ubicacion,estado,suspendido,demo,created_at').order('created_at',{ascending:false}),
       sb.from('companies').select('id,nombre_empresa,nombre_contacto,apellido_contacto,email_corporativo,industria,tamano,perfiles_buscados,suspendido,created_at').order('created_at',{ascending:false}),
-      sb.from('job_offers').select('id',{count:'exact',head:true}),
-      sb.from('job_applications').select('id',{count:'exact',head:true}),
-      sb.from('messages').select('id',{count:'exact',head:true})
+      sb.from('job_offers').select('id,demo'),
+      sb.from('job_applications').select('id,student_id'),
+      sb.from('messages').select('id,student_id')
     ]);
     cache.wl_estudiantes=est.data||[]; cache.wl_empresas=emp.data||[];
-    cache.students=stu.data||[]; cache.companies=comp.data||[];
+    cache.companies=comp.data||[];
+    // Crudo = lo que hay en la BD. cache.students queda como la vista ya filtrada,
+    // así el resto del panel sigue funcionando sin cambios.
+    cache.raw_students=stu.data||[];
+    cache.raw_offers=offers.data||[];
+    cache.raw_apps=apps.data||[];
+    cache.raw_msgs=msgs.data||[];
     const { data:act } = await sb.rpc('admin_auth_activity');
     cache.authMap={}; (act||[]).forEach(a=>{ cache.authMap[(a.email||'').toLowerCase()]={ last:a.last_sign_in_at, reg:a.registrado_at }; });
-    renderMetrics({ wlEst:cache.wl_estudiantes.length, wlEmp:cache.wl_empresas.length, stu:cache.students.length, comp:cache.companies.length, offers:offers.count||0, apps:apps.count||0, msgs:msgs.count||0 });
-    renderWaitlist(); renderUsers();
-    renderMetricsPanel({ offers:offers.count||0, apps:apps.count||0 });
+    aplicarFiltroDatos();
     cache.cargadoEn = Date.now();
+  }
+
+  // ── Selector demo / reales ──────────────────────────────────
+  // Solo students y job_offers tienen columna `demo`. Las demás tablas se derivan
+  // del estudiante al que pertenecen. La waitlist no se filtra: no hay demo ahí.
+  let modoDatos = 'reales';
+  try { modoDatos = localStorage.getItem('zentu_admin_datos') || 'reales'; } catch(e){}
+
+  function esDemo(r){ return !!(r && r.demo); }
+
+  function aplicarFiltroDatos(){
+    const soloDemo = modoDatos === 'demo';
+    const students = (cache.raw_students||[]).filter(r => esDemo(r) === soloDemo);
+    const idsVisibles = new Set(students.map(r => r.id));
+    const offers = (cache.raw_offers||[]).filter(r => esDemo(r) === soloDemo);
+    // Aplicaciones y mensajes no tienen bandera: pertenecen a un estudiante y
+    // heredan su condición. Los huérfanos solo cuentan en modo reales.
+    const apps = (cache.raw_apps||[]).filter(r => idsVisibles.has(r.student_id));
+    const msgs = (cache.raw_msgs||[]).filter(r => idsVisibles.has(r.student_id));
+
+    cache.students = students;
+    pintarSelectorDatos();
+    renderMetrics({ wlEst:cache.wl_estudiantes.length, wlEmp:cache.wl_empresas.length,
+                    stu:students.length, comp:cache.companies.length,
+                    offers:offers.length, apps:apps.length, msgs:msgs.length });
+    renderWaitlist(); renderUsers();
+    renderMetricsPanel({ offers:offers.length, apps:apps.length });
+  }
+
+  function cambiarModoDatos(modo){
+    if(modo === modoDatos) return;
+    modoDatos = modo;
+    try { localStorage.setItem('zentu_admin_datos', modo); } catch(e){}
+    aplicarFiltroDatos();
+  }
+
+  function pintarSelectorDatos(){
+    const cont = document.getElementById('selectorDatos');
+    if(!cont) return;
+    const nDemo   = (cache.raw_students||[]).filter(esDemo).length;
+    const nReales = (cache.raw_students||[]).length - nDemo;
+    const btn = (modo, etiqueta, n) => {
+      const activo = modoDatos === modo;
+      const color = modo === 'demo' ? '#B45309' : '#0F766E';
+      const fondo = modo === 'demo' ? '#FEF3C7' : '#CCFBF1';
+      return `<button onclick="cambiarModoDatos('${modo}')" class="text-sm font-bold px-3 py-1.5 rounded-lg transition"
+        style="${activo ? `background:${fondo};color:${color};` : 'background:transparent;color:#64748B;'}">
+        ${etiqueta} <span style="opacity:.7">${n}</span></button>`;
+    };
+    cont.innerHTML = btn('reales','Reales',nReales) + btn('demo','Demo',nDemo);
   }
 
   // ── Métricas / KPIs ─────────────────────────────────────────
