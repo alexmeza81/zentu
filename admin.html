@@ -348,6 +348,9 @@ Cualquier cosa, responde a este correo.
       aviso.classList.remove('hidden');
       return;
     }
+    // Aviso temprano si la sesión dejó de ser de admin: el panel se ve igual,
+    // pero los botones no funcionarían y no sabrías por qué.
+    sigoSiendoAdmin();
     lanzCfg = data;
     pintarLanzamiento();
   }
@@ -381,6 +384,11 @@ Cualquier cosa, responde a este correo.
 
   async function alternarAcceso(publico){
     if(!lanzCfg) return;
+    // La sesión de Supabase es una sola por navegador: si en otra pestaña se
+    // inicia sesión con otra cuenta, esta pestaña sigue mostrando el panel pero
+    // sus peticiones ya van firmadas por la otra cuenta y RLS las rechaza sin
+    // decir por qué. Comprobamos antes para dar un mensaje que sirva.
+    if(!(await sigoSiendoAdmin())) return;
     const campo   = publico === 'estudiantes' ? 'estudiantes_abierto' : 'empresas_abierto';
     const sufijo  = publico === 'estudiantes' ? 'Est' : 'Emp';
     const abriendo = !lanzCfg[campo];
@@ -411,6 +419,36 @@ Cualquier cosa, responde a este correo.
       aviso.innerHTML = '<strong>Acceso abierto.</strong> Falta el paso del correo: copia los destinatarios y el texto de abajo, y mándalo desde Resend.';
       aviso.classList.remove('hidden');
     }
+  }
+
+  // Devuelve true si la sesión actual sigue siendo de un admin. Si no, avisa
+  // con el motivo real en vez de dejar que RLS falle en silencio.
+  async function sigoSiendoAdmin(){
+    const aviso = document.getElementById('lanzAviso');
+    let sesion = null, esAdmin = false;
+    try {
+      const { data } = await sb.auth.getSession();
+      sesion = data && data.session;
+      if(sesion){ const { data: adm } = await sb.rpc('is_admin'); esAdmin = !!adm; }
+    } catch(e){
+      aviso.textContent = 'No pudimos verificar tu sesión. Revisa tu conexión e inténtalo de nuevo.';
+      aviso.classList.remove('hidden');
+      return false;
+    }
+    if(!sesion){
+      aviso.innerHTML = '<strong>Tu sesión se cerró.</strong> <a href="acceso.html" class="underline font-bold">Vuelve a entrar</a> con tu correo de administrador.';
+      aviso.classList.remove('hidden');
+      return false;
+    }
+    if(!esAdmin){
+      aviso.innerHTML = '<strong>Esta pestaña ya no tiene sesión de administrador.</strong> '
+        + 'Ahora estás como <b>' + escapeHTML(sesion.user.email || '') + '</b>. '
+        + 'Pasa cuando inicias sesión con otra cuenta en otra pestaña: Supabase guarda una sola sesión por navegador. '
+        + '<a href="acceso.html" class="underline font-bold">Vuelve a entrar</a> con tu correo de admin — y para probar el flujo de usuario nuevo, usa una ventana de incógnito.';
+      aviso.classList.remove('hidden');
+      return false;
+    }
+    return true;
   }
 
   function copiarCorreos(publico){
