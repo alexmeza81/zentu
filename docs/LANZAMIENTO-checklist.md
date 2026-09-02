@@ -32,6 +32,13 @@ Fecha: 2026-08-18. Estado tras la auditoría de esta sesión.
   ⚠️ Hazlo **solo si** el registro va por el RPC `submit_student_waitlist`
   (security definer, que ignora estos grants). Prueba un registro después.
 
+  **⚠️ AVISO (2026-09-02): esto se aplicó y ROMPIÓ el panel de admin.** Revocar
+  también quitó el SELECT a `authenticated`, y como los GRANT se evalúan antes
+  que RLS, la política `admin read all` quedó inalcanzable: el panel mostraba la
+  waitlist vacía con registros reales en la BD. Corregido en
+  `2026-09-02-fix-grants-waitlist.sql`. La regla correcta: **revoca a `anon`,
+  nunca a `authenticated`** — a authenticated se le concede y RLS restringe.
+
 - [ ] **Logo del correo de auth.** Ya restauramos `logo.png` en prod. Verifica en
   Supabase → Auth → Email Templates que el `<img src>` apunte a
   `https://www.zentu.app/logo.png` (no a SVG). Manda un código de prueba.
