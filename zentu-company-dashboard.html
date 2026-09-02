@@ -989,6 +989,18 @@
     let selectedOfferId = '';
     let offersLoaded = false;
     let isAdminUser = false;           // gate del match con IA (premium; hoy solo admin)
+
+    // Modo capturas: esconde las etiquetas DEMO. Los datos de demostración solo los ve
+    // el admin, y para tomar capturas de marketing esas etiquetas ámbar estorban. Se
+    // enciende con ?capturas=1 y se apaga con ?capturas=0; queda en la pestaña, así que
+    // navegar entre secciones no lo pierde. No cambia qué datos se muestran, solo el sello.
+    let modoCapturas = false;
+    try {
+      const q = new URLSearchParams(location.search).get('capturas');
+      if (q === '1') sessionStorage.setItem('zentu_capturas', '1');
+      if (q === '0') sessionStorage.removeItem('zentu_capturas');
+      modoCapturas = sessionStorage.getItem('zentu_capturas') === '1';
+    } catch (e) {}
     let aiMatches = {};                // student_id -> {pct, razon} para la oferta seleccionada
 
     function _disp(id,val){ const e=document.getElementById(id); if(e) e.style.display=val; }
@@ -1254,7 +1266,7 @@
                 <span class="font-black text-slate-900 truncate">${fullName(st)}</span>
                 <span class="text-[13px] font-black px-2 py-0.5 rounded-lg border ${t.cls} whitespace-nowrap">${m.pct}% match</span>
                 ${m.ai?'<span class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-purple-100 text-purple-700 border border-purple-200 whitespace-nowrap">✨ IA</span>':''}
-                ${st.demo?'<span class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap" title="Perfil de demostración, solo visible para ti">DEMO</span>':''}
+                ${st.demo&&!modoCapturas?'<span class="text-[10px] font-black px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap" title="Perfil de demostración, solo visible para ti">DEMO</span>':''}
               </div>
               <div class="text-xs text-slate-500 font-semibold truncate mt-0.5">${escapeHTML(st.universidad||'')}</div>
               <div class="text-xs text-slate-400 truncate">${carreraLine}</div>
@@ -1644,7 +1656,7 @@
             </div>
             <div class="flex flex-col items-end gap-1 flex-shrink-0">
               <span class="text-[10px] font-black px-2 py-1 rounded-full whitespace-nowrap ${closed?'text-slate-500 bg-slate-100 border border-slate-200':'text-green-700 bg-green-50 border border-green-200'}">${closed?'Cerrada':'Publicada'}</span>
-              ${o.demo?'<span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap" title="Vacante de demostración, solo visible para ti">DEMO</span>':''}
+              ${o.demo&&!modoCapturas?'<span class="text-[10px] font-black px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap" title="Vacante de demostración, solo visible para ti">DEMO</span>':''}
             </div>
           </div>
           ${o.salario?`<div class="text-sm font-bold text-slate-700 mt-2">💰 ${escapeHTML(o.salario)}</div>`:''}
