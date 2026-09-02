@@ -221,6 +221,14 @@ Cualquier cosa, responde a este correo.
           <p class="text-slate-500 font-medium mt-1">Cuánta gente avanza en cada paso y quién ha entrado. Los estudiantes de demostración no cuentan aquí.</p>
         </div>
 
+        <h2 class="text-lg font-black mb-1">Tráfico</h2>
+        <p class="text-sm text-slate-500 mb-4">Últimos 7 días. Sirve para saber si el problema es que no llega gente o que llega y no se registra.</p>
+        <div id="visitasResumen" class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4"></div>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6"><div id="visitasPorDia"></div></div>
+          <div class="bg-white rounded-2xl border border-slate-200 p-6"><div id="visitasDetalle"></div></div>
+        </div>
+
         <h2 class="text-lg font-black mb-3">Embudo de activación</h2>
         <p class="text-sm text-slate-500 mb-4">De registrarse a quedar visible para un reclutador. El escalón donde más gente se cae es dónde hay que trabajar.</p>
         <div id="embudo" class="space-y-2 mb-8"></div>
@@ -522,10 +530,12 @@ Cualquier cosa, responde a este correo.
         '<div class="text-sm text-slate-500">No pudimos leer las métricas. Revisa tu conexión.</div>';
       return;
     }
+    window.__ULTIMO_EMBUDO = data.embudo || {};
     pintarEmbudo(data.embudo || {});
     pintarSaludWaitlist(data.waitlist || {});
     pintarOrigen(data.waitlist || {});
     pintarSesiones(data.actividad || {});
+    cargarVisitas();   // después del embudo: necesita en_waitlist para la conversión
   }
 
   const fechaCorta = (iso) => {
@@ -595,6 +605,65 @@ Cualquier cosa, responde a este correo.
       dias.map(d => `<div title="${d.dia}: ${d.n}" style="flex:1;min-width:4px;height:${Math.max(6, d.n/max*70)}px;
         border-radius:3px 3px 0 0;background:linear-gradient(180deg,#7B68EE,#4A9EFF)"></div>`).join('') +
       '</div>';
+  }
+
+  async function cargarVisitas(){
+    const cont = document.getElementById('visitasResumen');
+    const { data, error } = await sb.rpc('admin_visitas');
+    if(error || !data || data.error){
+      cont.innerHTML = '<div class="col-span-full text-sm text-slate-500">No pudimos leer el tráfico.</div>';
+      return;
+    }
+    const t = (n, etiqueta, ayuda) =>
+      `<div class="bg-white rounded-xl border border-slate-200 p-4">
+         <div class="text-2xl font-black">${n}</div>
+         <div class="text-xs font-bold text-slate-600 mt-0.5">${etiqueta}</div>
+         ${ayuda ? `<div class="text-xs text-slate-400 mt-0.5">${ayuda}</div>` : ''}
+       </div>`;
+
+    // La conversión es el número que decide qué arreglar.
+    const landing = Number(data.landing_7d)||0;
+    const form = Number(data.formulario_7d)||0;
+    const altas = (window.__ULTIMO_EMBUDO && Number(window.__ULTIMO_EMBUDO.en_waitlist)) || 0;
+    const pct = (a,b) => b ? Math.round(a/b*100) + '%' : '—';
+
+    cont.innerHTML =
+      t(data.visitas_7d ?? 0, 'Visitantes', 'personas distintas, 7 días') +
+      t(landing, 'Vieron la landing', '') +
+      t(form, 'Abrieron el formulario', landing ? pct(form, landing) + ' de los de la landing' : '') +
+      t(pct(altas, form), 'Completaron el registro', form ? `${altas} de ${form} que lo abrieron` : 'sin datos aún');
+
+    if(!data.desde){
+      document.getElementById('visitasPorDia').innerHTML =
+        '<div class="text-sm text-slate-500">Todavía no hay visitas registradas. Empiezan a contarse en cuanto alguien entre al sitio.</div>';
+      document.getElementById('visitasDetalle').innerHTML = '';
+      return;
+    }
+
+    const dias = data.por_dia || [];
+    const max = Math.max(1, ...dias.map(d=>d.n));
+    document.getElementById('visitasPorDia').innerHTML =
+      '<div class="text-xs font-black uppercase tracking-wide text-slate-400 mb-2">Visitantes por día</div>' +
+      (dias.length
+        ? '<div style="display:flex;align-items:flex-end;gap:3px;height:90px;">' +
+          dias.map(d=>`<div title="${d.dia}: ${d.n}" style="flex:1;min-width:4px;height:${Math.max(6,d.n/max*90)}px;
+            border-radius:3px 3px 0 0;background:linear-gradient(180deg,#7B68EE,#4A9EFF)"></div>`).join('') + '</div>'
+        : '<div class="text-sm text-slate-400">Sin visitas en los últimos 30 días.</div>');
+
+    const lista = (titulo, filas) => {
+      if(!filas || !filas.length) return '';
+      const m = Math.max(...filas.map(f=>f.n));
+      return `<div class="mb-4"><div class="text-xs font-black uppercase tracking-wide text-slate-400 mb-2">${titulo}</div>` +
+        filas.map(f=>`<div class="flex items-center gap-2 mb-1.5">
+          <div class="text-sm text-slate-600 truncate" style="width:44%" title="${escapeHTML(f.nombre)}">${escapeHTML(f.nombre)}</div>
+          <div style="flex:1;height:7px;background:#EEF2FF;border-radius:999px;overflow:hidden;">
+            <div style="height:100%;width:${Math.round(f.n/m*100)}%;border-radius:999px;background:linear-gradient(90deg,#7B68EE,#4A9EFF)"></div>
+          </div>
+          <div class="text-sm font-bold text-slate-700" style="width:32px;text-align:right">${f.n}</div>
+        </div>`).join('') + '</div>';
+    };
+    document.getElementById('visitasDetalle').innerHTML =
+      lista('Canal de llegada', data.por_canal) + lista('Páginas más vistas', data.por_ruta);
   }
 
   function pintarOrigen(w){

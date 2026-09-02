@@ -35,3 +35,8 @@ alter table public.waitlist_empresas
 --
 -- El referente se guarda solo como dominio, no la URL completa, que puede llevar
 -- datos de la navegación de la persona.
+
+-- ── Analítica propia ────────────────────────────────────────────────────────
+-- Migraciones: analitica_visitas, admin_metricas_con_visitas.
+-- Tabla page_views (anon solo INSERT, admin SELECT), admin_visitas() y
+-- limpiar_visitas_viejas(). Sin cookies, sin IP, sin user agent, sin URL completa.
