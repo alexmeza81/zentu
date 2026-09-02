@@ -112,7 +112,7 @@
 
       <div id="sec-waitlist" class="tab-sec hidden">
         <div class="flex items-end justify-between flex-wrap gap-3 mb-5">
-          <div><h1 class="text-3xl font-black tracking-tight">Waitlist</h1><p class="text-slate-500 font-medium mt-1">Registros previos al lanzamiento. <span class="text-slate-400">Todos son reales: aquí no hay datos de demostración, así que el selector no aplica.</span></p></div>
+          <div><h1 class="text-3xl font-black tracking-tight">Waitlist</h1><p class="text-slate-500 font-medium mt-1">Registros previos al lanzamiento. <span class="text-slate-400">El selector de arriba también aplica aquí.</span></p></div>
           <div class="flex items-center gap-2">
             <select id="wlKind" onchange="renderWaitlist()" class="py-2 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600"><option value="estudiantes">Estudiantes</option><option value="empresas">Empresas</option></select>
             <input id="wlSearch" oninput="renderWaitlist()" placeholder="Buscar…" class="py-2 px-3 border border-slate-200 rounded-xl text-sm w-48 focus:outline-none focus:border-purple-400"/>
@@ -268,7 +268,7 @@ Cualquier cosa, responde a este correo.
 
       <div id="sec-usuarios" class="tab-sec hidden">
         <div class="flex items-end justify-between flex-wrap gap-3 mb-5">
-          <div><h1 class="text-3xl font-black tracking-tight">Usuarios</h1><p class="text-slate-500 font-medium mt-1">Estudiantes y empresas registrados. <span class="text-slate-400">Las empresas no tienen marca de demostración, así que se muestran siempre.</span></p></div>
+          <div><h1 class="text-3xl font-black tracking-tight">Usuarios</h1><p class="text-slate-500 font-medium mt-1">Estudiantes y empresas registrados. <span class="text-slate-400">Filtrados por el selector de arriba.</span></p></div>
           <div class="flex items-center gap-2">
             <select id="usKind" onchange="renderUsers()" class="py-2 px-3 border border-slate-200 rounded-xl text-sm font-semibold text-slate-600"><option value="students">Estudiantes</option><option value="companies">Empresas</option></select>
             <input id="usSearch" oninput="renderUsers()" placeholder="Buscar…" class="py-2 px-3 border border-slate-200 rounded-xl text-sm w-48 focus:outline-none focus:border-purple-400"/>
@@ -426,9 +426,17 @@ Cualquier cosa, responde a este correo.
     cargarResumenEnvios();
   }
 
+  // Lanzamiento cuenta siempre gente real, ignorando el selector demo/reales:
+  // es lo mismo que hace la función de envío, y si no coincidieran la tarjeta
+  // diría «4 en espera» mientras el resumen de envíos dice «0 pendientes».
+  function waitlistReal(publico){
+    const crudo = (publico === 'empresas' ? cache.raw_wl_empresas : cache.raw_wl_estudiantes) || [];
+    return crudo.filter(r => !esDemo(r));
+  }
+
   function pintarLanzamiento(){
-    const est = cache.wl_estudiantes ? cache.wl_estudiantes.length : 0;
-    const emp = cache.wl_empresas ? cache.wl_empresas.length : 0;
+    const est = waitlistReal('estudiantes').length;
+    const emp = waitlistReal('empresas').length;
     pintarTarjeta('Est', 'estudiantes', lanzCfg.estudiantes_abierto, lanzCfg.abierto_estudiantes_at, est);
     pintarTarjeta('Emp', 'empresas',    lanzCfg.empresas_abierto,    lanzCfg.abierto_empresas_at,    emp);
   }
@@ -463,10 +471,10 @@ Cualquier cosa, responde a este correo.
     const campo   = publico === 'estudiantes' ? 'estudiantes_abierto' : 'empresas_abierto';
     const sufijo  = publico === 'estudiantes' ? 'Est' : 'Emp';
     const abriendo = !lanzCfg[campo];
-    const conteo  = (publico === 'estudiantes' ? cache.wl_estudiantes : cache.wl_empresas || []).length;
+    const conteo  = waitlistReal(publico).length;
 
     const confirmacion = abriendo
-      ? 'Vas a ABRIR el acceso a ' + publico + '.\n\n' + conteo + ' en la lista podrán entrar, y la landing cambiará a «crea tu perfil».\n\nEsto NO manda ningún correo: el aviso lo mandas tú desde Resend.\n\n¿Continuar?'
+      ? 'Vas a ABRIR el acceso a ' + publico + '.\n\n' + conteo + ' en la lista podrán entrar, y la landing cambiará a «crea tu perfil».\n\nEsto NO manda ningún correo: el aviso se manda con el botón de abajo.\n\n¿Continuar?'
       : 'Vas a CERRAR el acceso a ' + publico + '.\n\nDejarán de poder entrar (tú no, por ser admin) y la landing volverá a «únete a la waitlist».\n\n¿Continuar?';
     if(!confirm(confirmacion)) return;
 
@@ -854,13 +862,13 @@ Cualquier cosa, responde a este correo.
       sb.from('waitlist_estudiantes').select('*').order('created_at',{ascending:false}),
       sb.from('waitlist_empresas').select('*').order('created_at',{ascending:false}),
       sb.from('students').select('id,nombre,apellido,email,universidad,carrera,ubicacion,estado,suspendido,demo,created_at').order('created_at',{ascending:false}),
-      sb.from('companies').select('id,nombre_empresa,nombre_contacto,apellido_contacto,email_corporativo,industria,tamano,perfiles_buscados,suspendido,created_at').order('created_at',{ascending:false}),
+      sb.from('companies').select('id,nombre_empresa,nombre_contacto,apellido_contacto,email_corporativo,industria,tamano,perfiles_buscados,suspendido,demo,created_at').order('created_at',{ascending:false}),
       sb.from('job_offers').select('id,demo'),
       sb.from('job_applications').select('id,student_id'),
       sb.from('messages').select('id,student_id')
     ]);
-    cache.wl_estudiantes=est.data||[]; cache.wl_empresas=emp.data||[];
-    cache.companies=comp.data||[];
+    cache.raw_wl_estudiantes=est.data||[]; cache.raw_wl_empresas=emp.data||[];
+    cache.raw_companies=comp.data||[];
     // Crudo = lo que hay en la BD. cache.students queda como la vista ya filtrada,
     // así el resto del panel sigue funcionando sin cambios.
     cache.raw_students=stu.data||[];
@@ -874,8 +882,8 @@ Cualquier cosa, responde a este correo.
   }
 
   // ── Selector demo / reales ──────────────────────────────────
-  // Solo students y job_offers tienen columna `demo`. Las demás tablas se derivan
-  // del estudiante al que pertenecen. La waitlist no se filtra: no hay demo ahí.
+  // Tienen columna `demo`: students, job_offers, companies y las dos waitlist.
+  // Aplicaciones y mensajes no: se derivan del estudiante al que pertenecen.
   let modoDatos = 'reales';
   try { modoDatos = localStorage.getItem('zentu_admin_datos') || 'reales'; } catch(e){}
 
@@ -886,6 +894,9 @@ Cualquier cosa, responde a este correo.
     const students = (cache.raw_students||[]).filter(r => esDemo(r) === soloDemo);
     const idsVisibles = new Set(students.map(r => r.id));
     const offers = (cache.raw_offers||[]).filter(r => esDemo(r) === soloDemo);
+    cache.wl_estudiantes = (cache.raw_wl_estudiantes||[]).filter(r => esDemo(r) === soloDemo);
+    cache.wl_empresas    = (cache.raw_wl_empresas||[]).filter(r => esDemo(r) === soloDemo);
+    cache.companies      = (cache.raw_companies||[]).filter(r => esDemo(r) === soloDemo);
     // Aplicaciones y mensajes no tienen bandera: pertenecen a un estudiante y
     // heredan su condición. Los huérfanos solo cuentan en modo reales.
     const apps = (cache.raw_apps||[]).filter(r => idsVisibles.has(r.student_id));
@@ -910,8 +921,12 @@ Cualquier cosa, responde a este correo.
   function pintarSelectorDatos(){
     const cont = document.getElementById('selectorDatos');
     if(!cont) return;
-    const nDemo   = (cache.raw_students||[]).filter(esDemo).length;
-    const nReales = (cache.raw_students||[]).length - nDemo;
+    // Suma de todo lo que lleva bandera, para que el número no mienta cuando
+    // la waitlist o las empresas son de prueba y los estudiantes no.
+    const conBandera = [].concat(cache.raw_students||[], cache.raw_wl_estudiantes||[],
+                                 cache.raw_wl_empresas||[], cache.raw_companies||[]);
+    const nDemo   = conBandera.filter(esDemo).length;
+    const nReales = conBandera.length - nDemo;
     const btn = (modo, etiqueta, n) => {
       const activo = modoDatos === modo;
       const color = modo === 'demo' ? '#B45309' : '#0F766E';

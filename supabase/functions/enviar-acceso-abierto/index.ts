@@ -90,8 +90,11 @@ Deno.serve(async (req: Request) => {
       }, 409);
     }
 
-    // Solo quien no ha recibido el aviso.
-    let q = admin.from(tabla).select("id,email,nombre").is("acceso_email_enviado_at", null).order("created_at");
+    // Solo quien no ha recibido el aviso Y no está marcado como demostración.
+    // Sin el filtro de demo, el panel diría "nadie pendiente" —su resumen sí los
+    // excluye— mientras la función les seguiría mandando correo.
+    let q = admin.from(tabla).select("id,email,nombre")
+      .is("acceso_email_enviado_at", null).eq("demo", false).order("created_at");
     if (soloA) q = q.eq("email", soloA);
     const { data: pendientes, error: errLectura } = await q;
     if (errLectura) throw errLectura;
