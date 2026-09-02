@@ -82,6 +82,7 @@
         <button id="tab-metricas" onclick="showTab('metricas')" class="tab-btn">Métricas</button>
         <button id="tab-waitlist" onclick="showTab('waitlist')" class="tab-btn">Waitlist</button>
         <button id="tab-lanzamiento" onclick="showTab('lanzamiento')" class="tab-btn">Lanzamiento</button>
+        <button id="tab-actividad" onclick="showTab('actividad')" class="tab-btn">Actividad</button>
         <button id="tab-usuarios" onclick="showTab('usuarios')" class="tab-btn">Usuarios</button>
         <button id="tab-monitoreo" onclick="showTab('monitoreo')" class="tab-btn">Monitoreo</button>
         <button id="tab-cumplimiento" onclick="showTab('cumplimiento')" class="tab-btn">Cumplimiento</button>
@@ -166,7 +167,22 @@
 
         <div class="bg-white rounded-2xl border border-slate-200 p-6 mt-5">
           <h2 class="text-lg font-black mb-1">Avisar por correo</h2>
-          <p class="text-sm text-slate-500 mb-4">Abrir el acceso no manda ningún correo. El aviso lo mandas tú desde Resend: usa la plantilla con la identidad de ZentU (botón de abajo) o, si prefieres texto plano, el borrador que sigue.</p>
+          <p class="text-sm text-slate-500 mb-4">Abrir el acceso no manda ningún correo: se manda desde aquí, con la plantilla de ZentU. Solo recibe quien no haya sido avisado antes, así que apretar dos veces no reenvía.</p>
+          <div id="envioCaja" class="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+            <div class="flex items-end justify-between flex-wrap gap-3">
+              <div>
+                <div id="envioEstado" class="text-sm font-bold text-slate-700">—</div>
+                <div id="envioDetalle" class="text-xs text-slate-500 mt-0.5"></div>
+              </div>
+              <div class="flex items-center gap-2">
+                <button id="btnEnvioSeco" onclick="enviarAviso(true)" class="text-sm font-bold text-slate-600 border border-slate-200 bg-white px-3 py-2.5 rounded-xl hover:bg-slate-50 transition">Ver a quién le tocaría</button>
+                <button id="btnEnvio" onclick="enviarAviso(false)" class="text-sm font-bold text-white grad px-4 py-2.5 rounded-xl hover:opacity-90 transition">Enviar aviso</button>
+              </div>
+            </div>
+            <div id="envioResultado" class="hidden mt-3 text-sm rounded-lg px-3 py-2.5"></div>
+          </div>
+
+          <p class="text-xs text-slate-400 mb-4">O házlo a mano desde Resend, si prefieres estadísticas de apertura y manejo de bajas:</p>
           <div class="flex flex-wrap gap-2 mb-4">
             <button onclick="copiarCorreos('estudiantes')" class="text-sm font-bold text-purple-700 bg-purple-50 border border-purple-200 px-4 py-2.5 rounded-xl hover:bg-purple-100 transition">Copiar correos de estudiantes</button>
             <button onclick="copiarCorreos('empresas')" class="text-sm font-bold text-slate-600 border border-slate-200 px-4 py-2.5 rounded-xl hover:bg-slate-50 transition">Copiar correos de empresas</button>
@@ -196,6 +212,49 @@ Cualquier cosa, responde a este correo.
 
 — Alex, fundador de ZentU</pre>
           </div>
+        </div>
+      </div>
+
+      <div id="sec-actividad" class="tab-sec hidden">
+        <div class="mb-6">
+          <h1 class="text-3xl font-black tracking-tight">Actividad</h1>
+          <p class="text-slate-500 font-medium mt-1">Cuánta gente avanza en cada paso y quién ha entrado. Los estudiantes de demostración no cuentan aquí.</p>
+        </div>
+
+        <h2 class="text-lg font-black mb-3">Embudo de activación</h2>
+        <p class="text-sm text-slate-500 mb-4">De registrarse a quedar visible para un reclutador. El escalón donde más gente se cae es dónde hay que trabajar.</p>
+        <div id="embudo" class="space-y-2 mb-8"></div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
+          <div class="bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 class="text-lg font-black mb-1">Salud de la waitlist</h2>
+            <p class="text-sm text-slate-500 mb-4">Si pasan muchas horas sin registros, la promoción se enfrió.</p>
+            <div id="waitlistSalud" class="grid grid-cols-2 gap-3 mb-5"></div>
+            <div id="waitlistPorDia"></div>
+          </div>
+          <div class="bg-white rounded-2xl border border-slate-200 p-6">
+            <h2 class="text-lg font-black mb-1">De dónde vienen</h2>
+            <p class="text-sm text-slate-500 mb-4">Sirve para saber si estás llegando a la facultad del piloto o te dispersaste.</p>
+            <div id="waitlistOrigen"></div>
+          </div>
+        </div>
+
+        <div class="flex items-end justify-between flex-wrap gap-3 mb-3">
+          <div>
+            <h2 class="text-lg font-black">Sesiones</h2>
+            <p class="text-sm text-slate-500">Quién ha entrado y hasta dónde llegó. Ordenado por sesión más reciente.</p>
+          </div>
+          <div id="actividadResumen" class="flex gap-2 flex-wrap"></div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200 overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="text-left text-slate-400 border-b border-slate-100">
+              <tr><th class="px-4 py-2.5 font-bold">Correo</th><th class="px-4 py-2.5 font-bold">Tipo</th>
+                  <th class="px-4 py-2.5 font-bold">Última sesión</th><th class="px-4 py-2.5 font-bold">Perfil</th>
+                  <th class="px-4 py-2.5 font-bold">Test</th></tr>
+            </thead>
+            <tbody id="sesionesBody"></tbody>
+          </table>
         </div>
       </div>
 
@@ -299,6 +358,7 @@ Cualquier cosa, responde a este correo.
     // Las pestañas con datos se refrescan solas si ya envejecieron.
     if(['resumen','metricas','waitlist','usuarios','lanzamiento'].includes(id)) refrescarSiViejo();
     if(id==='lanzamiento') cargarLanzamiento();
+    if(id==='actividad') cargarActividad();
   }
 
   // ── Refresco de datos ───────────────────────────────────────
@@ -355,6 +415,7 @@ Cualquier cosa, responde a este correo.
     sigoSiendoAdmin();
     lanzCfg = data;
     pintarLanzamiento();
+    cargarResumenEnvios();
   }
 
   function pintarLanzamiento(){
@@ -451,6 +512,178 @@ Cualquier cosa, responde a este correo.
       return false;
     }
     return true;
+  }
+
+  // ── Actividad: embudo, salud de la waitlist y sesiones ──────
+  async function cargarActividad(){
+    const { data, error } = await sb.rpc('admin_metricas');
+    if(error || !data || data.error){
+      document.getElementById('embudo').innerHTML =
+        '<div class="text-sm text-slate-500">No pudimos leer las métricas. Revisa tu conexión.</div>';
+      return;
+    }
+    pintarEmbudo(data.embudo || {});
+    pintarSaludWaitlist(data.waitlist || {});
+    pintarSesiones(data.actividad || {});
+  }
+
+  const fechaCorta = (iso) => {
+    if(!iso) return '—';
+    const d = new Date(iso), ahora = new Date();
+    const horas = (ahora - d) / 36e5;
+    if(horas < 1) return 'hace menos de 1 h';
+    if(horas < 24) return `hace ${Math.round(horas)} h`;
+    if(horas < 48) return 'ayer';
+    return d.toLocaleDateString('es-MX', { day:'numeric', month:'short' });
+  };
+
+  function pintarEmbudo(e){
+    // El primer escalón es la base: los demás se leen como % de ese.
+    const pasos = [
+      ['En la waitlist',      e.en_waitlist, 'Se registraron'],
+      ['Avisados',            e.avisados,    'Recibieron el correo de acceso'],
+      ['Entraron',            e.con_sesion,  'Iniciaron sesión al menos una vez'],
+      ['Con perfil',          e.con_perfil,  'Crearon su ficha'],
+      ['Hicieron el test',    e.con_test,    'Completaron las 18 preguntas'],
+      ['Visibles',            e.reclutables, 'Aparecen en las búsquedas de empresas'],
+    ];
+    const base = Math.max(1, Number(e.en_waitlist) || 0);
+    document.getElementById('embudo').innerHTML = pasos.map(([nombre, n, ayuda], i) => {
+      const v = Number(n) || 0;
+      const pct = Math.round(v / base * 100);
+      const prev = i ? (Number(pasos[i-1][1]) || 0) : v;
+      const caida = prev - v;
+      return `<div class="bg-white rounded-xl border border-slate-200 p-4">
+        <div class="flex items-center justify-between gap-3 mb-2">
+          <div>
+            <span class="font-bold text-slate-800">${nombre}</span>
+            <span class="text-xs text-slate-400 ml-2">${ayuda}</span>
+          </div>
+          <div class="text-right flex-shrink-0">
+            <span class="text-2xl font-black">${v}</span>
+            <span class="text-xs font-bold text-slate-400 ml-1">${pct}%</span>
+          </div>
+        </div>
+        <div style="height:8px;background:#EEF2FF;border-radius:999px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;border-radius:999px;background:linear-gradient(90deg,#7B68EE,#4A9EFF)"></div>
+        </div>
+        ${i && caida > 0 ? `<div class="text-xs text-rose-600 font-semibold mt-1.5">Se cayeron ${caida} en este paso</div>` : ''}
+      </div>`;
+    }).join('');
+  }
+
+  function pintarSaludWaitlist(w){
+    const horas = w.horas_sin_registro;
+    const tarjeta = (n, etiqueta, color) =>
+      `<div class="bg-slate-50 rounded-xl p-3"><div class="text-2xl font-black ${color||''}">${n}</div>
+       <div class="text-xs font-bold text-slate-500 mt-0.5">${etiqueta}</div></div>`;
+    document.getElementById('waitlistSalud').innerHTML =
+      tarjeta(w.total ?? 0, 'Registros en total') +
+      tarjeta(w.ultimas_24h ?? 0, 'Últimas 24 horas') +
+      tarjeta(w.ultimos_7d ?? 0, 'Últimos 7 días') +
+      tarjeta(horas == null ? '—' : horas + ' h', 'Sin registros nuevos',
+              horas != null && horas > 48 ? 'text-amber-600' : '');
+
+    const dias = w.por_dia || [];
+    if(!dias.length){ document.getElementById('waitlistPorDia').innerHTML =
+      '<div class="text-sm text-slate-400">Sin registros en los últimos 30 días.</div>'; return; }
+    const max = Math.max(...dias.map(d => d.n));
+    document.getElementById('waitlistPorDia').innerHTML =
+      '<div class="text-xs font-black uppercase tracking-wide text-slate-400 mb-2">Registros por día</div>' +
+      '<div style="display:flex;align-items:flex-end;gap:3px;height:70px;">' +
+      dias.map(d => `<div title="${d.dia}: ${d.n}" style="flex:1;min-width:4px;height:${Math.max(6, d.n/max*70)}px;
+        border-radius:3px 3px 0 0;background:linear-gradient(180deg,#7B68EE,#4A9EFF)"></div>`).join('') +
+      '</div>';
+  }
+
+  function pintarSesiones(a){
+    document.getElementById('actividadResumen').innerHTML =
+      `<span class="text-sm font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg">${a.activos_24h ?? 0} activos hoy</span>` +
+      `<span class="text-sm font-bold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg">${a.activos_7d ?? 0} esta semana</span>` +
+      (a.nunca_entraron ? `<span class="text-sm font-bold text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg" title="Recibieron el correo pero no han iniciado sesión">${a.nunca_entraron} avisados sin entrar</span>` : '');
+
+    const filas = a.sesiones || [];
+    document.getElementById('sesionesBody').innerHTML = filas.length ? filas.map(r => {
+      const si = (v) => v ? '<span class="text-emerald-600 font-bold">✓</span>' : '<span class="text-slate-300">—</span>';
+      return `<tr class="border-b border-slate-50">
+        <td class="px-4 py-2.5 font-semibold text-slate-700">${escapeHTML(r.email||'')}</td>
+        <td class="px-4 py-2.5 text-slate-500">${escapeHTML(r.tipo||'—')}</td>
+        <td class="px-4 py-2.5 text-slate-500">${escapeHTML(fechaCorta(r.ultima_sesion))}</td>
+        <td class="px-4 py-2.5">${si(r.perfil_completo)}</td>
+        <td class="px-4 py-2.5">${si(r.hizo_test)}</td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="5" class="px-4 py-8 text-center text-slate-400">Nadie ha iniciado sesión todavía.</td></tr>';
+  }
+
+  // ── Envío del aviso de acceso abierto ───────────────────────
+  // La Edge Function tiene la llave de Resend y la guardia de admin. Aquí solo se
+  // pide, se confirma y se muestra el resultado.
+  async function cargarResumenEnvios(){
+    const est = document.getElementById('envioEstado');
+    const det = document.getElementById('envioDetalle');
+    if(!est) return;
+    const { data, error } = await sb.rpc('envios_acceso_resumen');
+    if(error || !data){ est.textContent = 'No pudimos leer el estado de los envíos.'; det.textContent = ''; return; }
+    const e = (data||[]).find(r => r.publico === 'estudiantes') || { total:0, enviados:0, pendientes:0 };
+    envioPendientes = Number(e.pendientes) || 0;
+    est.textContent = envioPendientes
+      ? `${envioPendientes} pendiente${envioPendientes===1?'':'s'} de aviso`
+      : 'Todos avisados';
+    det.textContent = `${e.enviados} de ${e.total} ya recibieron el correo.`;
+    const btn = document.getElementById('btnEnvio');
+    if(btn){ btn.disabled = !envioPendientes; btn.style.opacity = envioPendientes ? '' : '.45'; btn.style.pointerEvents = envioPendientes ? '' : 'none';
+             btn.textContent = envioPendientes ? `Enviar aviso a ${envioPendientes}` : 'Nadie pendiente'; }
+  }
+  let envioPendientes = 0;
+
+  function mostrarResultadoEnvio(texto, tipo){
+    const box = document.getElementById('envioResultado');
+    const estilos = { ok:'background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0',
+                      aviso:'background:#FFFBEB;color:#92400E;border:1px solid #FDE68A',
+                      error:'background:#FEF2F2;color:#991B1B;border:1px solid #FECACA' };
+    box.style.cssText = estilos[tipo] || estilos.aviso;
+    box.innerHTML = texto;
+    box.classList.remove('hidden');
+  }
+
+  async function enviarAviso(enSeco){
+    if(!(await sigoSiendoAdmin())) return;
+    if(!enSeco){
+      if(!confirm(`Vas a mandar el correo de acceso abierto a ${envioPendientes} persona(s).\n\n` +
+                  'Solo lo recibe quien no haya sido avisado antes, así que no se duplica.\n\n¿Continuar?')) return;
+    }
+    const btn = document.getElementById(enSeco ? 'btnEnvioSeco' : 'btnEnvio');
+    const etiqueta = btn.textContent;
+    btn.disabled = true; btn.textContent = enSeco ? 'Calculando…' : 'Enviando…';
+    document.getElementById('envioResultado').classList.add('hidden');
+    try {
+      const { data, error } = await sb.functions.invoke('enviar-acceso-abierto',
+        { body: { publico: 'estudiantes', en_seco: !!enSeco } });
+      // Las funciones devuelven el motivo en el cuerpo aunque el status no sea 200.
+      const cuerpo = data || (error && error.context && await error.context.json().catch(()=>null)) || null;
+      if(cuerpo && cuerpo.error){
+        mostrarResultadoEnvio('<strong>' + escapeHTML(cuerpo.error) + '</strong>' +
+          (cuerpo.comoArreglarlo ? '<br>' + escapeHTML(cuerpo.comoArreglarlo) : ''), 'error');
+      } else if(error){
+        mostrarResultadoEnvio('No se pudo contactar la función de envío: ' + escapeHTML(error.message||''), 'error');
+      } else if(cuerpo && cuerpo.en_seco){
+        mostrarResultadoEnvio(`Se enviaría a <strong>${cuerpo.seEnviarianA}</strong> persona(s)` +
+          (cuerpo.quedarianPendientes ? `, y quedarían ${cuerpo.quedarianPendientes} para después` : '') +
+          '. No se mandó nada.', 'aviso');
+      } else if(cuerpo){
+        const hayFallos = cuerpo.fallidos > 0;
+        mostrarResultadoEnvio('<strong>' + escapeHTML(cuerpo.mensaje||'Listo.') + '</strong>' +
+          (hayFallos ? `<br>${cuerpo.fallidos} fallaron: ` +
+             escapeHTML((cuerpo.detalleFallidos||[]).map(f=>f.email+' ('+f.motivo+')').join(', ')) : ''),
+          hayFallos ? 'aviso' : 'ok');
+        await cargarResumenEnvios();
+      }
+    } catch(e){
+      mostrarResultadoEnvio('Error inesperado: ' + escapeHTML(String(e)), 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = etiqueta;
+      if(!enSeco) await cargarResumenEnvios();
+    }
   }
 
   function copiarCorreos(publico){
