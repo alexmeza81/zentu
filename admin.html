@@ -14,6 +14,8 @@
   body{font-family:'Inter',sans-serif}
   .grad{background:linear-gradient(135deg,#7B68EE,#4A9EFF)}
   .grad-text{background:linear-gradient(135deg,#7B68EE,#4A9EFF);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  @keyframes girar{to{transform:rotate(360deg)}}
+  #refrescarIcono{display:inline-block}
   .tab-btn{padding:12px 16px;font-size:14px;font-weight:700;color:#64748B;border-bottom:2px solid transparent;cursor:pointer;background:transparent;margin-bottom:-1px}
   .tab-btn:hover{color:#0F172A}
   .tab-btn.active{color:#6D28D9;border-bottom-color:#7B68EE}
@@ -67,6 +69,10 @@
         </div>
         <div class="flex items-center gap-4">
           <span id="adminEmail" class="hidden sm:block text-sm font-semibold text-slate-500"></span>
+          <button id="btnRefrescar" onclick="refrescar(true)" title="Volver a leer los datos" class="flex items-center gap-1.5 text-sm font-bold text-purple-700 border border-purple-200 px-3 py-2 rounded-xl hover:bg-purple-50 transition">
+            <span id="refrescarIcono">↻</span>
+            <span id="refrescarTexto" class="hidden sm:inline">Actualizar</span>
+          </button>
           <button onclick="logout()" class="text-sm font-bold text-slate-600 hover:text-slate-900 border border-slate-200 px-4 py-2 rounded-xl hover:bg-slate-50 transition">Salir</button>
         </div>
       </div>
@@ -288,8 +294,45 @@ Cualquier cosa, responde a este correo.
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
     document.getElementById('tab-'+id).classList.add('active');
     if(id==='monitoreo') loadMonitoring();
+    // Las pestañas con datos se refrescan solas si ya envejecieron.
+    if(['resumen','metricas','waitlist','usuarios','lanzamiento'].includes(id)) refrescarSiViejo();
     if(id==='lanzamiento') cargarLanzamiento();
   }
+
+  // ── Refresco de datos ───────────────────────────────────────
+  // loadAll() solo corría al entrar, así que un registro hecho en otra pestaña
+  // no aparecía hasta recargar la página entera.
+  const REFRESCO_MS = 30000;   // más nuevo que esto, no se vuelve a pedir
+  let refrescando = false;
+
+  async function refrescar(manual){
+    if(refrescando) return;
+    refrescando = true;
+    const icono = document.getElementById('refrescarIcono');
+    const texto = document.getElementById('refrescarTexto');
+    if(icono) icono.style.animation = 'girar .8s linear infinite';
+    if(manual && texto) texto.textContent = 'Actualizando…';
+    try {
+      await loadAll();
+      if(!document.getElementById('sec-lanzamiento').classList.contains('hidden')) await cargarLanzamiento();
+    } catch(e){
+      console.error('No se pudo refrescar:', e);
+      if(manual) alert('No pudimos actualizar los datos. Revisa tu conexión.');
+    } finally {
+      refrescando = false;
+      if(icono) icono.style.animation = '';
+      if(texto) texto.textContent = 'Actualizar';
+    }
+  }
+
+  function refrescarSiViejo(){
+    if(!cache.cargadoEn || (Date.now() - cache.cargadoEn) > REFRESCO_MS) refrescar(false);
+  }
+
+  // Al volver a la pestaña del navegador: si estuvo fuera un rato, releer.
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible') refrescarSiViejo();
+  });
 
   // ── Lanzamiento: interruptores de acceso ────────────────────
   // El acceso vive en app_config (una fila, dos banderas). check_waitlist_role
@@ -456,6 +499,7 @@ Cualquier cosa, responde a este correo.
     renderMetrics({ wlEst:cache.wl_estudiantes.length, wlEmp:cache.wl_empresas.length, stu:cache.students.length, comp:cache.companies.length, offers:offers.count||0, apps:apps.count||0, msgs:msgs.count||0 });
     renderWaitlist(); renderUsers();
     renderMetricsPanel({ offers:offers.count||0, apps:apps.count||0 });
+    cache.cargadoEn = Date.now();
   }
 
   // ── Métricas / KPIs ─────────────────────────────────────────
