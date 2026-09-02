@@ -524,6 +524,7 @@ Cualquier cosa, responde a este correo.
     }
     pintarEmbudo(data.embudo || {});
     pintarSaludWaitlist(data.waitlist || {});
+    pintarOrigen(data.waitlist || {});
     pintarSesiones(data.actividad || {});
   }
 
@@ -594,6 +595,28 @@ Cualquier cosa, responde a este correo.
       dias.map(d => `<div title="${d.dia}: ${d.n}" style="flex:1;min-width:4px;height:${Math.max(6, d.n/max*70)}px;
         border-radius:3px 3px 0 0;background:linear-gradient(180deg,#7B68EE,#4A9EFF)"></div>`).join('') +
       '</div>';
+  }
+
+  function pintarOrigen(w){
+    const lista = (titulo, filas, vacio) => {
+      if(!filas || !filas.length) return `<div class="mb-4"><div class="text-xs font-black uppercase tracking-wide text-slate-400 mb-2">${titulo}</div><div class="text-sm text-slate-400">${vacio}</div></div>`;
+      const max = Math.max(...filas.map(f=>f.n));
+      return `<div class="mb-4"><div class="text-xs font-black uppercase tracking-wide text-slate-400 mb-2">${titulo}</div>` +
+        filas.map(f=>`<div class="flex items-center gap-2 mb-1.5">
+          <div class="text-sm text-slate-600 truncate" style="width:44%" title="${escapeHTML(f.nombre)}">${escapeHTML(f.nombre)}</div>
+          <div style="flex:1;height:7px;background:#EEF2FF;border-radius:999px;overflow:hidden;">
+            <div style="height:100%;width:${Math.round(f.n/max*100)}%;border-radius:999px;background:linear-gradient(90deg,#7B68EE,#4A9EFF)"></div>
+          </div>
+          <div class="text-sm font-bold text-slate-700" style="width:28px;text-align:right">${f.n}</div>
+        </div>`).join('') + '</div>';
+    };
+    document.getElementById('waitlistOrigen').innerHTML =
+      lista('Canal', w.por_fuente, 'Sin datos todavía.') +
+      lista('Campaña', w.por_campana, 'Ninguna campaña etiquetada aún.') +
+      lista('Universidad', w.por_universidad, 'Sin datos.') +
+      lista('Carrera', w.por_carrera, 'Sin datos.') +
+      '<p class="text-xs text-slate-400 mt-1">Para medir un canal, comparte el enlace con etiqueta: ' +
+      '<code class="bg-slate-100 px-1 rounded">zentu.app/?utm_source=whatsapp&amp;utm_campaign=facultad_fi</code></p>';
   }
 
   function pintarSesiones(a){

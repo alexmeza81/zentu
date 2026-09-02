@@ -22,3 +22,16 @@ alter table public.waitlist_empresas
 
 -- El cuerpo completo de envios_acceso_resumen() y admin_metricas() está aplicado
 -- en la base; ver el historial de migraciones de Supabase para el SQL exacto.
+
+-- ── Añadido el mismo día: origen del registro ───────────────────────────────
+-- Migraciones: waitlist_origen_de_registro, admin_metricas_con_origen.
+-- Columnas utm_source / utm_campaign / referrer en ambas waitlists, y la función
+-- registrar_origen_waitlist() que las llena desde el formulario público.
+--
+-- Va en una función aparte del alta a propósito: cambiar la firma de
+-- submit_student_waitlist obligaría a soltar y recrear la función que hoy sostiene
+-- todo el registro, y el origen no vale ese riesgo. Si el registro de origen falla,
+-- el alta se completa igual: se pierde un dato de negocio, nunca al usuario.
+--
+-- El referente se guarda solo como dominio, no la URL completa, que puede llevar
+-- datos de la navegación de la persona.

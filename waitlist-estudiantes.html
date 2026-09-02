@@ -483,6 +483,27 @@
             el.classList.toggle('selected');
         }
 
+
+        // De dónde llegó este registro. Se guarda aparte del alta para no bloquearla:
+        // si esto falla, la persona igual queda registrada — solo perdemos la
+        // atribución, que es un dato de negocio, no del usuario.
+        async function registrarOrigen(sb, correo) {
+            try {
+                const q = new URLSearchParams(location.search);
+                const fuente = q.get('utm_source') || q.get('ref') || null;
+                const campana = q.get('utm_campaign') || null;
+                // Solo el dominio de procedencia: la URL completa puede llevar datos
+                // de la navegación de la persona y aquí no hacen falta.
+                let ref = null;
+                try { if (document.referrer && !document.referrer.includes(location.host)) ref = new URL(document.referrer).hostname; } catch (e) {}
+                if (!fuente && !campana && !ref) return;
+                await sb.rpc('registrar_origen_waitlist', {
+                    p_email: correo, p_publico: 'estudiantes',
+                    p_utm_source: fuente, p_utm_campaign: campana, p_referrer: ref,
+                });
+            } catch (e) { console.warn('No se pudo registrar el origen:', e); }
+        }
+
         function showFormError(msg) {
             const el = document.getElementById('submitErr');
             el.textContent = msg;
@@ -583,6 +604,8 @@
                 showFormError('No pudimos guardar tu registro. Revisa tu conexión e inténtalo de nuevo.');
                 return;
             }
+
+            registrarOrigen(sbClient, correo);
 
             // Registro guardado: ya puede entrar.
             document.querySelectorAll('.successName').forEach(function(el){ el.textContent = nombre; });

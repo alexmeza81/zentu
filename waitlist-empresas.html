@@ -462,6 +462,26 @@
             document.getElementById('phoneCounter').textContent = `${input.value.length} / ${digits}`;
         }
 
+        // De dónde llegó este registro. Se guarda aparte del alta para no bloquearla:
+        // si esto falla, la persona igual queda registrada — solo perdemos la
+        // atribución, que es un dato de negocio, no del usuario.
+        async function registrarOrigen(cliente, correo) {
+            try {
+                const q = new URLSearchParams(location.search);
+                const fuente = q.get('utm_source') || q.get('ref') || null;
+                const campana = q.get('utm_campaign') || null;
+                // Solo el dominio de procedencia: la URL completa puede llevar datos
+                // de la navegación de la persona y aquí no hacen falta.
+                let ref = null;
+                try { if (document.referrer && !document.referrer.includes(location.host)) ref = new URL(document.referrer).hostname; } catch (e) {}
+                if (!fuente && !campana && !ref) return;
+                await cliente.rpc('registrar_origen_waitlist', {
+                    p_email: correo, p_publico: 'empresas',
+                    p_utm_source: fuente, p_utm_campaign: campana, p_referrer: ref
+                });
+            } catch (e) { console.warn('No se pudo registrar el origen:', e); }
+        }
+
         function markError(id) {
             const el = document.getElementById(id);
             el.style.borderColor = '#F87171';
@@ -534,6 +554,8 @@
                 alert('Hubo un error al enviar. Intenta de nuevo.');
                 return;
             }
+
+            registrarOrigen(sb, correo);
 
             // Mostrar éxito (registro guardado en BD)
             document.getElementById('successName').textContent = nombre;
