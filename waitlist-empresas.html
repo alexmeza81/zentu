@@ -468,8 +468,13 @@
         async function registrarOrigen(cliente, correo) {
             try {
                 const q = new URLSearchParams(location.search);
-                const fuente = q.get('utm_source') || q.get('ref') || null;
-                const campana = q.get('utm_campaign') || null;
+                // El canal puede venir en esta URL o de la landing por la que pasó
+                // la persona; analitica.js lo guarda al entrar. Sin el respaldo, todo
+                // el que llega por la landing se registra sin origen.
+                let guardado = {};
+                try { guardado = JSON.parse(sessionStorage.getItem('zentu_origen') || '{}') || {}; } catch (e) {}
+                const fuente = q.get('utm_source') || q.get('ref') || guardado.utm_source || null;
+                const campana = q.get('utm_campaign') || guardado.utm_campaign || null;
                 // Solo el dominio de procedencia: la URL completa puede llevar datos
                 // de la navegación de la persona y aquí no hacen falta.
                 let ref = null;

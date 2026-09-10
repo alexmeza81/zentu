@@ -17,6 +17,21 @@
     // Fuera también las pruebas locales.
     if (location.protocol === 'file:' || /localhost|127\.0\.0\.1/.test(location.hostname)) return;
 
+    // El canal viaja con la persona. Quien llega de Facebook cae en la landing y el
+    // utm se queda ahí: al pasar al formulario la URL ya viene limpia y el alta se
+    // registraba sin origen. Se recuerda el primero de la sesión (el que trajo a la
+    // persona; si luego navega, no se pisa) y el formulario lo usa como respaldo.
+    try {
+      var qOrigen = new URLSearchParams(location.search);
+      var fuenteUrl = qOrigen.get('utm_source') || qOrigen.get('ref');
+      if (fuenteUrl && !sessionStorage.getItem('zentu_origen')) {
+        sessionStorage.setItem('zentu_origen', JSON.stringify({
+          utm_source: fuenteUrl.slice(0, 120),
+          utm_campaign: (qOrigen.get('utm_campaign') || '').slice(0, 120) || null
+        }));
+      }
+    } catch (e) { /* modo privado: se pierde el canal, el alta se registra igual */ }
+
     // Autoexclusión por navegador. El fundador recarga su propia landing decenas de
     // veces al día y eso infla el tráfico del lanzamiento; abrir una vez
     // zentu.app/?zentu_no_contar=1 en cada dispositivo deja de contar para siempre.
