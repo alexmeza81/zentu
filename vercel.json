@@ -2,14 +2,45 @@
   "rewrites": [
     {
       "source": "/",
-      "has": [{ "type": "host", "value": "join.zentu.app" }],
+      "has": [
+        {
+          "type": "host",
+          "value": "join.zentu.app"
+        }
+      ],
       "destination": "/waitlist-estudiantes.html"
     }
   ],
   "redirects": [
-    { "source": "/admin", "destination": "/admin.html", "permanent": false },
-    { "source": "/fb", "destination": "/?utm_source=facebook&utm_campaign=fb_sin_curriculum", "permanent": false },
-    { "source": "/ig", "destination": "/?utm_source=instagram&utm_campaign=ig_sin_curriculum", "permanent": false },
-    { "source": "/wa", "destination": "/?utm_source=whatsapp&utm_campaign=wa_sin_curriculum", "permanent": false }
+    {
+      "source": "/admin",
+      "destination": "/admin.html",
+      "permanent": false
+    },
+    {
+      "source": "/fb",
+      "destination": "/?utm_source=facebook&utm_campaign=fb_sin_curriculum",
+      "permanent": false
+    },
+    {
+      "source": "/ig",
+      "destination": "/?utm_source=instagram&utm_campaign=ig_sin_curriculum",
+      "permanent": false
+    },
+    {
+      "source": "/wa",
+      "destination": "/?utm_source=whatsapp&utm_campaign=wa_sin_curriculum",
+      "permanent": false
+    },
+    {
+      "source": "/empresas",
+      "destination": "/waitlist-empresas.html?utm_source=directo&utm_campaign=empresas",
+      "permanent": false
+    },
+    {
+      "source": "/li",
+      "destination": "/waitlist-empresas.html?utm_source=linkedin&utm_campaign=li_empresas",
+      "permanent": false
+    }
   ]
 }
