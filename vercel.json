@@ -41,6 +41,11 @@
       "source": "/li",
       "destination": "/waitlist-empresas.html?utm_source=linkedin&utm_campaign=li_empresas",
       "permanent": false
+    },
+    {
+      "source": "/e/:quien",
+      "destination": "/waitlist-empresas.html?utm_source=directo&utm_campaign=:quien",
+      "permanent": false
     }
   ]
 }
